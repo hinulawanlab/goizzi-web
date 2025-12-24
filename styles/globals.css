@@ -1,0 +1,654 @@
+@import 'tailwindcss';
+/* FullCalendar styles */
+/* @import '@fullcalendar/core/index.css';
+@import '@fullcalendar/daygrid/index.css'; */
+
+/* Map design tokens to Tailwind v4 color system so utilities like
+   `bg-primary` and `text-primary-foreground` work, including hover/active. */
+@theme {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --radius: 0.5rem;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --header-height: 4rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+
+  body {
+    font-family: "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    color: #111827;
+    background-color: var(--color-background);
+  }
+}
+
+/* --- Universal Hover Feedback for Interactive Elements --- */
+@layer base {
+  /* ---------------------------------------------
+     Smooth transition for color and background
+     --------------------------------------------- */
+  a,
+  [role='button'],
+  [role='menuitem'],
+  [role='tab'],
+  [data-slot='tabs-trigger'],
+  .cursor-pointer {
+    transition:
+      color 80ms ease,
+      background-color 80ms ease,
+      border-color 80ms ease;
+  }
+
+  /* Default border color follows theme token */
+  * {
+    border-color: var(--color-border);
+  }
+
+  /* ---------------------------------------------
+     Universal hover + active (selected) states
+     Apply to menu, sidebar, dropdown, rows, tabs
+     --------------------------------------------- */
+  [role='menuitem']:hover,
+  [role='button']:hover,
+  [role='tab']:hover,
+  [data-slot='tabs-trigger']:hover,
+  .cursor-pointer:hover,
+  .menu-item:hover,
+  .dropdown-item:hover,
+  .row-hover:hover {
+    background-color: #FFF0F4 !important;
+    color: #833362 !important;
+  }
+
+  /* Selected or active items (e.g., sidebar active link, dropdown selection) */
+  [aria-selected='true'],
+  .active,
+  .selected,
+  .row-selected,
+  .menu-item.active,
+  .dropdown-item.active {
+    background-color: #FFF0F4 !important;
+    color: #833362 !important;
+  }
+
+  /* ---------------------------------------------
+     Icon color logic ensures icons follow text color
+     Ensures consistent contrast across backgrounds
+     --------------------------------------------- */
+  a svg,
+  [role='button'] svg,
+  [role='menuitem'] svg,
+  [role='tab'] svg,
+  [data-slot='tabs-trigger'] svg,
+  .cursor-pointer svg {
+    color: currentColor;
+    stroke: currentColor;
+    fill: none;
+  }
+
+  [data-scratchpad-tab-list] {
+    -ms-overflow-style: none; /* IE and Edge */
+    overscroll-behavior-x: contain;
+  }
+
+  [data-scratchpad-tab-list]::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+    width: 0;
+    height: 0;
+  }
+
+  @supports (scrollbar-width: none) {
+    [data-scratchpad-tab-list] {
+      scrollbar-width: none;
+    }
+  }
+
+  [data-board-scroll-panel],
+  [data-board-column-scroll] {
+    -ms-overflow-style: none;
+  }
+
+  [data-board-scroll-panel]::-webkit-scrollbar,
+  [data-board-column-scroll]::-webkit-scrollbar {
+    display: none;
+  }
+
+  @supports (scrollbar-width: none) {
+    [data-board-scroll-panel],
+    [data-board-column-scroll] {
+      scrollbar-width: none;
+    }
+  }
+
+  [data-scratchpad-note-textarea]::-webkit-scrollbar {
+    width: 6px;
+    background-color: var(--color-card);
+  }
+
+  @supports (scrollbar-width: thin) {
+    [data-scratchpad-note-textarea] {
+      scrollbar-width: thin;
+      scrollbar-color: transparent transparent;
+    }
+  }
+
+  [data-scratchpad-note-textarea]::-webkit-scrollbar-track {
+    background-color: var(--color-card);
+    border-radius: 9999px;
+  }
+
+  [data-scratchpad-note-textarea]::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background-color: transparent;
+    min-height: 48px;
+  }
+
+  [data-scratchpad-note-textarea]::-webkit-scrollbar-track:hover {
+    background-color: rgba(131, 51, 98, 0.08);
+  }
+
+  [data-scratchpad-note-textarea]::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(131, 51, 98, 0.45);
+  }
+
+  [data-scratchpad-note-textarea]::-webkit-scrollbar-thumb:active {
+    background-color: rgba(131, 51, 98, 0.6);
+  }
+
+  a:hover svg,
+  [role='button']:hover svg,
+  [role='menuitem']:hover svg,
+  [role='tab']:hover svg,
+  [data-slot='tabs-trigger']:hover svg,
+  .cursor-pointer:hover svg {
+    color: currentColor;
+    stroke: currentColor;
+    fill: none;
+  }
+
+  /* ---------------------------------------------
+     Primary CTA (e.g., "+ Add task" button)
+     Idle: dark magenta with white icon/text
+     Hover: pink background with brand color text/icon
+     --------------------------------------------- */
+  [data-slot='primary-cta'] {
+    background-color: #833362 !important;
+    color: #ffffff !important;
+  }
+
+  [data-slot='primary-cta'] svg {
+    color: currentColor !important;
+    stroke: currentColor !important;
+    fill: none !important;
+  }
+
+  [data-slot='primary-cta']:hover {
+    background-color: #FFF0F4 !important;
+    color: #833362 !important;
+    border-color: #833362 !important;
+  }
+
+  [data-slot='primary-cta']:hover svg {
+    color: currentColor !important;
+    stroke: currentColor !important;
+    fill: none !important;
+  }
+
+  /* ---------------------------------------------
+     Clickable cards: subtle border + background tint
+     --------------------------------------------- */
+  [data-slot='card'].cursor-pointer:hover,
+  [data-slot='card'][role='button']:hover,
+  [data-slot='card'][role='link']:hover {
+    border-color: #833362;
+    color: #833362;
+    background-color: #FFF0F4 !important;
+  }
+}
+
+/* globals.css */
+@media (max-height: 800px) {
+  .modal-form-scroll {
+    max-height: 80vh;
+    /* fit within viewport */
+    overflow-y: auto;
+    /* scroll when content exceeds */
+    padding-right: 0.5rem;
+    /* account for scrollbar */
+  }
+}
+
+/* Responsive FullCalendar height */
+@media (max-width: 790px) {
+  .fc .fc-daygrid-day-frame {
+    min-height: 2rem;
+    height: 2rem;
+  }
+}
+
+/* Make day cells shorter */
+.fc .fc-daygrid-day-frame {
+  min-height: 6rem;
+  /* default is ~7rem */
+  height: 6rem;
+}
+
+.fc .fc-daygrid-day-top {
+  padding-top: 2px;
+  /* reduce top spacing */
+  padding-bottom: 2px;
+}
+
+/* --- PRINT: lock paper to 8.5" x 13" (Legal, portrait), compress spacing, and fix blank last page --- */
+@media print {
+  @page {
+    size: 8.5in 13in;
+    margin-top: 1in;
+    margin-left: 1in;
+    margin-right: 0.5in;
+    margin-bottom: 0.5in;
+    /* explicitly set bottom too */
+  }
+
+  /* Ensure first page uses the same margins */
+  @page :first {
+    margin-top: 0.5in;
+    margin-left: 1in;
+    margin-right: 0.5in;
+    margin-bottom: 0.5in;
+  }
+
+  .font-sans {
+    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
+      "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji",
+      "Segoe UI Symbol" !important;
+  }
+
+  .font-mono {
+    font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco,
+      Consolas, "Liberation Mono", "Courier New", monospace !important;
+  }
+
+  .uppercase {
+    letter-spacing: 0.02em;
+  }
+
+  .print-hidden,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  .minutes-page {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .minutes-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+}
+
+/* --- Global Scrollbar Behavior --- */
+html {
+  overflow-y: auto;
+}
+
+body {
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji",
+    "Segoe UI Symbol" !important;
+  font-size: 11pt;
+  line-height: 1.25;
+
+  /* Default page background and text */
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+
+  /* Remove default margins and padding */
+  margin: 0;
+  padding: 0;
+}
+
+*:focus {
+  outline-offset: 0;
+}
+
+/* Route-scoped helpers */
+html.no-scroll {
+  overflow-y: hidden;
+  /* kill page-level scrollbar */
+}
+
+/* Main container - remove left spacing */
+.flex.h-screen {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* Fullscreen loader - remove scrollbar gutter spacing */
+.fixed.inset-0 {
+  left: 0 !important;
+  right: 0 !important;
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+
+
+/* Scrollbar utility: hide horizontal scrollbars when needed */
+.hide-scrollbar {
+  overflow-x: auto;
+  /* Ensure horizontal scroll still works */
+  -ms-overflow-style: none; /* IE/Edge legacy */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none; /* Chrome, Safari, Opera */
+}
+
+@supports (scrollbar-width: none) {
+  .hide-scrollbar {
+    scrollbar-width: none;
+    /* Firefox */
+  }
+}
+
+/* ========================================================= */
+/* Custom Light Scrollbars (applies to all scrollable areas) */
+/* ========================================================= */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f9fafb;
+  /* light gray track */
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #d3d3d3;
+  /* lighter thumb */
+  border-radius: 9999px;
+  border: 2px solid #f9fafb;
+  /* padding effect */
+}
+
+/* Firefox support (modern browsers only) */
+@supports (scrollbar-width: thin) {
+  * {
+    scrollbar-width: thin;
+  }
+}
+
+@supports (scrollbar-color: auto) {
+  * {
+    scrollbar-color: #d3d3d3 #f9fafb;
+  }
+}
+
+@layer utilities {
+  @keyframes gradient-flow-rtl {
+    0% {
+      background-position: 200% 50%;
+    }
+
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  @keyframes gradient-flow-ltr {
+    0% {
+      background-position: 0% 50%;
+    }
+
+    100% {
+      background-position: 200% 50%;
+    }
+  }
+
+  .animate-gradient-flow-rtl {
+    background-size: 300% 300%;
+    animation: gradient-flow-rtl 4s linear infinite;
+  }
+
+  .animate-gradient-flow-ltr {
+    background-size: 300% 300%;
+    animation: gradient-flow-ltr 4s linear infinite;
+  }
+
+  /* Fade helpers for loader */
+  .fade-in {
+    animation: fade-in 0.25s ease-out forwards;
+  }
+
+  .fade-out {
+    animation: fade-out 0.35s ease-in forwards;
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes fade-out {
+    from {
+      opacity: 1;
+    }
+
+    to {
+      opacity: 0;
+    }
+  }
+
+  .select-none,
+  .select-none * {
+    -webkit-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+  }
+}
+
+@layer components {
+  .prose {
+    color: #111827;
+    line-height: 1.6;
+    font-size: 0.95rem;
+  }
+
+  @media (min-width: 768px) {
+    .prose {
+      font-size: 1rem;
+    }
+  }
+
+  .prose :where(p, ul, ol) {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .prose :where(ul) {
+    list-style-type: disc;
+    padding-left: 1.25rem;
+  }
+
+  .prose :where(ol) {
+    list-style-type: decimal;
+    padding-left: 1.5rem;
+  }
+
+  .prose :where(li) {
+    margin: 0.2rem 0;
+  }
+
+  .prose :where(blockquote) {
+    margin: 0.75rem 0;
+    padding-left: 1rem;
+    border-left: 3px solid rgba(131, 51, 98, 0.35);
+    color: #4b5563;
+    font-style: italic;
+  }
+
+  .prose :where(blockquote > :first-child) {
+    margin-top: 0;
+  }
+
+  .prose :where(blockquote > :last-child) {
+    margin-bottom: 0;
+  }
+
+  .prose :where(a) {
+    color: #833362;
+    text-decoration: underline;
+  }
+}
+
+/* This is a global CSS file for the application, defining styles and themes for various components. */
+
+/* Hide native password reveal/clear buttons (Edge/IE) so custom eye icons don't duplicate */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
+/* Template editor placeholder chip */
+.placeholder-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  margin: 0 0.125rem;
+  border-radius: 9999px;
+  background-color: #e5e7eb;
+  color: #374151;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  border: 1px solid #d1d5db;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.placeholder-chip::before {
+  content: '\200b';
+}
+
+/* Active state when user selects a placeholder chip */
+.placeholder-chip-active {
+  outline: 2px solid #833362;
+  background-color: #efe4ea;
+}
+
+/* Template editor date candidates */
+.date-candidate {
+  display: inline;
+  padding: 0 0.15rem;
+  border-bottom: 1px dashed #c084fc;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-bottom-color 120ms ease;
+}
+
+/* Hover and active state for candidates */
+.date-candidate:hover,
+.date-candidate-active {
+  background-color: rgba(131, 51, 98, 0.12);
+  border-bottom-color: #7c3aed;
+  outline: 1px solid #833362;
+}
+
+/* Case document highlight animation */
+.case-doc-highlight {
+  animation: case-doc-blink 0.8s ease-in-out 2;
+  box-shadow: 0 0 0 1px rgba(131, 51, 98, 0.35);
+}
+
+@keyframes case-doc-blink {
+  0%,
+  100% {
+    background-color: #ffffff;
+    box-shadow: 0 0 0 1px rgba(131, 51, 98, 0.2);
+  }
+  50% {
+    background-color: #f9fafb;
+    box-shadow: 0 0 0 3px rgba(131, 51, 98, 0.45);
+  }
+}
