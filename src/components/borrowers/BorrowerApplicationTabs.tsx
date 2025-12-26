@@ -1,12 +1,15 @@
+// src/components/borrowers/BorrowerApplicationTabs.tsx
 "use client";
 
 import { useMemo, useState } from "react";
 
 import BorrowerProofOfBillingPanel from "@/components/borrowers/BorrowerProofOfBillingPanel";
+import { auth } from "@/shared/singletons/firebase";
 import type { BorrowerSummary } from "@/shared/types/dashboard";
 import type { BorrowerReference, ReferenceContactStatus } from "@/shared/types/borrowerReference";
 import type { BorrowerProofOfBillingKyc } from "@/shared/types/kyc";
 import type { LoanApplication } from "@/shared/types/loanApplication";
+import type { BorrowerNote } from "@/shared/types/borrowerNote";
 
 type TabKey = "maker" | "comakers" | "references" | "proof" | "documents";
 type ActionState = "idle" | "working" | "success" | "error";
@@ -16,6 +19,7 @@ interface BorrowerApplicationTabsProps {
   application: LoanApplication;
   references: BorrowerReference[];
   proofOfBillingKycs: BorrowerProofOfBillingKyc[];
+  notes: BorrowerNote[];
 }
 
 const tabs: { key: TabKey; label: string }[] = [
@@ -49,6 +53,9 @@ const contactActions: { value: ReferenceContactStatus; label: string }[] = [
   { value: "declined", label: "Did not agree" },
   { value: "no_response", label: "No response" }
 ];
+
+const loanActions = ["Reject", "Reviewed", "Approved", "Completed"] as const;
+type LoanAction = (typeof loanActions)[number];
 
 function formatDate(value?: string) {
   if (!value || value === "N/A") {
@@ -90,12 +97,22 @@ export default function BorrowerApplicationTabs({
   borrower,
   application,
   references,
-  proofOfBillingKycs
+  proofOfBillingKycs,
+  notes
 }: BorrowerApplicationTabsProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("maker");
   const [statusOverrides, setStatusOverrides] = useState<Record<string, ReferenceContactStatus>>({});
   const [actionStates, setActionStates] = useState<Record<string, ActionState>>({});
   const [actionMessages, setActionMessages] = useState<Record<string, string>>({});
+  const [auditStatus, setAuditStatus] = useState(application.status);
+  const [auditUpdatedAt, setAuditUpdatedAt] = useState(application.updatedAt);
+  const [statusUpdatedByName, setStatusUpdatedByName] = useState(application.statusUpdatedByName);
+  const [noteEntries, setNoteEntries] = useState(notes);
+  const [noteText, setNoteText] = useState("");
+  const [noteActionState, setNoteActionState] = useState<ActionState>("idle");
+  const [noteActionMessage, setNoteActionMessage] = useState("");
+  const [statusActionState, setStatusActionState] = useState<ActionState>("idle");
+  const [statusActionMessage, setStatusActionMessage] = useState("");
 
   const referencesById = useMemo(() => {
     const mapping: Record<string, BorrowerReference> = {};
@@ -104,6 +121,14 @@ export default function BorrowerApplicationTabs({
     });
     return mapping;
   }, [references]);
+
+  const getActorProfile = () => {
+    const currentUser = auth.currentUser;
+    return {
+      name: currentUser?.displayName ?? "Unknown staff",
+      userId: currentUser?.uid
+    };
+  };
 
   const getReferenceStatus = (referenceId: string): ReferenceContactStatus => {
     return statusOverrides[referenceId] ?? referencesById[referenceId]?.contactStatus ?? "pending";
@@ -149,6 +174,112 @@ export default function BorrowerApplicationTabs({
     }
   };
 
+  const handleAddNote = async () => {
+    const trimmedNote = noteText.trim();
+    if (!trimmedNote) {
+      setNoteActionState("error");
+      setNoteActionMessage("Please enter a note before saving.");
+      return;
+    }
+
+    if (!borrower?.borrowerId) {
+      setNoteActionState("error");
+      setNoteActionMessage("Borrower id is missing. Refresh and try again.");
+      return;
+    }
+
+    setNoteActionState("working");
+    setNoteActionMessage("Saving note...");
+
+    const actor = getActorProfile();
+
+    try {
+      const response = await fetch(`/api/borrowers/${borrower.borrowerId}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          applicationId: application.applicationId,
+          note: trimmedNote,
+          createdByName: actor.name,
+          createdByUserId: actor.userId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Note update failed.");
+      }
+
+      const payload = (await response.json()) as { note?: BorrowerNote };
+      if (!payload.note) {
+        throw new Error("Missing note payload.");
+      }
+
+      setNoteEntries((prev) => [payload.note as BorrowerNote, ...prev]);
+      setAuditUpdatedAt(payload.note.createdAt);
+      setNoteText("");
+      setNoteActionState("success");
+      setNoteActionMessage("Note added.");
+    } catch (error) {
+      console.warn("Unable to add note:", error);
+      setNoteActionState("error");
+      setNoteActionMessage("Unable to add note. Please retry.");
+    }
+  };
+
+  const handleStatusChange = async (status: LoanAction) => {
+    if (!borrower?.borrowerId) {
+      setStatusActionState("error");
+      setStatusActionMessage("Borrower id is missing. Refresh and try again.");
+      return;
+    }
+
+    setStatusActionState("working");
+    setStatusActionMessage(`Updating status to ${status}...`);
+
+    const actor = getActorProfile();
+
+    try {
+      const response = await fetch(
+        `/api/borrowers/${borrower.borrowerId}/application/${application.applicationId}/status`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status,
+            actorName: actor.name,
+            actorUserId: actor.userId
+          })
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Status update failed.");
+      }
+
+      const payload = (await response.json()) as {
+        updatedAt?: string;
+        status?: LoanAction;
+        statusUpdatedByName?: string;
+        note?: BorrowerNote;
+      };
+
+      setAuditStatus(payload.status ?? status);
+      setAuditUpdatedAt(payload.updatedAt ?? auditUpdatedAt);
+      setStatusUpdatedByName(payload.statusUpdatedByName ?? actor.name);
+
+      if (payload.note) {
+        setNoteEntries((prev) => [payload.note as BorrowerNote, ...prev]);
+      }
+
+      setStatusActionState("success");
+      setStatusActionMessage(`Status updated to ${status}.`);
+    } catch (error) {
+      console.warn("Unable to update application status:", error);
+      setStatusActionState("error");
+      setStatusActionMessage("Unable to update status. Please retry.");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
@@ -159,6 +290,7 @@ export default function BorrowerApplicationTabs({
             <p className="text-sm text-slate-500">
               Review maker details, co-maker information, references, proof of billing, and loan documents.
             </p>
+
           </div>
         </div>
 
@@ -194,29 +326,30 @@ export default function BorrowerApplicationTabs({
               <DetailRow label="Civil status" value={application.borrower.civilStatus} />
               <DetailRow label="Current address" value={application.borrower.currentAddress} />
               <DetailRow label="Provincial same as current" value={application.borrower.provincialSameAsCurrent} />
+              <DetailRow label="Marketing source" value={application.marketing?.source} />
             </div>
           </div>
 
           <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
             <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Loan details</p>
             <div className="mt-4 grid gap-3">
-              <DetailRow label="Product" value={application.loanDetails?.productName} />
-              <DetailRow label="Product ID" value={application.loanDetails?.productId} />
-              <DetailRow label="Amount applied" value={formatAmount(application.loanDetails?.amountApplied)} />
-              <DetailRow label="Term" value={application.loanDetails?.term} />
+              <DetailRow label="Loan type" value={application.loanDetails?.productName} />
+              <DetailRow label="Loan category" value={application.loanDetails?.productId} />
+              <DetailRow label="Amount applied (in Pesos)" value={formatAmount(application.loanDetails?.amountApplied)} />
+              <DetailRow label="Term (in months)" value={application.loanDetails?.term} />
               <DetailRow label="Purpose" value={application.loanDetails?.purpose} />
               <DetailRow label="Submitted" value={formatDate(application.submittedAt ?? application.createdAt)} />
-              <DetailRow label="Loan status" value={application.status} />
+              <DetailRow label="Loan status" value={auditStatus} />
             </div>
           </div>
 
           <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Employment & income</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Source of income details</p>
             <div className="mt-4 grid gap-3">
-              <DetailRow label="Employer" value={application.borrowerIncome?.employerName} />
-              <DetailRow label="Occupation" value={application.borrowerIncome?.occupation} />
-              <DetailRow label="Net income" value={application.borrowerIncome?.netIncome} />
-              <DetailRow label="Years in role" value={application.borrowerIncome?.yearsInRole} />
+              <DetailRow label="Employer / Business Name" value={application.borrowerIncome?.employerName} />
+              <DetailRow label="Source" value={application.borrowerIncome?.occupation} />
+              <DetailRow label="Net income (in Pesos)" value={application.borrowerIncome?.netIncome} />
+              <DetailRow label="Number of years employed or in business" value={application.borrowerIncome?.yearsInRole} />
             </div>
           </div>
 
@@ -224,28 +357,17 @@ export default function BorrowerApplicationTabs({
             <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Spouse</p>
             <div className="mt-4 grid gap-3">
               <DetailRow label="Full name" value={application.spouse?.fullName} />
-              <DetailRow label="Occupation" value={application.spouse?.occupation} />
-              <DetailRow label="Net income" value={application.spouse?.netIncome} />
-              <DetailRow label="Contact" value={application.spouse?.contactNumber} />
+              <DetailRow label="Source of income" value={application.spouse?.occupation} />
+              <DetailRow label="Net income (in Pesos)" value={application.spouse?.netIncome} />
+              <DetailRow label="Contact number" value={application.spouse?.contactNumber} />
             </div>
           </div>
 
           <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Assets & marketing</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Assets & estimated value</p>
             <div className="mt-4 grid gap-3">
               <DetailRow label="Assets" value={application.borrowerAssets?.selections?.join(", ")} />
-              <DetailRow label="Estimated value" value={application.borrowerAssets?.estimatedValue} />
-              <DetailRow label="Asset notes" value={application.borrowerAssets?.details} />
-              <DetailRow label="Marketing source" value={application.marketing?.source} />
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-slate-100 bg-slate-50 p-6">
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Audit</p>
-            <div className="mt-4 grid gap-3">
-              <DetailRow label="Created" value={formatDate(application.createdAt)} />
-              <DetailRow label="Submitted" value={formatDate(application.submittedAt)} />
-              <DetailRow label="Updated" value={formatDate(application.updatedAt)} />
+              <DetailRow label="Estimated value (in Pesos)" value={application.borrowerAssets?.estimatedValue} />
             </div>
           </div>
         </div>
@@ -354,6 +476,130 @@ export default function BorrowerApplicationTabs({
       {activeTab === "proof" && (
         <BorrowerProofOfBillingPanel borrowerId={borrower.borrowerId} kycs={proofOfBillingKycs} />
       )}
+
+      <div className="space-y-6">
+        <div className="rounded-3xl border border-slate-100 bg-slate-50 p-6">
+          <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Audit</p>
+          <div className="mt-4 grid gap-3">
+            <DetailRow label="Submitted" value={formatDate(application.submittedAt)} />
+            <DetailRow label="Updated" value={formatDate(auditUpdatedAt)} />
+            <DetailRow label="Loan status" value={auditStatus} />
+            <DetailRow label="Status updated by" value={statusUpdatedByName} />
+          </div>
+          <div className="mt-6">
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Notes</p>
+            <div className="mt-3 space-y-3">
+              {noteEntries.length ? (
+                noteEntries.map((note) => (
+                  <div key={note.noteId} className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap wrap-break-word">{note.note}</p>
+                    <p className="mt-2 text-[11px] uppercase tracking-[0.2em] text-slate-400">
+                      {note.createdByName ?? "Unknown staff"} - {formatDate(note.createdAt)}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-slate-500">No notes yet.</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
+          <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Notes & actions</p>
+          <div className="mt-4 space-y-4">
+            <div>
+              <label className="text-[11px] uppercase tracking-[0.3em] text-slate-400" htmlFor="loan-note">
+                Add a note
+              </label>
+              <textarea
+                id="loan-note"
+                value={noteText}
+                onChange={(event) => {
+                  setNoteText(event.target.value);
+                  if (noteActionState !== "idle") {
+                    setNoteActionState("idle");
+                    setNoteActionMessage("");
+                  }
+                }}
+                rows={4}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none"
+                placeholder="Write a note for this loan application."
+              />
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleAddNote}
+                  disabled={noteActionState === "working" || !noteText.trim()}
+                  className={`rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+                    noteActionState === "working" || !noteText.trim()
+                      ? "cursor-not-allowed border-slate-200 text-slate-300"
+                      : "cursor-pointer border-slate-900 bg-slate-900 text-white hover:border-slate-700 hover:bg-slate-800"
+                  }`}
+                >
+                  Add note
+                </button>
+              </div>
+              {noteActionState === "working" && (
+                <div className="mt-3 flex items-center gap-2 text-sm text-slate-500">
+                  <span className="inline-flex h-4 w-4 animate-spin rounded-full border border-slate-300 border-t-transparent" />
+                  {noteActionMessage}
+                </div>
+              )}
+              {noteActionState === "success" && noteActionMessage && (
+                <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                  {noteActionMessage}
+                </div>
+              )}
+              {noteActionState === "error" && noteActionMessage && (
+                <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {noteActionMessage}
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Application status</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {loanActions.map((action) => {
+                  const isWorking = statusActionState === "working";
+                  return (
+                    <button
+                      key={action}
+                      type="button"
+                      onClick={() => handleStatusChange(action)}
+                      disabled={isWorking}
+                      className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+                        isWorking
+                          ? "cursor-not-allowed border-slate-200 text-slate-300"
+                          : "cursor-pointer border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                      }`}
+                    >
+                      {action}
+                    </button>
+                  );
+                })}
+              </div>
+              {statusActionState === "working" && (
+                <div className="mt-3 flex items-center gap-2 text-sm text-slate-500">
+                  <span className="inline-flex h-4 w-4 animate-spin rounded-full border border-slate-300 border-t-transparent" />
+                  {statusActionMessage}
+                </div>
+              )}
+              {statusActionState === "success" && statusActionMessage && (
+                <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                  {statusActionMessage}
+                </div>
+              )}
+              {statusActionState === "error" && statusActionMessage && (
+                <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {statusActionMessage}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

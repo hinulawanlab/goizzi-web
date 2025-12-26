@@ -93,6 +93,8 @@ export interface LoanApplication {
   createdAt?: string;
   submittedAt?: string;
   updatedAt?: string;
+  statusUpdatedByName?: string;
+  statusUpdatedByUserId?: string;
   borrower: ApplicationBorrower;
   borrowerAssets?: BorrowerAssets;
   borrowerIncome?: BorrowerIncome;

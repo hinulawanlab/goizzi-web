@@ -6,6 +6,7 @@ import { getBorrowerSummaryById } from "@/shared/services/borrowerService";
 import { getBorrowerApplicationById } from "@/shared/services/applicationService";
 import { getBorrowerReferences } from "@/shared/services/borrowerReferenceService";
 import { getBorrowerProofOfBillingKycs } from "@/shared/services/kycService";
+import { getBorrowerNotesByApplication } from "@/shared/services/borrowerNoteService";
 
 interface BorrowerApplicationPageProps {
   params: Promise<{
@@ -24,11 +25,13 @@ export default async function BorrowerApplicationPage({ params }: BorrowerApplic
   const applicationPromise = getBorrowerApplicationById(borrowerId, applicationId);
   const referencesPromise = getBorrowerReferences(borrowerId);
   const proofOfBillingPromise = getBorrowerProofOfBillingKycs(borrowerId);
+  const notesPromise = getBorrowerNotesByApplication(borrowerId, applicationId);
 
   const borrower = await borrowerPromise;
   const application = await applicationPromise;
   const references = await referencesPromise;
   const proofOfBillingKycs = await proofOfBillingPromise;
+  const notes = await notesPromise;
 
   if (!borrower || !application) {
     notFound();
@@ -43,6 +46,7 @@ export default async function BorrowerApplicationPage({ params }: BorrowerApplic
             application={application}
             references={references}
             proofOfBillingKycs={proofOfBillingKycs}
+            notes={notes}
           />
         </main>
       </div>

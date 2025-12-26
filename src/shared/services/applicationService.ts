@@ -192,6 +192,8 @@ function mapApplicationDoc(doc: DocumentSnapshot): LoanApplication {
     createdAt: formatTimestamp(data.createdAt),
     submittedAt: formatTimestamp(data.submittedAt),
     updatedAt: formatTimestamp(data.updatedAt),
+    statusUpdatedByName: typeof data.statusUpdatedByName === "string" ? data.statusUpdatedByName : undefined,
+    statusUpdatedByUserId: typeof data.statusUpdatedByUserId === "string" ? data.statusUpdatedByUserId : undefined,
     borrower: mapBorrower(borrower),
     borrowerAssets: mapBorrowerAssets(borrowerAssets),
     borrowerIncome: mapBorrowerIncome(borrowerIncome),

@@ -1,3 +1,4 @@
+// src/components/borrowers/BorrowerProfileTabs.tsx
 "use client";
 
 import { useMemo, useState } from "react";
@@ -10,7 +11,7 @@ import type { LoanApplication } from "@/shared/types/loanApplication";
 import type { LoanSummary } from "@/shared/types/loan";
 import type { LocationObservation } from "@/shared/types/location";
 
-type TabKey = "location" | "submitted" | "active" | "completed";
+type TabKey = "location" | "submitted" | "reviewed" | "active" | "completed";
 
 interface BorrowerProfileTabsProps {
   borrower: BorrowerSummary;
@@ -29,6 +30,7 @@ interface BorrowerProfileTabsProps {
 const tabs: { key: TabKey; label: string }[] = [
   { key: "location", label: "Map & location" },
   { key: "submitted", label: "Submitted loans" },
+  { key: "reviewed", label: "Reviewed loans" },
   { key: "active", label: "Active loans" },
   { key: "completed", label: "Completed loans" }
 ];
@@ -44,7 +46,20 @@ export default function BorrowerProfileTabs({
   const [activeTab, setActiveTab] = useState<TabKey>("location");
 
   const submittedApplications = useMemo(
-    () => applications.filter((application) => application.status === "submitted"),
+    () =>
+      applications.filter((application) => {
+        const normalized = application.status.trim().toLowerCase();
+        return normalized === "submitted";
+      }),
+    [applications]
+  );
+
+  const reviewedApplications = useMemo(
+    () =>
+      applications.filter((application) => {
+        const normalized = application.status.trim().toLowerCase();
+        return ["reviewed", "approved", "completed", "reject", "rejected"].includes(normalized);
+      }),
     [applications]
   );
 
@@ -80,7 +95,7 @@ export default function BorrowerProfileTabs({
             key={tab.key}
             type="button"
             onClick={() => setActiveTab(tab.key)}
-            className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+            className={`cursor-pointer rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
               activeTab === tab.key
                 ? "border-slate-900 bg-slate-900 text-white"
                 : "border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-900"
@@ -103,6 +118,10 @@ export default function BorrowerProfileTabs({
 
         {activeTab === "submitted" && (
           <BorrowerApplicationsTable borrowerId={borrower.borrowerId} applications={submittedApplications} />
+        )}
+
+        {activeTab === "reviewed" && (
+          <BorrowerApplicationsTable borrowerId={borrower.borrowerId} applications={reviewedApplications} />
         )}
 
         {activeTab === "active" && (

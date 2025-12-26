@@ -130,8 +130,11 @@ Raw signals used to compute “usual location.” Keep event-based.
 ### `/borrowers/{borrowerId}/notes/{noteId}` (optional)
 **Fields**
 - `note: string`
+- `applicationId: string?` (links a note to a loan application)
 - `createdAt: timestamp`
 - `createdByUserId: string`
+- `createdByName: string?` (displayName snapshot)
+- `noteId: string`
 
 ### `/borrowers/{borrowerId}/references/{referenceId}`
 **Fields**

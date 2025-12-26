@@ -34,11 +34,17 @@ function formatAmount(value?: string) {
 }
 
 function getStatusClass(status: string) {
-  switch (status) {
+  const normalized = status.trim().toLowerCase();
+  switch (normalized) {
     case "submitted":
       return "bg-amber-100 text-amber-700";
     case "approved":
       return "bg-emerald-100 text-emerald-700";
+    case "reviewed":
+      return "bg-sky-100 text-sky-700";
+    case "completed":
+      return "bg-slate-200 text-slate-700";
+    case "reject":
     case "rejected":
       return "bg-rose-100 text-rose-700";
     case "draft":
@@ -59,8 +65,8 @@ export default function BorrowerApplicationsTable({
   if (!applications.length) {
     return (
       <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
-        <p className="text-sm font-semibold text-slate-900">No submitted applications yet.</p>
-        <p className="mt-2 text-xs text-slate-500">Submitted applications will appear here when available.</p>
+        <p className="text-sm font-semibold text-slate-900">No pending applications yet.</p>
+        <p className="mt-2 text-xs text-slate-500">Pending applications will appear here when available.</p>
       </div>
     );
   }
@@ -68,7 +74,7 @@ export default function BorrowerApplicationsTable({
   return (
     <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white p-4 shadow-lg">
       <div className="mb-4 flex items-center justify-between px-2 text-sm text-slate-500">
-        <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Submitted applications</p>
+        <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Pending applications</p>
         <span className="text-xs text-slate-500">{applications.length} records</span>
       </div>
       <div className="overflow-x-auto">
@@ -79,7 +85,7 @@ export default function BorrowerApplicationsTable({
               <th className="px-3 py-3">Product</th>
               <th className="px-3 py-3">Amount</th>
               <th className="px-3 py-3">Status</th>
-              <th className="px-3 py-3">Submitted</th>
+              <th className="px-3 py-3">Date</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
