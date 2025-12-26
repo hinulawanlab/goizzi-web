@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { getDownloadURL, ref } from "firebase/storage";
 
@@ -62,6 +62,8 @@ export default function BorrowerProofOfBillingPanel({ borrowerId, kycs }: Borrow
   const [actionStates, setActionStates] = useState<Record<string, ActionState>>({});
   const [actionMessages, setActionMessages] = useState<Record<string, string>>({});
   const [approvalOverrides, setApprovalOverrides] = useState<Record<string, boolean>>({});
+  const imageStatesRef = useRef(imageStates);
+  const isMountedRef = useRef(true);
   const sortedKycs = useMemo(() => {
     return [...kycs].sort((left, right) => {
       const leftTime = left.createdAt ? Date.parse(left.createdAt) : 0;
@@ -71,11 +73,19 @@ export default function BorrowerProofOfBillingPanel({ borrowerId, kycs }: Borrow
   }, [kycs]);
 
   useEffect(() => {
-    let cancelled = false;
+    imageStatesRef.current = imageStates;
+  }, [imageStates]);
 
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
     sortedKycs.forEach((kyc) => {
       const refs = kyc.storageRefs ?? [];
-      const currentState = imageStates[kyc.kycId];
+      const currentState = imageStatesRef.current[kyc.kycId];
       if (currentState?.status === "loading" || currentState?.status === "success" || currentState?.status === "error") {
         return;
       }
@@ -102,32 +112,39 @@ export default function BorrowerProofOfBillingPanel({ borrowerId, kycs }: Borrow
         return;
       }
 
-      Promise.all(normalizedRefs.map((path) => getDownloadURL(ref(storage, path))))
-        .then((urls) => {
-          if (cancelled) {
+      Promise.allSettled(normalizedRefs.map((path) => getDownloadURL(ref(storage, path))))
+        .then((results) => {
+          if (!isMountedRef.current) {
             return;
           }
+          const urls = results
+            .filter((result): result is PromiseFulfilledResult<string> => result.status === "fulfilled")
+            .map((result) => result.value);
+
+          if (!urls.length) {
+            setImageStates((prev) => ({
+              ...prev,
+              [kyc.kycId]: { status: "error", urls: [], errorMessage: "Images could not be loaded." }
+            }));
+            return;
+          }
+
           setImageStates((prev) => ({
             ...prev,
             [kyc.kycId]: { status: "success", urls }
           }));
         })
         .catch((error) => {
-          if (cancelled) {
+          if (!isMountedRef.current) {
             return;
           }
-          console.warn("Unable to load proof of billing images:", error);
           setImageStates((prev) => ({
             ...prev,
             [kyc.kycId]: { status: "error", urls: [], errorMessage: "Images could not be loaded." }
           }));
         });
     });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [sortedKycs, imageStates]);
+  }, [sortedKycs]);
 
   const submitApproval = async (kycId: string, isApproved: boolean) => {
     if (!borrowerId || !kycId) {

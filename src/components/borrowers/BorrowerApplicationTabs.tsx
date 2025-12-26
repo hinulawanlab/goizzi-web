@@ -297,7 +297,7 @@ export default function BorrowerApplicationTabs({
                 <div className="mt-4 grid gap-3">
                   <DetailRow label="Mobile" value={reference.mobileNumber} />
                   <DetailRow label="Address" value={reference.address} />
-                  <DetailRow label="Created" value={formatDate(reference.createdAt)} />
+                  <DetailRow label="Added" value={formatDate(reference.createdAt)} />
                   <DetailRow label="Contact status" value={contactStatusLabels[getReferenceStatus(reference.referenceId)]} />
                 </div>
                 <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50 p-4">
