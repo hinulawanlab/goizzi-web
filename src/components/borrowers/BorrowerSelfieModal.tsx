@@ -1,3 +1,4 @@
+// src/components/borrowers/BorrowerSelfieModal.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -200,7 +201,7 @@ export default function BorrowerSelfieModal({ kycs, borrowerName }: BorrowerSelf
             className="absolute inset-0 cursor-default bg-slate-900/60"
             aria-label="Close selfie viewer"
           />
-          <div className="relative w-full max-w-4xl rounded-3xl bg-white p-6 shadow-2xl">
+          <div className="relative w-full max-w-3xl rounded-3xl bg-white p-6 shadow-2xl">
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.4em] text-slate-400">Borrower selfie</p>
@@ -325,16 +326,16 @@ export default function BorrowerSelfieModal({ kycs, borrowerName }: BorrowerSelf
               )}
 
               {loadState === "success" && (
-                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-center">
                   <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Selfie</p>
                   {imageUrl ? (
                     <Image
                       src={imageUrl}
                       alt="Borrower selfie"
-                      width={1200}
-                      height={1200}
+                      width={480}
+                      height={480}
                       unoptimized
-                      className="mt-3 w-full rounded-xl border border-slate-200 object-contain"
+                      className="mt-3 inline-block h-120 w-120 rounded-xl border border-slate-200 object-contain"
                     />
                   ) : (
                     <p className="mt-4 text-sm text-slate-500">Selfie image unavailable.</p>
