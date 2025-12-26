@@ -1,20 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import type { BorrowerSummary } from "@/shared/types/dashboard";
+import type { BorrowerReference, ReferenceContactStatus } from "@/shared/types/borrowerReference";
 import type { LoanApplication } from "@/shared/types/loanApplication";
 
-type TabKey = "maker" | "comakers" | "documents";
+type TabKey = "maker" | "comakers" | "references" | "proof" | "documents";
+type ActionState = "idle" | "working" | "success" | "error";
 
 interface BorrowerApplicationTabsProps {
   borrower: BorrowerSummary;
   application: LoanApplication;
+  references: BorrowerReference[];
 }
 
 const tabs: { key: TabKey; label: string }[] = [
   { key: "maker", label: "Maker's details" },
   { key: "comakers", label: "Co-makers" },
+  { key: "references", label: "References" },
+  { key: "proof", label: "Proof of billing" },
   { key: "documents", label: "Loan documents" }
 ];
 
@@ -23,6 +28,23 @@ const documentGroups = [
   { title: "Payslips", description: "Placeholder for payslip uploads." },
   { title: "Property titles", description: "Placeholder for property title uploads." },
   { title: "Others", description: "Placeholder for other supporting documents." }
+];
+
+const placeholderCards = [
+  { title: "Awaiting uploads", description: "Entries will appear here once the data capture flow is added." }
+];
+
+const contactStatusLabels: Record<ReferenceContactStatus, string> = {
+  pending: "Pending outreach",
+  agreed: "Agreed to be reference",
+  declined: "Contacted, did not agree",
+  no_response: "No response / cannot be reached"
+};
+
+const contactActions: { value: ReferenceContactStatus; label: string }[] = [
+  { value: "agreed", label: "Agreed" },
+  { value: "declined", label: "Did not agree" },
+  { value: "no_response", label: "No response" }
 ];
 
 function formatDate(value?: string) {
@@ -61,8 +83,67 @@ function DetailRow({ label, value }: { label: string; value?: string | boolean }
   );
 }
 
-export default function BorrowerApplicationTabs({ borrower, application }: BorrowerApplicationTabsProps) {
+export default function BorrowerApplicationTabs({
+  borrower,
+  application,
+  references
+}: BorrowerApplicationTabsProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("maker");
+  const [statusOverrides, setStatusOverrides] = useState<Record<string, ReferenceContactStatus>>({});
+  const [actionStates, setActionStates] = useState<Record<string, ActionState>>({});
+  const [actionMessages, setActionMessages] = useState<Record<string, string>>({});
+
+  const referencesById = useMemo(() => {
+    const mapping: Record<string, BorrowerReference> = {};
+    references.forEach((reference) => {
+      mapping[reference.referenceId] = reference;
+    });
+    return mapping;
+  }, [references]);
+
+  const getReferenceStatus = (referenceId: string): ReferenceContactStatus => {
+    return statusOverrides[referenceId] ?? referencesById[referenceId]?.contactStatus ?? "pending";
+  };
+
+  const updateReferenceStatus = async (referenceId: string, contactStatus: ReferenceContactStatus) => {
+    if (!borrower?.borrowerId) {
+      setActionStates((prev) => ({ ...prev, [referenceId]: "error" }));
+      setActionMessages((prev) => ({
+        ...prev,
+        [referenceId]: "Borrower id is missing. Refresh and try again."
+      }));
+      return;
+    }
+
+    setActionStates((prev) => ({ ...prev, [referenceId]: "working" }));
+    setActionMessages((prev) => ({ ...prev, [referenceId]: "Updating reference status..." }));
+
+    try {
+      const response = await fetch(
+        `/api/borrowers/${borrower.borrowerId}/references/${referenceId}/status`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contactStatus })
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Status update failed.");
+      }
+
+      setStatusOverrides((prev) => ({ ...prev, [referenceId]: contactStatus }));
+      setActionStates((prev) => ({ ...prev, [referenceId]: "success" }));
+      setActionMessages((prev) => ({
+        ...prev,
+        [referenceId]: `Status updated to "${contactStatusLabels[contactStatus]}".`
+      }));
+    } catch (error) {
+      console.warn("Unable to update reference status:", error);
+      setActionStates((prev) => ({ ...prev, [referenceId]: "error" }));
+      setActionMessages((prev) => ({ ...prev, [referenceId]: "Unable to update status. Please retry." }));
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -72,7 +153,7 @@ export default function BorrowerApplicationTabs({ borrower, application }: Borro
             <p className="text-xs uppercase tracking-[0.4em] text-slate-400">Application details</p>
             <h2 className="text-2xl font-semibold text-slate-900">Borrower and loan insights</h2>
             <p className="text-sm text-slate-500">
-              Review maker details, co-maker information, and loan documents in one place.
+              Review maker details, co-maker information, references, proof of billing, and loan documents.
             </p>
           </div>
           <div className="text-sm text-slate-500">
@@ -87,7 +168,7 @@ export default function BorrowerApplicationTabs({ borrower, application }: Borro
               key={tab.key}
               type="button"
               onClick={() => setActiveTab(tab.key)}
-              className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+              className={`rounded-full border px-4 py-2 cursor-pointer text-xs font-semibold uppercase tracking-[0.3em] transition ${
                 activeTab === tab.key
                   ? "border-slate-900 bg-slate-900 text-white"
                   : "border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-900"
@@ -197,6 +278,82 @@ export default function BorrowerApplicationTabs({ borrower, application }: Borro
       {activeTab === "documents" && (
         <div className="grid gap-4 md:grid-cols-2">
           {documentGroups.map((group) => (
+            <div key={group.title} className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{group.title}</p>
+              <p className="mt-3 text-sm text-slate-600">{group.description}</p>
+              <p className="mt-2 text-xs text-slate-400">Logic will be added in a later iteration.</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {activeTab === "references" && (
+        <div className="space-y-4">
+          {references.length ? (
+            references.map((reference) => (
+              <div key={reference.referenceId} className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Reference</p>
+                <p className="mt-2 text-lg font-semibold text-slate-900">{reference.name}</p>
+                <div className="mt-4 grid gap-3">
+                  <DetailRow label="Mobile" value={reference.mobileNumber} />
+                  <DetailRow label="Address" value={reference.address} />
+                  <DetailRow label="Created" value={formatDate(reference.createdAt)} />
+                  <DetailRow label="Contact status" value={contactStatusLabels[getReferenceStatus(reference.referenceId)]} />
+                </div>
+                <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Reference check</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {contactActions.map((action) => {
+                      const actionState = actionStates[reference.referenceId] ?? "idle";
+                      const isWorking = actionState === "working";
+                      return (
+                        <button
+                          key={action.value}
+                          type="button"
+                          onClick={() => updateReferenceStatus(reference.referenceId, action.value)}
+                          disabled={isWorking}
+                          className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+                            isWorking
+                              ? "cursor-not-allowed border-slate-200 text-slate-300"
+                              : "cursor-pointer border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                          }`}
+                        >
+                          {action.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {(actionStates[reference.referenceId] ?? "idle") === "working" && (
+                    <div className="mt-3 flex items-center gap-2 text-sm text-slate-500">
+                      <span className="inline-flex h-4 w-4 animate-spin rounded-full border border-slate-300 border-t-transparent" />
+                      {actionMessages[reference.referenceId] ?? "Updating status..."}
+                    </div>
+                  )}
+                  {(actionStates[reference.referenceId] ?? "idle") === "success" && actionMessages[reference.referenceId] && (
+                    <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                      {actionMessages[reference.referenceId]}
+                    </div>
+                  )}
+                  {(actionStates[reference.referenceId] ?? "idle") === "error" && actionMessages[reference.referenceId] && (
+                    <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                      {actionMessages[reference.referenceId]}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="rounded-3xl border border-slate-100 bg-white p-6 text-center shadow-lg">
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-400">No references yet</p>
+              <p className="mt-3 text-sm text-slate-600">Reference entries will appear once added.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === "proof" && (
+        <div className="grid gap-4 md:grid-cols-2">
+          {placeholderCards.map((group) => (
             <div key={group.title} className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
               <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{group.title}</p>
               <p className="mt-3 text-sm text-slate-600">{group.description}</p>

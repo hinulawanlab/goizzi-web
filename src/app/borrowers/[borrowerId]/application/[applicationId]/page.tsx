@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import BorrowerApplicationTabs from "@/components/borrowers/BorrowerApplicationTabs";
 import { getBorrowerSummaryById } from "@/shared/services/borrowerService";
 import { getBorrowerApplicationById } from "@/shared/services/applicationService";
+import { getBorrowerReferences } from "@/shared/services/borrowerReferenceService";
 
 interface BorrowerApplicationPageProps {
   params: Promise<{
@@ -20,9 +21,11 @@ export default async function BorrowerApplicationPage({ params }: BorrowerApplic
 
   const borrowerPromise = getBorrowerSummaryById(borrowerId);
   const applicationPromise = getBorrowerApplicationById(borrowerId, applicationId);
+  const referencesPromise = getBorrowerReferences(borrowerId);
 
   const borrower = await borrowerPromise;
   const application = await applicationPromise;
+  const references = await referencesPromise;
 
   if (!borrower || !application) {
     notFound();
@@ -32,7 +35,7 @@ export default async function BorrowerApplicationPage({ params }: BorrowerApplic
     <div className="min-h-screen bg-transparent px-4 py-8 text-slate-900">
       <div className="mx-auto w-full max-w-6xl">
         <main className="space-y-6">
-          <BorrowerApplicationTabs borrower={borrower} application={application} />
+          <BorrowerApplicationTabs borrower={borrower} application={application} references={references} />
         </main>
       </div>
     </div>

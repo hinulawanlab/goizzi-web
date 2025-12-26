@@ -86,6 +86,7 @@ Small, fast “profile header” document. Keep PII-heavy KYC in a subcollection
 ```
 /borrowers/{borrowerId}/kyc/{docId}
 /borrowers/{borrowerId}/locationObservations/{obsId}
+/borrowers/{borrowerId}/references/{referenceId}
 /borrowers/{borrowerId}/notes/{noteId}            (optional)
 ```
 
@@ -129,6 +130,16 @@ Raw signals used to compute “usual location.” Keep event-based.
 - `note: string`
 - `createdAt: timestamp`
 - `createdByUserId: string`
+
+### `/borrowers/{borrowerId}/references/{referenceId}`
+**Fields**
+- `name: string`
+- `mobileNumber: string`
+- `address: string`
+- `createdAt: timestamp`
+- `referenceId: string`
+- `contactStatus: string` (`pending|agreed|declined|no_response`)
+- `updatedAt: timestamp?`
 
 ---
 
