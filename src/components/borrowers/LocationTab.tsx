@@ -75,9 +75,6 @@ function LocationMap({ observation }: LocationMapProps) {
         >
           Open in OpenStreetMap
         </a>
-        <span className="flex items-center gap-1 text-[11px] tracking-[0.4em]">
-          Map data refreshed just now <RefreshCw className="h-3.5 w-3.5" />
-        </span>
       </div>
     </div>
   );
@@ -131,7 +128,7 @@ function ObservationList({
             title="Sync observations"
             aria-label="Sync location observations"
             disabled={isRefreshing}
-            className="rounded-full border border-slate-200 bg-white p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1877f2] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+            className="cursor-pointer rounded-full border border-slate-200 bg-white p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1877f2] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
           >
             <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} aria-hidden />
             <span className="sr-only">Refresh location observations</span>

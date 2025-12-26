@@ -62,7 +62,7 @@ export default async function BorrowerProfilePage({ params }: BorrowerProfilePag
               {borrower.fullName}
             </h1>
             <p className="text-sm text-slate-500">
-              {borrower.phone} Aú {borrower.branch}
+              {borrower.phone} - {borrower.branch}
             </p>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-700">
