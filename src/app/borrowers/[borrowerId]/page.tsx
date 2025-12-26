@@ -1,11 +1,13 @@
 import { notFound } from "next/navigation";
 
 import Sidebar from "@/components/navigation/Sidebar";
-import LocationTab from "@/components/borrowers/LocationTab";
+import BorrowerProfileTabs from "@/components/borrowers/BorrowerProfileTabs";
 import { getBorrowerSummaryById } from "@/shared/services/borrowerService";
 import { getLocationObservations } from "@/shared/services/locationService";
 import { getAppConfigConstants } from "@/shared/services/appConfigService";
 import { refreshBorrowerLocationSummary } from "@/shared/services/locationSummaryService";
+import { getBorrowerApplications } from "@/shared/services/applicationService";
+import { getBorrowerLoans } from "@/shared/services/loanService";
 
 interface BorrowerProfilePageProps {
   params: Promise<{
@@ -22,13 +24,20 @@ export default async function BorrowerProfilePage({ params }: BorrowerProfilePag
   const borrowerPromise = getBorrowerSummaryById(borrowerId);
   const observationsPromise = getLocationObservations(borrowerId, 30);
   const appConfigPromise = getAppConfigConstants();
+  const applicationsPromise = getBorrowerApplications(borrowerId, 20);
+  const loansPromise = getBorrowerLoans(borrowerId, 50);
 
   const borrower = await borrowerPromise;
   if (!borrower) {
     notFound();
   }
 
-  const [observations, appConfig] = await Promise.all([observationsPromise, appConfigPromise]);
+  const [observations, appConfig, applications, loans] = await Promise.all([
+    observationsPromise,
+    appConfigPromise,
+    applicationsPromise,
+    loansPromise
+  ]);
   const derivedSummary = await refreshBorrowerLocationSummary(borrowerId, observations, appConfig);
 
   const mergedBorrower = derivedSummary
@@ -74,11 +83,13 @@ export default async function BorrowerProfilePage({ params }: BorrowerProfilePag
             </div>
           </section>
 
-          <LocationTab
+          <BorrowerProfileTabs
             borrower={mergedBorrower}
             observations={observations}
             topSourcesCount={topSourcesCount}
             topAreaLocation={topAreaLocation}
+            applications={applications}
+            loans={loans}
           />
         </main>
       </div>
