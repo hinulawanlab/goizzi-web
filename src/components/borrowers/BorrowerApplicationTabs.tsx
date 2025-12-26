@@ -2,8 +2,10 @@
 
 import { useMemo, useState } from "react";
 
+import BorrowerProofOfBillingPanel from "@/components/borrowers/BorrowerProofOfBillingPanel";
 import type { BorrowerSummary } from "@/shared/types/dashboard";
 import type { BorrowerReference, ReferenceContactStatus } from "@/shared/types/borrowerReference";
+import type { BorrowerProofOfBillingKyc } from "@/shared/types/kyc";
 import type { LoanApplication } from "@/shared/types/loanApplication";
 
 type TabKey = "maker" | "comakers" | "references" | "proof" | "documents";
@@ -13,6 +15,7 @@ interface BorrowerApplicationTabsProps {
   borrower: BorrowerSummary;
   application: LoanApplication;
   references: BorrowerReference[];
+  proofOfBillingKycs: BorrowerProofOfBillingKyc[];
 }
 
 const tabs: { key: TabKey; label: string }[] = [
@@ -86,7 +89,8 @@ function DetailRow({ label, value }: { label: string; value?: string | boolean }
 export default function BorrowerApplicationTabs({
   borrower,
   application,
-  references
+  references,
+  proofOfBillingKycs
 }: BorrowerApplicationTabsProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("maker");
   const [statusOverrides, setStatusOverrides] = useState<Record<string, ReferenceContactStatus>>({});
@@ -155,10 +159,6 @@ export default function BorrowerApplicationTabs({
             <p className="text-sm text-slate-500">
               Review maker details, co-maker information, references, proof of billing, and loan documents.
             </p>
-          </div>
-          <div className="text-sm text-slate-500">
-            <p className="font-semibold text-slate-900">{tabs.length} tabs</p>
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Grouped records</p>
           </div>
         </div>
 
@@ -352,15 +352,7 @@ export default function BorrowerApplicationTabs({
       )}
 
       {activeTab === "proof" && (
-        <div className="grid gap-4 md:grid-cols-2">
-          {placeholderCards.map((group) => (
-            <div key={group.title} className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{group.title}</p>
-              <p className="mt-3 text-sm text-slate-600">{group.description}</p>
-              <p className="mt-2 text-xs text-slate-400">Logic will be added in a later iteration.</p>
-            </div>
-          ))}
-        </div>
+        <BorrowerProofOfBillingPanel borrowerId={borrower.borrowerId} kycs={proofOfBillingKycs} />
       )}
     </div>
   );

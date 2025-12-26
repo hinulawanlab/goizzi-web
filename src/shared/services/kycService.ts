@@ -1,7 +1,8 @@
 import type { DocumentSnapshot } from "firebase-admin/firestore";
 
 import { db, hasAdminCredentials } from "@/shared/singletons/firebaseAdmin";
-import type { BorrowerGovernmentIdKyc } from "@/shared/types/kyc";
+import { demoBorrowerProofOfBillingKycs } from "@/shared/data/demoBorrowerProofOfBillingKycs";
+import type { BorrowerGovernmentIdKyc, BorrowerProofOfBillingKyc } from "@/shared/types/kyc";
 
 function formatTimestamp(value: unknown): string | undefined {
   if (!value) {
@@ -112,6 +113,27 @@ function mapSelfieDoc(doc: DocumentSnapshot, borrowerId: string): BorrowerGovern
   };
 }
 
+function mapProofOfBillingDoc(doc: DocumentSnapshot, borrowerId: string): BorrowerProofOfBillingKyc | null {
+  const data = doc.data() || {};
+  const normalizedRefs = normalizeStorageRefs(data.storageRefs);
+  const primaryRef = normalizeStorageRef(data.storageRef);
+  const storageRefs = primaryRef ? [primaryRef, ...normalizedRefs] : normalizedRefs;
+
+  return {
+    borrowerId,
+    kycId: doc.id,
+    documentType: typeof data.documentType === "string" ? data.documentType : undefined,
+    storageRefs,
+    isApproved:
+      typeof data.isApproved === "boolean"
+        ? data.isApproved
+        : typeof data.isApprove === "boolean"
+          ? data.isApprove
+          : undefined,
+    createdAt: formatTimestamp(data.createdAt)
+  };
+}
+
 async function fetchGovernmentIdKyc(borrowerId: string): Promise<BorrowerGovernmentIdKyc | null> {
   if (!db) {
     throw new Error("Firestore Admin client is not initialized.");
@@ -175,6 +197,27 @@ async function fetchSelfieKycs(borrowerId: string, limit = 10): Promise<Borrower
   return snapshot.docs.map((doc) => mapSelfieDoc(doc, borrowerId)).filter(Boolean) as BorrowerGovernmentIdKyc[];
 }
 
+async function fetchProofOfBillingKycs(borrowerId: string, limit = 10): Promise<BorrowerProofOfBillingKyc[]> {
+  if (!db) {
+    throw new Error("Firestore Admin client is not initialized.");
+  }
+
+  const snapshot = await db
+    .collection("borrowers")
+    .doc(borrowerId)
+    .collection("kyc")
+    .where("type", "==", "proofOfBilling")
+    .orderBy("createdAt", "desc")
+    .limit(limit)
+    .get();
+
+  if (snapshot.empty) {
+    return [];
+  }
+
+  return snapshot.docs.map((doc) => mapProofOfBillingDoc(doc, borrowerId)).filter(Boolean) as BorrowerProofOfBillingKyc[];
+}
+
 export async function getBorrowerGovernmentIdKyc(borrowerId: string): Promise<BorrowerGovernmentIdKyc | null> {
   if (!borrowerId) {
     return null;
@@ -221,6 +264,24 @@ export async function getBorrowerSelfieKycs(borrowerId: string, limit = 10): Pro
   }
 
   return [];
+}
+
+export async function getBorrowerProofOfBillingKycs(
+  borrowerId: string,
+  limit = 10
+): Promise<BorrowerProofOfBillingKyc[]> {
+  if (!borrowerId) {
+    return [];
+  }
+  if (hasAdminCredentials()) {
+    try {
+      return await fetchProofOfBillingKycs(borrowerId, limit);
+    } catch (error) {
+      console.warn(`Unable to fetch proof of billing KYC list for ${borrowerId}:`, error);
+    }
+  }
+
+  return demoBorrowerProofOfBillingKycs[borrowerId] ?? [];
 }
 
 export async function setBorrowerGovernmentIdApproval(

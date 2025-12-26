@@ -9,3 +9,12 @@ export interface BorrowerGovernmentIdKyc {
   isApproved?: boolean;
   createdAt?: string;
 }
+
+export interface BorrowerProofOfBillingKyc {
+  borrowerId: string;
+  kycId: string;
+  documentType?: string;
+  storageRefs: string[];
+  isApproved?: boolean;
+  createdAt?: string;
+}

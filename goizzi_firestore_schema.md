@@ -94,11 +94,13 @@ Small, fast “profile header” document. Keep PII-heavy KYC in a subcollection
 
 ### `/borrowers/{borrowerId}/kyc/{docId}`
 **Fields**
-- `type: string` (e.g., `governmentId|proofOfAddress|selfie`)
+- `type: string` (e.g., `governmentId|proofOfAddress|proofOfBilling|selfie`)
 - `idNumber: string?` (consider encryption/tokenization later)
 - `issuer: string?`
 - `expiryDate: timestamp?`
 - `storageRefs: array` (Cloud Storage paths/URLs; keep small)
+- `documentType: string?` (used for proof of billing)
+- `isApproved: boolean?`
 - `verifiedAt: timestamp?`
 - `verifiedByUserId: string?`
 - `createdAt: timestamp`
