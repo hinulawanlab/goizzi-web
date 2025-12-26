@@ -32,11 +32,11 @@ export default async function BranchesPage() {
           </section> */}
 
           <BranchDirectory branches={branches} />
-
+{/* 
           <section className="grid gap-5 lg:grid-cols-2">
             <QueueSection title="Branch KYC queues" items={kycQueue} badgeLabel="Preview" />
             <QueueSection title="Branch location queues" items={locationQueue} badgeLabel="Preview" />
-          </section>
+          </section> */}
         </main>
       </div>
     </div>

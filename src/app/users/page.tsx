@@ -34,10 +34,10 @@ export default async function UsersPage() {
 
           <UserDirectory users={users} />
 
-          <section className="grid gap-5 lg:grid-cols-2">
+          {/* <section className="grid gap-5 lg:grid-cols-2">
             <QueueSection title="Governance queues" items={kycQueue} />
             <QueueSection title="Location &amp; monitoring" items={locationQueue} />
-          </section>
+          </section> */}
         </main>
       </div>
     </div>
