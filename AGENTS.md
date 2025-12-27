@@ -45,6 +45,7 @@ Check
 Act
 -After each development session, perform a short retrospective to refine workflow alignment with developer-profile.md.
 -If new patterns or preferences emerge from the user, append or update them in the developer profile to keep the project guidelines accurate and current.
+-make sure to update firebase_storage_rules.md and firebase_database_rules.md (add versioning at the bottom with date [lastUpdate])
 
 Explain
 -Provide a simple summary of what was done using clear, 10th-grade-level explanation and highlight key points.
