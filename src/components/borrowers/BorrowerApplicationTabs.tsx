@@ -131,6 +131,7 @@ export default function BorrowerApplicationTabs({
       <div className="pl-4 flex flex-col gap-6 lg:h-[calc(100vh-4rem)]">
         <BorrowerApplicationHeaderSection
           activeTab={activeTab}
+          loanStatus={auditStatus}
           onTabChange={setActiveTab}
           onRefresh={handleRefresh}
           isRefreshing={isRefreshing}

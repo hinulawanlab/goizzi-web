@@ -2,11 +2,13 @@
 
 import { RefreshCw } from "lucide-react";
 
+import LoanStatusBadge from "@/components/borrowers/LoanStatusBadge";
 import type { TabKey } from "@/components/borrowers/borrowerApplicationTypes";
 import { tabs } from "@/components/borrowers/borrowerApplicationTypes";
 
 interface BorrowerApplicationHeaderSectionProps {
   activeTab: TabKey;
+  loanStatus: string;
   onTabChange: (tab: TabKey) => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
@@ -14,27 +16,13 @@ interface BorrowerApplicationHeaderSectionProps {
 
 export default function BorrowerApplicationHeaderSection({
   activeTab,
+  loanStatus,
   onTabChange,
   onRefresh,
   isRefreshing = false
 }: BorrowerApplicationHeaderSectionProps) {
   return (
-    <section className="relative rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
-      <div className="absolute right-4 top-4">
-        <button
-          type="button"
-          onClick={onRefresh}
-          disabled={isRefreshing || !onRefresh}
-          className={`inline-flex items-center justify-center rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-            isRefreshing || !onRefresh
-              ? "cursor-not-allowed border-slate-200 text-slate-300"
-              : "cursor-pointer border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-900"
-          }`}
-        >
-          <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} aria-hidden />
-          <span className="sr-only">Refresh tab data</span>
-        </button>
-      </div>
+    <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.4em] text-slate-400">Application details</p>
@@ -42,6 +30,25 @@ export default function BorrowerApplicationHeaderSection({
           <p className="text-sm text-slate-500">
             Review maker details, co-maker information, references, proof of billing, and loan documents.
           </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3 rounded-full border border-slate-100 bg-slate-50 px-4 py-2 text-xs uppercase tracking-[0.3em] text-slate-500">
+            <span>Loan status</span>
+            <LoanStatusBadge status={loanStatus} />
+          </div>
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={isRefreshing || !onRefresh}
+            className={`inline-flex items-center justify-center rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+              isRefreshing || !onRefresh
+                ? "cursor-not-allowed border-slate-200 text-slate-300"
+                : "cursor-pointer border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-900"
+            }`}
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} aria-hidden />
+            <span className="sr-only">Refresh tab data</span>
+          </button>
         </div>
       </div>
 

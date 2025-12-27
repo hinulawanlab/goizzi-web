@@ -370,10 +370,9 @@ export default function BorrowerApplicationTabSection({
         <div className="rounded-3xl border border-slate-100 bg-slate-50 p-6">
           <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Audit</p>
           <div className="mt-4 grid gap-3">
-            <DetailRow label="Submitted" value={formatDate(application.submittedAt)} />
-            <DetailRow label="Updated" value={formatDate(auditUpdatedAt)} />
             <DetailRow label="Loan status" value={auditStatus} />
             <DetailRow label="Status updated by" value={statusUpdatedByName} />
+            <DetailRow label="Date of application" value={formatDate(application.submittedAt)} />
           </div>
           <div className="mt-6">
             <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Notes</p>

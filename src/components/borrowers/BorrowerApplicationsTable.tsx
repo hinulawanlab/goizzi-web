@@ -1,5 +1,6 @@
 "use client";
 
+import LoanStatusBadge from "@/components/borrowers/LoanStatusBadge";
 import type { LoanApplication } from "@/shared/types/loanApplication";
 
 interface BorrowerApplicationsTableProps {
@@ -31,26 +32,6 @@ function formatAmount(value?: string) {
     return value;
   }
   return parsed.toLocaleString("en-US");
-}
-
-function getStatusClass(status: string) {
-  const normalized = status.trim().toLowerCase();
-  switch (normalized) {
-    case "submitted":
-      return "bg-amber-100 text-amber-700";
-    case "approved":
-      return "bg-emerald-100 text-emerald-700";
-    case "reviewed":
-      return "bg-sky-100 text-sky-700";
-    case "completed":
-      return "bg-slate-200 text-slate-700";
-    case "reject":
-    case "rejected":
-      return "bg-rose-100 text-rose-700";
-    case "draft":
-    default:
-      return "bg-slate-100 text-slate-600";
-  }
 }
 
 export default function BorrowerApplicationsTable({
@@ -106,13 +87,7 @@ export default function BorrowerApplicationsTable({
                   {formatAmount(application.loanDetails?.amountApplied)}
                 </td>
                 <td className="px-3 py-4">
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${getStatusClass(
-                      application.status
-                    )}`}
-                  >
-                    {application.status}
-                  </span>
+                  <LoanStatusBadge status={application.status} />
                 </td>
                 <td className="px-3 py-4 text-slate-700">
                   {formatDate(application.submittedAt ?? application.createdAt)}
