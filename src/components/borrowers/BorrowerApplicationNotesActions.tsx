@@ -74,7 +74,7 @@ export default function BorrowerApplicationNotesActions({
         </div>
 
         <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-          <p className="text-sm uppercase tracking-[0.2em] text-black/90">Application status</p>
+          <p className="text-sm uppercase tracking-[0.2em] text-black/90">Available actions</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {loanActions.map((action) => {
               const isWorking = statusActionState === "working";

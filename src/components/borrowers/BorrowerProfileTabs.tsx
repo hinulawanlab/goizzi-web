@@ -58,7 +58,7 @@ export default function BorrowerProfileTabs({
     () =>
       applications.filter((application) => {
         const normalized = application.status.trim().toLowerCase();
-        return ["reviewed", "approved", "completed", "reject", "rejected"].includes(normalized);
+        return ["reviewed", "approve", "completed", "reject", "rejected"].includes(normalized);
       }),
     [applications]
   );

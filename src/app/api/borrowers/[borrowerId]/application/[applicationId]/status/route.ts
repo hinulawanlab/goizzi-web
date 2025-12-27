@@ -12,7 +12,7 @@ interface StatusPayload {
   actorUserId?: string;
 }
 
-const validStatuses: ApplicationStatusAction[] = ["Reject", "Reviewed", "Approved", "Completed"];
+const validStatuses: ApplicationStatusAction[] = ["Reject", "Reviewed", "Approve", "Completed"];
 
 export async function POST(
   request: NextRequest,

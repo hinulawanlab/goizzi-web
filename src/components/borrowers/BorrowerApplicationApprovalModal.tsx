@@ -1,3 +1,4 @@
+// src/components/borrowers/BorrowerApplicationApprovalModal.tsx
 "use client";
 
 import { useState } from "react";

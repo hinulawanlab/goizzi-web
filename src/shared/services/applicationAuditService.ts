@@ -3,7 +3,7 @@ import type { BorrowerNote } from "@/shared/types/borrowerNote";
 import { buildBorrowerNoteData, sanitizeNote } from "@/shared/services/borrowerNoteUtils";
 import { resolveActorName } from "@/shared/services/actorNameResolver";
 
-const validStatuses = ["Reject", "Reviewed", "Approved", "Completed"] as const;
+const validStatuses = ["Reject", "Reviewed", "Approve", "Completed"] as const;
 
 export type ApplicationStatusAction = (typeof validStatuses)[number];
 

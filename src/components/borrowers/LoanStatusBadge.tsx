@@ -10,7 +10,7 @@ function getStatusClass(status: string) {
   switch (normalized) {
     case "submitted":
       return "bg-amber-100 text-amber-700";
-    case "approved":
+    case "approve":
       return "bg-emerald-100 text-emerald-700";
     case "reviewed":
       return "bg-sky-100 text-sky-700";

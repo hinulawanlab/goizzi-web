@@ -22,5 +22,5 @@ export const tabs: { key: TabKey; label: string }[] = [
   { key: "audit", label: "Audit" }
 ];
 
-export const loanActions = ["Reject", "Reviewed", "Approved", "Completed"] as const;
+export const loanActions = ["Reject", "Reviewed", "Approve", "Completed"] as const;
 export type LoanAction = (typeof loanActions)[number];
