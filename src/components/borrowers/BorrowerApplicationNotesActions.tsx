@@ -26,7 +26,7 @@ export default function BorrowerApplicationNotesActions({
   onStatusChange
 }: BorrowerApplicationNotesActionsProps) {
   return (
-    <div className="flex h-full flex-col rounded-3xl border border-slate-100 bg-black/70 p-6 shadow-sm">
+    <div className="flex h-full flex-col rounded-3xl bg-linear-to-b from-slate-950/90 to-slate-900/60 p-6 shadow-glow ring-1 ring-white/20 backdrop-blur-lg">
       <p className="font-semibold text-md uppercase tracking-[0.3em] text-white">Notes & actions</p>
       <div className="mt-4 flex flex-1 flex-col gap-4">
         <div className="flex flex-1 flex-col">
