@@ -1,0 +1,15 @@
+"use client";
+
+import { render, screen } from "@testing-library/react";
+
+import BorrowerApplicationHeaderSection from "@/components/borrowers/BorrowerApplicationHeaderSection";
+
+describe("BorrowerApplicationHeaderSection", () => {
+  it("renders the header and tabs", () => {
+    render(<BorrowerApplicationHeaderSection activeTab="maker" onTabChange={() => undefined} />);
+
+    expect(screen.getByText("Application details")).toBeInTheDocument();
+    expect(screen.getByText("Maker's details")).toBeInTheDocument();
+    expect(screen.getByText("Audit")).toBeInTheDocument();
+  });
+});
