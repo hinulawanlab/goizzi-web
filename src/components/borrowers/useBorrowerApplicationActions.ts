@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { auth } from "@/shared/singletons/firebase";
 import type { BorrowerNote } from "@/shared/types/borrowerNote";
@@ -42,6 +42,16 @@ export function useBorrowerApplicationActions({
   const [noteActionMessage, setNoteActionMessage] = useState("");
   const [statusActionState, setStatusActionState] = useState<ActionState>("idle");
   const [statusActionMessage, setStatusActionMessage] = useState("");
+
+  useEffect(() => {
+    setAuditStatus(initialStatus);
+    setAuditUpdatedAt(initialUpdatedAt);
+    setStatusUpdatedByName(initialStatusUpdatedByName);
+  }, [initialStatus, initialUpdatedAt, initialStatusUpdatedByName]);
+
+  useEffect(() => {
+    setNoteEntries(initialNotes);
+  }, [initialNotes]);
 
   const getActorProfile = (): ActorProfile => {
     const currentUser = auth.currentUser;
