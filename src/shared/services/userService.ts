@@ -4,6 +4,14 @@ import { db, hasAdminCredentials } from "@/shared/singletons/firebaseAdmin";
 import { demoUsers } from "@/shared/data/demoUsers";
 import type { UserRole, UserStatus, UserSummary } from "@/shared/types/user";
 
+function normalizeDisplayName(value: unknown): string | undefined {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length ? trimmed : undefined;
+  }
+  return undefined;
+}
+
 function normalizeRole(role: unknown): UserRole {
   const validRoles: UserRole[] = ["admin", "encoder", "manager", "auditor"];
   return typeof role === "string" && validRoles.includes(role as UserRole) ? (role as UserRole) : "encoder";
@@ -45,10 +53,11 @@ function formatDate(value: unknown): string {
 function mapUserDoc(doc: DocumentSnapshot): UserSummary {
   const data = doc.data() || {};
   const branchId = typeof data.branchId === "string" ? data.branchId : undefined;
+  const displayName = normalizeDisplayName(data.displayName);
 
   return {
     userId: doc.id,
-    displayName: data.displayName || "Unknown staff",
+    displayName: displayName ?? "Unknown staff",
     email: data.email || "unknown@goizzi.com",
     phone: data.phone,
     role: normalizeRole(data.role),
@@ -90,4 +99,56 @@ export async function getUserSummaries(limit = 30): Promise<UserSummary[]> {
   }
 
   return demoUsers;
+}
+
+export async function getUserDisplayNamesByIds(userIds: string[]): Promise<Record<string, string>> {
+  const uniqueIds = Array.from(new Set(userIds.filter((userId) => typeof userId === "string" && userId.trim().length)));
+  if (!uniqueIds.length) {
+    return {};
+  }
+
+  if (hasAdminCredentials()) {
+    const firestore = db;
+    if (!firestore) {
+      return {};
+    }
+
+    try {
+      const refs = uniqueIds.map((userId) => firestore.collection("users").doc(userId));
+      const snapshots = await firestore.getAll(...refs);
+      const result: Record<string, string> = {};
+
+      snapshots.forEach((doc, index) => {
+        if (!doc.exists) {
+          return;
+        }
+        const displayName = normalizeDisplayName(doc.data()?.displayName);
+        if (displayName) {
+          result[uniqueIds[index]] = displayName;
+        }
+      });
+
+      return result;
+    } catch (error) {
+      console.warn("Unable to fetch user names from Firestore:", error);
+    }
+  }
+
+  const result: Record<string, string> = {};
+  const demoLookup = new Map(demoUsers.map((user) => [user.userId, user.displayName]));
+  uniqueIds.forEach((userId) => {
+    const displayName = demoLookup.get(userId);
+    if (displayName) {
+      result[userId] = displayName;
+    }
+  });
+  return result;
+}
+
+export async function getUserDisplayNameById(userId?: string): Promise<string | undefined> {
+  if (!userId) {
+    return undefined;
+  }
+  const names = await getUserDisplayNamesByIds([userId]);
+  return names[userId];
 }

@@ -1,6 +1,7 @@
 import { db } from "@/shared/singletons/firebaseAdmin";
 import type { BorrowerNote } from "@/shared/types/borrowerNote";
-import { buildBorrowerNoteData, sanitizeName, sanitizeNote } from "@/shared/services/borrowerNoteUtils";
+import { buildBorrowerNoteData, sanitizeNote } from "@/shared/services/borrowerNoteUtils";
+import { resolveActorName } from "@/shared/services/actorNameResolver";
 
 const validStatuses = ["Reject", "Reviewed", "Approved", "Completed"] as const;
 
@@ -36,6 +37,7 @@ export async function addBorrowerApplicationNote(input: NoteInput): Promise<Borr
   }
 
   const createdAt = new Date().toISOString();
+  const actorName = await resolveActorName(input.createdByUserId, input.createdByName);
   const noteRef = db.collection("borrowers").doc(input.borrowerId).collection("notes").doc();
   const applicationRef = db
     .collection("borrowers")
@@ -48,7 +50,7 @@ export async function addBorrowerApplicationNote(input: NoteInput): Promise<Borr
     applicationId: input.applicationId,
     note: trimmedNote,
     createdAt,
-    createdByName: input.createdByName,
+    createdByName: actorName,
     createdByUserId: input.createdByUserId
   });
 
@@ -80,7 +82,7 @@ export async function setBorrowerApplicationStatusWithNote(
   }
 
   const createdAt = new Date().toISOString();
-  const actorName = sanitizeName(input.actorName);
+  const actorName = await resolveActorName(input.actorUserId, input.actorName);
   const noteText = `Status set to ${input.status}.`;
 
   const noteRef = db.collection("borrowers").doc(input.borrowerId).collection("notes").doc();

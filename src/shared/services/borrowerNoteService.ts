@@ -3,6 +3,7 @@ import type { DocumentSnapshot } from "firebase-admin/firestore";
 import { db, hasAdminCredentials } from "@/shared/singletons/firebaseAdmin";
 import { demoBorrowerNotes } from "@/shared/data/demoBorrowerNotes";
 import type { BorrowerNote } from "@/shared/types/borrowerNote";
+import { getUserDisplayNamesByIds } from "@/shared/services/userService";
 
 function formatTimestamp(value: unknown): string {
   if (!value) {
@@ -65,6 +66,36 @@ function mapNoteDoc(doc: DocumentSnapshot): BorrowerNote {
   };
 }
 
+async function hydrateNoteAuthors(notes: BorrowerNote[]): Promise<BorrowerNote[]> {
+  const missingIds = Array.from(
+    new Set(
+      notes
+        .filter((note) => !note.createdByName && note.createdByUserId)
+        .map((note) => note.createdByUserId as string)
+    )
+  );
+
+  if (!missingIds.length) {
+    return notes;
+  }
+
+  const nameMap = await getUserDisplayNamesByIds(missingIds);
+  if (!Object.keys(nameMap).length) {
+    return notes;
+  }
+
+  return notes.map((note) => {
+    if (note.createdByName || !note.createdByUserId) {
+      return note;
+    }
+    const resolvedName = nameMap[note.createdByUserId];
+    if (!resolvedName) {
+      return note;
+    }
+    return { ...note, createdByName: resolvedName };
+  });
+}
+
 async function fetchBorrowerNotesFromFirestore(borrowerId: string, applicationId: string): Promise<BorrowerNote[]> {
   if (!db) {
     throw new Error("Firestore Admin client is not initialized.");
@@ -95,7 +126,8 @@ export async function getBorrowerNotesByApplication(
 
   if (hasAdminCredentials()) {
     try {
-      return await fetchBorrowerNotesFromFirestore(borrowerId, applicationId);
+      const notes = await fetchBorrowerNotesFromFirestore(borrowerId, applicationId);
+      return await hydrateNoteAuthors(notes);
     } catch (error) {
       console.warn(`Unable to fetch notes for ${borrowerId} ${applicationId}:`, error);
     }

@@ -1,6 +1,7 @@
 import { db } from "@/shared/singletons/firebaseAdmin";
 import type { BorrowerNote } from "@/shared/types/borrowerNote";
-import { buildBorrowerNoteData, sanitizeName } from "@/shared/services/borrowerNoteUtils";
+import { buildBorrowerNoteData } from "@/shared/services/borrowerNoteUtils";
+import { resolveActorName } from "@/shared/services/actorNameResolver";
 
 const decisionNotes = {
   approve: "Proof of billing approved.",
@@ -45,7 +46,7 @@ export async function setBorrowerKycDecisionWithNote(input: KycDecisionInput): P
   }
 
   const createdAt = new Date().toISOString();
-  const actorName = sanitizeName(input.actorName);
+  const actorName = await resolveActorName(input.actorUserId, input.actorName);
   const noteText = decisionNotes[input.action];
 
   const noteRef = db.collection("borrowers").doc(input.borrowerId).collection("notes").doc();
