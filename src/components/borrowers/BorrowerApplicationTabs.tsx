@@ -12,7 +12,13 @@ import type { TabKey } from "@/components/borrowers/borrowerApplicationTypes";
 import { auth } from "@/shared/singletons/firebase";
 import type { BorrowerSummary } from "@/shared/types/dashboard";
 import type { BorrowerReference } from "@/shared/types/borrowerReference";
-import type { BorrowerProofOfBillingKyc } from "@/shared/types/kyc";
+import type {
+  BorrowerBankStatementKyc,
+  BorrowerOtherKyc,
+  BorrowerPayslipKyc,
+  BorrowerProofOfBillingKyc,
+  BorrowerPropertyTitleKyc
+} from "@/shared/types/kyc";
 import type { LoanApplication } from "@/shared/types/loanApplication";
 import type { BorrowerNote } from "@/shared/types/borrowerNote";
 
@@ -21,6 +27,10 @@ interface BorrowerApplicationTabsProps {
   application: LoanApplication;
   references: BorrowerReference[];
   proofOfBillingKycs: BorrowerProofOfBillingKyc[];
+  bankStatementKycs: BorrowerBankStatementKyc[];
+  payslipKycs: BorrowerPayslipKyc[];
+  propertyTitleKycs: BorrowerPropertyTitleKyc[];
+  otherKycs: BorrowerOtherKyc[];
   notes: BorrowerNote[];
 }
 
@@ -29,6 +39,10 @@ export default function BorrowerApplicationTabs({
   application,
   references,
   proofOfBillingKycs,
+  bankStatementKycs,
+  payslipKycs,
+  propertyTitleKycs,
+  otherKycs,
   notes
 }: BorrowerApplicationTabsProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("maker");
@@ -96,10 +110,14 @@ export default function BorrowerApplicationTabs({
           <BorrowerApplicationTabSection
             activeTab={activeTab}
             borrower={borrower}
-            application={application}
-            references={references}
-            proofOfBillingKycs={proofOfBillingKycs}
-            auditStatus={auditStatus}
+          application={application}
+          references={references}
+          proofOfBillingKycs={proofOfBillingKycs}
+          bankStatementKycs={bankStatementKycs}
+          payslipKycs={payslipKycs}
+          propertyTitleKycs={propertyTitleKycs}
+          otherKycs={otherKycs}
+          auditStatus={auditStatus}
             auditUpdatedAt={auditUpdatedAt}
             statusUpdatedByName={statusUpdatedByName}
             noteEntries={noteEntries}

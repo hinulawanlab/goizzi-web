@@ -2,31 +2,31 @@
 
 import BorrowerKycDocumentPanel from "@/components/borrowers/BorrowerKycDocumentPanel";
 import type { BorrowerNote } from "@/shared/types/borrowerNote";
-import type { BorrowerProofOfBillingKyc } from "@/shared/types/kyc";
+import type { BorrowerPropertyTitleKyc } from "@/shared/types/kyc";
 
-interface BorrowerProofOfBillingPanelProps {
+interface BorrowerPropertyTitlePanelProps {
   borrowerId: string;
   applicationId: string;
-  kycs: BorrowerProofOfBillingKyc[];
+  kycs: BorrowerPropertyTitleKyc[];
   onDecisionNoteAdded?: (note: BorrowerNote) => void;
 }
 
-export default function BorrowerProofOfBillingPanel({
+export default function BorrowerPropertyTitlePanel({
   borrowerId,
   applicationId,
   kycs,
   onDecisionNoteAdded
-}: BorrowerProofOfBillingPanelProps) {
+}: BorrowerPropertyTitlePanelProps) {
   return (
     <BorrowerKycDocumentPanel
       borrowerId={borrowerId}
       applicationId={applicationId}
-      title="Proof of billing"
-      sectionLabel="Proof of billing"
-      decisionLabel="Proof of billing"
-      emptyTitle="No proof of billing yet"
-      emptyMessage="Proof of billing submissions will appear once uploaded."
-      contextLabel="Proof of billing image"
+      title="Property titles"
+      sectionLabel="Property title"
+      decisionLabel="Property titles"
+      emptyTitle="No property titles yet"
+      emptyMessage="Property title uploads will appear once submitted."
+      contextLabel="Property title image"
       kycs={kycs}
       onDecisionNoteAdded={onDecisionNoteAdded}
     />

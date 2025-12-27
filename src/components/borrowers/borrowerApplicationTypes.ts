@@ -1,4 +1,13 @@
-export type TabKey = "maker" | "comakers" | "references" | "proof" | "documents" | "audit";
+export type TabKey =
+  | "maker"
+  | "comakers"
+  | "references"
+  | "proof"
+  | "bankStatements"
+  | "payslips"
+  | "propertyTitles"
+  | "otherDocuments"
+  | "audit";
 export type ActionState = "idle" | "working" | "success" | "error";
 
 export const tabs: { key: TabKey; label: string }[] = [
@@ -6,7 +15,10 @@ export const tabs: { key: TabKey; label: string }[] = [
   { key: "comakers", label: "Co-makers" },
   { key: "references", label: "References" },
   { key: "proof", label: "Proof of billing" },
-  { key: "documents", label: "Loan documents" },
+  { key: "bankStatements", label: "Bank statements" },
+  { key: "payslips", label: "Payslips" },
+  { key: "propertyTitles", label: "Property titles" },
+  { key: "otherDocuments", label: "Others" },
   { key: "audit", label: "Audit" }
 ];
 

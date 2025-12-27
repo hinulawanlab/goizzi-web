@@ -2,32 +2,33 @@
 
 import BorrowerKycDocumentPanel from "@/components/borrowers/BorrowerKycDocumentPanel";
 import type { BorrowerNote } from "@/shared/types/borrowerNote";
-import type { BorrowerProofOfBillingKyc } from "@/shared/types/kyc";
+import type { BorrowerPayslipKyc } from "@/shared/types/kyc";
 
-interface BorrowerProofOfBillingPanelProps {
+interface BorrowerPayslipPanelProps {
   borrowerId: string;
   applicationId: string;
-  kycs: BorrowerProofOfBillingKyc[];
+  kycs: BorrowerPayslipKyc[];
   onDecisionNoteAdded?: (note: BorrowerNote) => void;
 }
 
-export default function BorrowerProofOfBillingPanel({
+export default function BorrowerPayslipPanel({
   borrowerId,
   applicationId,
   kycs,
   onDecisionNoteAdded
-}: BorrowerProofOfBillingPanelProps) {
+}: BorrowerPayslipPanelProps) {
   return (
     <BorrowerKycDocumentPanel
       borrowerId={borrowerId}
       applicationId={applicationId}
-      title="Proof of billing"
-      sectionLabel="Proof of billing"
-      decisionLabel="Proof of billing"
-      emptyTitle="No proof of billing yet"
-      emptyMessage="Proof of billing submissions will appear once uploaded."
-      contextLabel="Proof of billing image"
+      title="Payslips"
+      sectionLabel="Payslip"
+      decisionLabel="Payslips"
+      emptyTitle="No payslips yet"
+      emptyMessage="Payslip uploads will appear once submitted."
+      contextLabel="Payslip image"
       kycs={kycs}
+      metadataFields={[{ label: "Employer", value: (entry) => entry.employer }]}
       onDecisionNoteAdded={onDecisionNoteAdded}
     />
   );

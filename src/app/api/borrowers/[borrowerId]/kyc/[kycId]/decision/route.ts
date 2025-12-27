@@ -6,6 +6,7 @@ import { setBorrowerKycDecisionWithNote, type KycDecisionAction } from "@/shared
 interface DecisionPayload {
   applicationId?: string;
   action?: KycDecisionAction;
+  documentType?: string;
   actorName?: string;
   actorUserId?: string;
 }
@@ -43,6 +44,7 @@ export async function POST(
       applicationId: payload.applicationId,
       kycId,
       action: payload.action,
+      documentType: payload.documentType,
       actorName: payload.actorName,
       actorUserId: payload.actorUserId
     });

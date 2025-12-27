@@ -2,11 +2,21 @@
 
 import { useMemo, useState } from "react";
 
+import BorrowerBankStatementPanel from "@/components/borrowers/BorrowerBankStatementPanel";
+import BorrowerOtherDocumentPanel from "@/components/borrowers/BorrowerOtherDocumentPanel";
+import BorrowerPayslipPanel from "@/components/borrowers/BorrowerPayslipPanel";
+import BorrowerPropertyTitlePanel from "@/components/borrowers/BorrowerPropertyTitlePanel";
 import BorrowerProofOfBillingPanel from "@/components/borrowers/BorrowerProofOfBillingPanel";
 import type { TabKey } from "@/components/borrowers/borrowerApplicationTypes";
 import type { BorrowerSummary } from "@/shared/types/dashboard";
 import type { BorrowerReference, ReferenceContactStatus } from "@/shared/types/borrowerReference";
-import type { BorrowerProofOfBillingKyc } from "@/shared/types/kyc";
+import type {
+  BorrowerBankStatementKyc,
+  BorrowerOtherKyc,
+  BorrowerPayslipKyc,
+  BorrowerProofOfBillingKyc,
+  BorrowerPropertyTitleKyc
+} from "@/shared/types/kyc";
 import type { LoanApplication } from "@/shared/types/loanApplication";
 import type { BorrowerNote } from "@/shared/types/borrowerNote";
 
@@ -18,19 +28,16 @@ interface BorrowerApplicationTabSectionProps {
   application: LoanApplication;
   references: BorrowerReference[];
   proofOfBillingKycs: BorrowerProofOfBillingKyc[];
+  bankStatementKycs: BorrowerBankStatementKyc[];
+  payslipKycs: BorrowerPayslipKyc[];
+  propertyTitleKycs: BorrowerPropertyTitleKyc[];
+  otherKycs: BorrowerOtherKyc[];
   auditStatus: string;
   auditUpdatedAt?: string;
   statusUpdatedByName?: string;
   noteEntries: BorrowerNote[];
   onDecisionNoteAdded: (note: BorrowerNote) => void;
 }
-
-const documentGroups = [
-  { title: "Bank statements", description: "Placeholder for bank statement uploads." },
-  { title: "Payslips", description: "Placeholder for payslip uploads." },
-  { title: "Property titles", description: "Placeholder for property title uploads." },
-  { title: "Others", description: "Placeholder for other supporting documents." }
-];
 
 const contactStatusLabels: Record<ReferenceContactStatus, string> = {
   pending: "Pending outreach",
@@ -87,6 +94,10 @@ export default function BorrowerApplicationTabSection({
   application,
   references,
   proofOfBillingKycs,
+  bankStatementKycs,
+  payslipKycs,
+  propertyTitleKycs,
+  otherKycs,
   auditStatus,
   auditUpdatedAt,
   statusUpdatedByName,
@@ -236,16 +247,40 @@ export default function BorrowerApplicationTabSection({
         </div>
       )}
 
-      {activeTab === "documents" && (
-        <div className="grid gap-4 md:grid-cols-2">
-          {documentGroups.map((group) => (
-            <div key={group.title} className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{group.title}</p>
-              <p className="mt-3 text-sm text-slate-600">{group.description}</p>
-              <p className="mt-2 text-xs text-slate-400">Logic will be added in a later iteration.</p>
-            </div>
-          ))}
-        </div>
+      {activeTab === "bankStatements" && (
+        <BorrowerBankStatementPanel
+          borrowerId={borrower.borrowerId}
+          applicationId={application.applicationId}
+          kycs={bankStatementKycs}
+          onDecisionNoteAdded={onDecisionNoteAdded}
+        />
+      )}
+
+      {activeTab === "payslips" && (
+        <BorrowerPayslipPanel
+          borrowerId={borrower.borrowerId}
+          applicationId={application.applicationId}
+          kycs={payslipKycs}
+          onDecisionNoteAdded={onDecisionNoteAdded}
+        />
+      )}
+
+      {activeTab === "propertyTitles" && (
+        <BorrowerPropertyTitlePanel
+          borrowerId={borrower.borrowerId}
+          applicationId={application.applicationId}
+          kycs={propertyTitleKycs}
+          onDecisionNoteAdded={onDecisionNoteAdded}
+        />
+      )}
+
+      {activeTab === "otherDocuments" && (
+        <BorrowerOtherDocumentPanel
+          borrowerId={borrower.borrowerId}
+          applicationId={application.applicationId}
+          kycs={otherKycs}
+          onDecisionNoteAdded={onDecisionNoteAdded}
+        />
       )}
 
       {activeTab === "references" && (

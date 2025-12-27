@@ -3,20 +3,21 @@ import type { BorrowerNote } from "@/shared/types/borrowerNote";
 import { buildBorrowerNoteData } from "@/shared/services/borrowerNoteUtils";
 import { resolveActorName } from "@/shared/services/actorNameResolver";
 
-const decisionNotes = {
-  approve: "Proof of billing approved.",
-  reject: "Proof of billing rejected.",
-  waive: "Proof of billing waived.",
-  unwaive: "Proof of billing unwaived."
+const decisionVerbs = {
+  approve: "approved",
+  reject: "rejected",
+  waive: "waived",
+  unwaive: "unwaived"
 } as const;
 
-export type KycDecisionAction = keyof typeof decisionNotes;
+export type KycDecisionAction = keyof typeof decisionVerbs;
 
 interface KycDecisionInput {
   borrowerId: string;
   applicationId: string;
   kycId: string;
   action: KycDecisionAction;
+  documentType?: string;
   actorName?: string;
   actorUserId?: string;
 }
@@ -34,6 +35,16 @@ function buildKycUpdate(action: KycDecisionAction): { isApproved?: boolean; isWa
   return { isWaived: false };
 }
 
+function resolveDocumentLabel(value?: string): string {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : "Proof of billing";
+}
+
+function buildDecisionNote(action: KycDecisionAction, documentType?: string): string {
+  const label = resolveDocumentLabel(documentType);
+  return `${label} ${decisionVerbs[action]}.`;
+}
+
 export async function setBorrowerKycDecisionWithNote(input: KycDecisionInput): Promise<BorrowerNote> {
   if (!db) {
     throw new Error("Firestore Admin client is not initialized.");
@@ -41,13 +52,13 @@ export async function setBorrowerKycDecisionWithNote(input: KycDecisionInput): P
   if (!input.borrowerId || !input.applicationId || !input.kycId) {
     throw new Error("Borrower, application, or KYC id is missing.");
   }
-  if (!(input.action in decisionNotes)) {
+  if (!(input.action in decisionVerbs)) {
     throw new Error("Action must be a valid value.");
   }
 
   const createdAt = new Date().toISOString();
   const actorName = await resolveActorName(input.actorUserId, input.actorName);
-  const noteText = decisionNotes[input.action];
+  const noteText = buildDecisionNote(input.action, input.documentType);
 
   const noteRef = db.collection("borrowers").doc(input.borrowerId).collection("notes").doc();
   const applicationRef = db

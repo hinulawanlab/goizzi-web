@@ -1,8 +1,19 @@
 import type { DocumentSnapshot } from "firebase-admin/firestore";
 
 import { db, hasAdminCredentials, storageBucket } from "@/shared/singletons/firebaseAdmin";
+import { demoBorrowerBankStatementKycs } from "@/shared/data/demoBorrowerBankStatementKycs";
+import { demoBorrowerOtherKycs } from "@/shared/data/demoBorrowerOtherKycs";
+import { demoBorrowerPayslipKycs } from "@/shared/data/demoBorrowerPayslipKycs";
 import { demoBorrowerProofOfBillingKycs } from "@/shared/data/demoBorrowerProofOfBillingKycs";
-import type { BorrowerGovernmentIdKyc, BorrowerProofOfBillingKyc } from "@/shared/types/kyc";
+import { demoBorrowerPropertyTitleKycs } from "@/shared/data/demoBorrowerPropertyTitleKycs";
+import type {
+  BorrowerBankStatementKyc,
+  BorrowerGovernmentIdKyc,
+  BorrowerOtherKyc,
+  BorrowerPayslipKyc,
+  BorrowerPropertyTitleKyc,
+  BorrowerProofOfBillingKyc
+} from "@/shared/types/kyc";
 
 function formatTimestamp(value: unknown): string | undefined {
   if (!value) {
@@ -165,6 +176,99 @@ function mapProofOfBillingDoc(doc: DocumentSnapshot, borrowerId: string): Borrow
   };
 }
 
+function mapBankStatementDoc(doc: DocumentSnapshot, borrowerId: string): BorrowerBankStatementKyc | null {
+  const data = doc.data() || {};
+  const normalizedRefs = normalizeStorageRefs(data.storageRefs);
+  const primaryRef = normalizeStorageRef(data.storageRef);
+  const storageRefs = primaryRef ? [primaryRef, ...normalizedRefs] : normalizedRefs;
+
+  return {
+    borrowerId,
+    kycId: doc.id,
+    documentType: typeof data.documentType === "string" ? data.documentType : undefined,
+    accountName: typeof data.accountName === "string" ? data.accountName : undefined,
+    accountNumber: typeof data.accountNumber === "string" ? data.accountNumber : undefined,
+    bankName: typeof data.bankName === "string" ? data.bankName : undefined,
+    storageRefs,
+    isApproved:
+      typeof data.isApproved === "boolean"
+        ? data.isApproved
+        : typeof data.isApprove === "boolean"
+          ? data.isApprove
+          : undefined,
+    isWaived: typeof data.isWaived === "boolean" ? data.isWaived : undefined,
+    createdAt: formatTimestamp(data.createdAt)
+  };
+}
+
+function mapPayslipDoc(doc: DocumentSnapshot, borrowerId: string): BorrowerPayslipKyc | null {
+  const data = doc.data() || {};
+  const normalizedRefs = normalizeStorageRefs(data.storageRefs);
+  const primaryRef = normalizeStorageRef(data.storageRef);
+  const storageRefs = primaryRef ? [primaryRef, ...normalizedRefs] : normalizedRefs;
+
+  return {
+    borrowerId,
+    kycId: doc.id,
+    documentType: typeof data.documentType === "string" ? data.documentType : undefined,
+    employer: typeof data.employer === "string" ? data.employer : undefined,
+    storageRefs,
+    isApproved:
+      typeof data.isApproved === "boolean"
+        ? data.isApproved
+        : typeof data.isApprove === "boolean"
+          ? data.isApprove
+          : undefined,
+    isWaived: typeof data.isWaived === "boolean" ? data.isWaived : undefined,
+    createdAt: formatTimestamp(data.createdAt)
+  };
+}
+
+function mapPropertyTitleDoc(doc: DocumentSnapshot, borrowerId: string): BorrowerPropertyTitleKyc | null {
+  const data = doc.data() || {};
+  const normalizedRefs = normalizeStorageRefs(data.storageRefs);
+  const primaryRef = normalizeStorageRef(data.storageRef);
+  const storageRefs = primaryRef ? [primaryRef, ...normalizedRefs] : normalizedRefs;
+
+  return {
+    borrowerId,
+    kycId: doc.id,
+    documentType: typeof data.documentType === "string" ? data.documentType : undefined,
+    storageRefs,
+    isApproved:
+      typeof data.isApproved === "boolean"
+        ? data.isApproved
+        : typeof data.isApprove === "boolean"
+          ? data.isApprove
+          : undefined,
+    isWaived: typeof data.isWaived === "boolean" ? data.isWaived : undefined,
+    createdAt: formatTimestamp(data.createdAt)
+  };
+}
+
+function mapOtherDoc(doc: DocumentSnapshot, borrowerId: string): BorrowerOtherKyc | null {
+  const data = doc.data() || {};
+  const normalizedRefs = normalizeStorageRefs(data.storageRefs);
+  const primaryRef = normalizeStorageRef(data.storageRef);
+  const storageRefs = primaryRef ? [primaryRef, ...normalizedRefs] : normalizedRefs;
+
+  return {
+    borrowerId,
+    kycId: doc.id,
+    documentType: typeof data.documentType === "string" ? data.documentType : undefined,
+    documentDescription: typeof data.documentDescription === "string" ? data.documentDescription : undefined,
+    storageRefs,
+    isApproved:
+      typeof data.isApproved === "boolean"
+        ? data.isApproved
+        : typeof data.isApprove === "boolean"
+          ? data.isApprove
+          : undefined,
+    isWaived: typeof data.isWaived === "boolean" ? data.isWaived : undefined,
+    createdAt: formatTimestamp(data.createdAt)
+  };
+}
+
 async function fetchGovernmentIdKyc(borrowerId: string): Promise<BorrowerGovernmentIdKyc | null> {
   if (!db) {
     throw new Error("Firestore Admin client is not initialized.");
@@ -264,6 +368,150 @@ async function fetchProofOfBillingKycs(borrowerId: string, limit = 10): Promise<
   return withUrls;
 }
 
+async function fetchBankStatementKycs(borrowerId: string, limit = 10): Promise<BorrowerBankStatementKyc[]> {
+  if (!db) {
+    throw new Error("Firestore Admin client is not initialized.");
+  }
+
+  const snapshot = await db
+    .collection("borrowers")
+    .doc(borrowerId)
+    .collection("kyc")
+    .where("type", "==", "bankStatement")
+    .orderBy("createdAt", "desc")
+    .limit(limit)
+    .get();
+
+  if (snapshot.empty) {
+    return [];
+  }
+
+  const mapped = snapshot.docs
+    .map((doc) => mapBankStatementDoc(doc, borrowerId))
+    .filter(Boolean) as BorrowerBankStatementKyc[];
+
+  if (!storageBucket) {
+    return mapped;
+  }
+
+  const withUrls = await Promise.all(
+    mapped.map(async (kyc) => ({
+      ...kyc,
+      imageUrls: await createSignedUrlsForRefs(kyc.storageRefs ?? [])
+    }))
+  );
+
+  return withUrls;
+}
+
+async function fetchPayslipKycs(borrowerId: string, limit = 10): Promise<BorrowerPayslipKyc[]> {
+  if (!db) {
+    throw new Error("Firestore Admin client is not initialized.");
+  }
+
+  const snapshot = await db
+    .collection("borrowers")
+    .doc(borrowerId)
+    .collection("kyc")
+    .where("type", "==", "paySlip")
+    .orderBy("createdAt", "desc")
+    .limit(limit)
+    .get();
+
+  if (snapshot.empty) {
+    return [];
+  }
+
+  const mapped = snapshot.docs
+    .map((doc) => mapPayslipDoc(doc, borrowerId))
+    .filter(Boolean) as BorrowerPayslipKyc[];
+
+  if (!storageBucket) {
+    return mapped;
+  }
+
+  const withUrls = await Promise.all(
+    mapped.map(async (kyc) => ({
+      ...kyc,
+      imageUrls: await createSignedUrlsForRefs(kyc.storageRefs ?? [])
+    }))
+  );
+
+  return withUrls;
+}
+
+async function fetchPropertyTitleKycs(borrowerId: string, limit = 10): Promise<BorrowerPropertyTitleKyc[]> {
+  if (!db) {
+    throw new Error("Firestore Admin client is not initialized.");
+  }
+
+  const snapshot = await db
+    .collection("borrowers")
+    .doc(borrowerId)
+    .collection("kyc")
+    .where("type", "==", "propertyTitle")
+    .orderBy("createdAt", "desc")
+    .limit(limit)
+    .get();
+
+  if (snapshot.empty) {
+    return [];
+  }
+
+  const mapped = snapshot.docs
+    .map((doc) => mapPropertyTitleDoc(doc, borrowerId))
+    .filter(Boolean) as BorrowerPropertyTitleKyc[];
+
+  if (!storageBucket) {
+    return mapped;
+  }
+
+  const withUrls = await Promise.all(
+    mapped.map(async (kyc) => ({
+      ...kyc,
+      imageUrls: await createSignedUrlsForRefs(kyc.storageRefs ?? [])
+    }))
+  );
+
+  return withUrls;
+}
+
+async function fetchOtherKycs(borrowerId: string, limit = 10): Promise<BorrowerOtherKyc[]> {
+  if (!db) {
+    throw new Error("Firestore Admin client is not initialized.");
+  }
+
+  const snapshot = await db
+    .collection("borrowers")
+    .doc(borrowerId)
+    .collection("kyc")
+    .where("type", "==", "others")
+    .orderBy("createdAt", "desc")
+    .limit(limit)
+    .get();
+
+  if (snapshot.empty) {
+    return [];
+  }
+
+  const mapped = snapshot.docs
+    .map((doc) => mapOtherDoc(doc, borrowerId))
+    .filter(Boolean) as BorrowerOtherKyc[];
+
+  if (!storageBucket) {
+    return mapped;
+  }
+
+  const withUrls = await Promise.all(
+    mapped.map(async (kyc) => ({
+      ...kyc,
+      imageUrls: await createSignedUrlsForRefs(kyc.storageRefs ?? [])
+    }))
+  );
+
+  return withUrls;
+}
+
 export async function getBorrowerGovernmentIdKyc(borrowerId: string): Promise<BorrowerGovernmentIdKyc | null> {
   if (!borrowerId) {
     return null;
@@ -328,6 +576,78 @@ export async function getBorrowerProofOfBillingKycs(
   }
 
   return demoBorrowerProofOfBillingKycs[borrowerId] ?? [];
+}
+
+export async function getBorrowerBankStatementKycs(
+  borrowerId: string,
+  limit = 10
+): Promise<BorrowerBankStatementKyc[]> {
+  if (!borrowerId) {
+    return [];
+  }
+  if (hasAdminCredentials()) {
+    try {
+      return await fetchBankStatementKycs(borrowerId, limit);
+    } catch (error) {
+      console.warn(`Unable to fetch bank statement KYC list for ${borrowerId}:`, error);
+    }
+  }
+
+  return demoBorrowerBankStatementKycs[borrowerId] ?? [];
+}
+
+export async function getBorrowerPayslipKycs(
+  borrowerId: string,
+  limit = 10
+): Promise<BorrowerPayslipKyc[]> {
+  if (!borrowerId) {
+    return [];
+  }
+  if (hasAdminCredentials()) {
+    try {
+      return await fetchPayslipKycs(borrowerId, limit);
+    } catch (error) {
+      console.warn(`Unable to fetch payslip KYC list for ${borrowerId}:`, error);
+    }
+  }
+
+  return demoBorrowerPayslipKycs[borrowerId] ?? [];
+}
+
+export async function getBorrowerPropertyTitleKycs(
+  borrowerId: string,
+  limit = 10
+): Promise<BorrowerPropertyTitleKyc[]> {
+  if (!borrowerId) {
+    return [];
+  }
+  if (hasAdminCredentials()) {
+    try {
+      return await fetchPropertyTitleKycs(borrowerId, limit);
+    } catch (error) {
+      console.warn(`Unable to fetch property title KYC list for ${borrowerId}:`, error);
+    }
+  }
+
+  return demoBorrowerPropertyTitleKycs[borrowerId] ?? [];
+}
+
+export async function getBorrowerOtherKycs(
+  borrowerId: string,
+  limit = 10
+): Promise<BorrowerOtherKyc[]> {
+  if (!borrowerId) {
+    return [];
+  }
+  if (hasAdminCredentials()) {
+    try {
+      return await fetchOtherKycs(borrowerId, limit);
+    } catch (error) {
+      console.warn(`Unable to fetch other KYC list for ${borrowerId}:`, error);
+    }
+  }
+
+  return demoBorrowerOtherKycs[borrowerId] ?? [];
 }
 
 export async function setBorrowerGovernmentIdApproval(

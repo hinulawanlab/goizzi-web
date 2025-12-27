@@ -5,7 +5,13 @@ import BorrowerApplicationTabs from "@/components/borrowers/BorrowerApplicationT
 import { getBorrowerSummaryById } from "@/shared/services/borrowerService";
 import { getBorrowerApplicationById } from "@/shared/services/applicationService";
 import { getBorrowerReferences } from "@/shared/services/borrowerReferenceService";
-import { getBorrowerProofOfBillingKycs } from "@/shared/services/kycService";
+import {
+  getBorrowerBankStatementKycs,
+  getBorrowerOtherKycs,
+  getBorrowerPayslipKycs,
+  getBorrowerProofOfBillingKycs,
+  getBorrowerPropertyTitleKycs
+} from "@/shared/services/kycService";
 import { getBorrowerNotesByApplication } from "@/shared/services/borrowerNoteService";
 
 interface BorrowerApplicationPageProps {
@@ -25,12 +31,20 @@ export default async function BorrowerApplicationPage({ params }: BorrowerApplic
   const applicationPromise = getBorrowerApplicationById(borrowerId, applicationId);
   const referencesPromise = getBorrowerReferences(borrowerId);
   const proofOfBillingPromise = getBorrowerProofOfBillingKycs(borrowerId);
+  const bankStatementPromise = getBorrowerBankStatementKycs(borrowerId);
+  const payslipPromise = getBorrowerPayslipKycs(borrowerId);
+  const propertyTitlePromise = getBorrowerPropertyTitleKycs(borrowerId);
+  const otherPromise = getBorrowerOtherKycs(borrowerId);
   const notesPromise = getBorrowerNotesByApplication(borrowerId, applicationId);
 
   const borrower = await borrowerPromise;
   const application = await applicationPromise;
   const references = await referencesPromise;
   const proofOfBillingKycs = await proofOfBillingPromise;
+  const bankStatementKycs = await bankStatementPromise;
+  const payslipKycs = await payslipPromise;
+  const propertyTitleKycs = await propertyTitlePromise;
+  const otherKycs = await otherPromise;
   const notes = await notesPromise;
 
   if (!borrower || !application) {
@@ -46,6 +60,10 @@ export default async function BorrowerApplicationPage({ params }: BorrowerApplic
             application={application}
             references={references}
             proofOfBillingKycs={proofOfBillingKycs}
+            bankStatementKycs={bankStatementKycs}
+            payslipKycs={payslipKycs}
+            propertyTitleKycs={propertyTitleKycs}
+            otherKycs={otherKycs}
             notes={notes}
           />
         </main>
