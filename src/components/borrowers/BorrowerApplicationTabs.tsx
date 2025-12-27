@@ -1,7 +1,8 @@
 // src/components/borrowers/BorrowerApplicationTabs.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { onAuthStateChanged } from "firebase/auth";
 
 import BorrowerProofOfBillingPanel from "@/components/borrowers/BorrowerProofOfBillingPanel";
 import { auth } from "@/shared/singletons/firebase";
@@ -114,6 +115,26 @@ export default function BorrowerApplicationTabs({
   const [noteActionMessage, setNoteActionMessage] = useState("");
   const [statusActionState, setStatusActionState] = useState<ActionState>("idle");
   const [statusActionMessage, setStatusActionMessage] = useState("");
+
+  useEffect(() => {
+    console.info("Borrower application auth check.", {
+      borrowerId: borrower.borrowerId,
+      applicationId: application.applicationId,
+      hasAuthUser: Boolean(auth.currentUser),
+      userId: auth.currentUser?.uid ?? null
+    });
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.info("Borrower application auth state changed.", {
+        borrowerId: borrower.borrowerId,
+        applicationId: application.applicationId,
+        hasAuthUser: Boolean(user),
+        userId: user?.uid ?? null
+      });
+    });
+
+    return unsubscribe;
+  }, [application.applicationId, borrower.borrowerId]);
 
   const referencesById = useMemo(() => {
     const mapping: Record<string, BorrowerReference> = {};

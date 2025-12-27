@@ -1,4 +1,4 @@
-import type { DocumentSnapshot } from "firebase-admin/firestore";
+import { FieldValue, type DocumentSnapshot } from "firebase-admin/firestore";
 
 import { db, hasAdminCredentials } from "@/shared/singletons/firebaseAdmin";
 import { demoBorrowerReferences } from "@/shared/data/demoBorrowerReferences";
@@ -123,7 +123,7 @@ export async function setBorrowerReferenceStatus(
     .set(
       {
         contactStatus,
-        updatedAt: new Date().toISOString()
+        updatedAt: FieldValue.serverTimestamp()
       },
       { merge: true }
     );

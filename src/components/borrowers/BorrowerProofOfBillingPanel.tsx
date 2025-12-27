@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import { onAuthStateChanged } from "firebase/auth";
 import { getDownloadURL, ref } from "firebase/storage";
 
-import { storage } from "@/shared/singletons/firebase";
+import { auth, storage } from "@/shared/singletons/firebase";
 import type { BorrowerProofOfBillingKyc } from "@/shared/types/kyc";
 
 type ActionState = "idle" | "working" | "success" | "error";
@@ -62,6 +63,8 @@ export default function BorrowerProofOfBillingPanel({ borrowerId, kycs }: Borrow
   const [actionStates, setActionStates] = useState<Record<string, ActionState>>({});
   const [actionMessages, setActionMessages] = useState<Record<string, string>>({});
   const [approvalOverrides, setApprovalOverrides] = useState<Record<string, boolean>>({});
+  const [authReady, setAuthReady] = useState(() => Boolean(auth.currentUser));
+  const [authUserId, setAuthUserId] = useState(() => auth.currentUser?.uid ?? null);
   const imageStatesRef = useRef(imageStates);
   const isMountedRef = useRef(true);
   const sortedKycs = useMemo(() => {
@@ -77,12 +80,51 @@ export default function BorrowerProofOfBillingPanel({ borrowerId, kycs }: Borrow
   }, [imageStates]);
 
   useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!isMountedRef.current) {
+        return;
+      }
+      setAuthReady(true);
+      setAuthUserId(user?.uid ?? null);
+      console.info("Proof of billing auth state changed.", {
+        borrowerId,
+        hasAuthUser: Boolean(user),
+        userId: user?.uid ?? null
+      });
+    });
+
+    return unsubscribe;
+  }, [borrowerId]);
+
+  useEffect(() => {
     return () => {
       isMountedRef.current = false;
     };
   }, []);
 
   useEffect(() => {
+    if (!authReady || !authUserId) {
+      if (sortedKycs.length > 0) {
+        console.warn("Proof of billing image load skipped; auth not ready.", {
+          borrowerId,
+          authReady,
+          authUserId
+        });
+      }
+      return;
+    }
+    if (sortedKycs.length > 0) {
+      console.info("Proof of billing KYC load start.", {
+        borrowerId,
+        kycCount: sortedKycs.length,
+        storageBucket: storage.app.options.storageBucket ?? "unknown",
+        kycs: sortedKycs.map((kyc) => ({
+          kycId: kyc.kycId,
+          refCount: kyc.storageRefs?.length ?? 0,
+          refs: kyc.storageRefs ?? []
+        }))
+      });
+    }
     sortedKycs.forEach((kyc) => {
       const refs = kyc.storageRefs ?? [];
       const currentState = imageStatesRef.current[kyc.kycId];
@@ -104,7 +146,14 @@ export default function BorrowerProofOfBillingPanel({ borrowerId, kycs }: Borrow
       }));
 
       const normalizedRefs = refs.map(normalizeStoragePath).filter(Boolean) as string[];
+      const debugContext = {
+        borrowerId,
+        kycId: kyc.kycId,
+        rawRefs: refs,
+        normalizedRefs
+      };
       if (!normalizedRefs.length) {
+        console.warn("Proof of billing has no valid storage paths.", debugContext);
         setImageStates((prev) => ({
           ...prev,
           [kyc.kycId]: { status: "error", urls: [], errorMessage: "No valid storage paths." }
@@ -112,14 +161,42 @@ export default function BorrowerProofOfBillingPanel({ borrowerId, kycs }: Borrow
         return;
       }
 
-      Promise.allSettled(normalizedRefs.map((path) => getDownloadURL(ref(storage, path))))
+      const timeoutId = window.setTimeout(() => {
+        if (!isMountedRef.current) {
+          return;
+        }
+        const current = imageStatesRef.current[kyc.kycId];
+        if (current?.status === "loading") {
+          console.warn("Proof of billing image load still pending.", {
+            ...debugContext,
+            pendingMs: 8000
+          });
+        }
+      }, 8000);
+
+      Promise.allSettled(
+        normalizedRefs.map((path) => {
+          console.info("Proof of billing image download start.", { ...debugContext, path });
+          return getDownloadURL(ref(storage, path));
+        })
+      )
         .then((results) => {
           if (!isMountedRef.current) {
             return;
           }
+          window.clearTimeout(timeoutId);
           const urls = results
             .filter((result): result is PromiseFulfilledResult<string> => result.status === "fulfilled")
             .map((result) => result.value);
+
+          const failures = results
+            .map((result, index) =>
+              result.status === "rejected" ? { path: normalizedRefs[index], error: result.reason } : null
+            )
+            .filter(Boolean);
+          if (failures.length > 0) {
+            console.warn("Proof of billing image load failures.", { ...debugContext, failures });
+          }
 
           if (!urls.length) {
             setImageStates((prev) => ({
@@ -128,6 +205,8 @@ export default function BorrowerProofOfBillingPanel({ borrowerId, kycs }: Borrow
             }));
             return;
           }
+
+          console.info("Proof of billing image URLs resolved.", { ...debugContext, urls });
 
           setImageStates((prev) => ({
             ...prev,
@@ -138,13 +217,15 @@ export default function BorrowerProofOfBillingPanel({ borrowerId, kycs }: Borrow
           if (!isMountedRef.current) {
             return;
           }
+          window.clearTimeout(timeoutId);
+          console.warn("Proof of billing image load error.", { ...debugContext, error });
           setImageStates((prev) => ({
             ...prev,
             [kyc.kycId]: { status: "error", urls: [], errorMessage: "Images could not be loaded." }
           }));
         });
     });
-  }, [sortedKycs]);
+  }, [sortedKycs, borrowerId, authReady, authUserId]);
 
   const submitApproval = async (kycId: string, isApproved: boolean) => {
     if (!borrowerId || !kycId) {
@@ -241,6 +322,15 @@ export default function BorrowerProofOfBillingPanel({ borrowerId, kycs }: Borrow
                             height={240}
                             unoptimized
                             className="h-44 w-full object-cover"
+                            onError={(event) => {
+                              console.warn("Proof of billing image tag failed to load.", {
+                                borrowerId,
+                                kycId: kyc.kycId,
+                                index,
+                                url,
+                                message: event.currentTarget?.currentSrc ?? "unknown-src"
+                              });
+                            }}
                           />
                         </div>
                       ))}
