@@ -51,6 +51,12 @@ service cloud.firestore {
        ========================= */
     match /borrowers/{borrowerId} {
       allow read, write: if isStaff();
+      allow create: if isAuthenticated()
+        && borrowerId == request.auth.uid
+        && request.resource.data.borrowerId == request.auth.uid
+        && request.resource.data.authUid == request.auth.uid;
+      allow read, update: if isAuthenticated()
+        && borrowerId == request.auth.uid;
 
       match /kyc/{docId} {
         allow read: if isStaff() || isBorrowerSelfieRead(borrowerId);
@@ -179,4 +185,5 @@ service cloud.firestore {
 
 
 <!-- firebase_database_rules.md -->
-lastUpdate: 12/27/2025-8:35PM
+<!-- Versioning -->
+lastUpdate: 12/27/2025-10:20PM

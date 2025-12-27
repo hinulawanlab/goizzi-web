@@ -32,6 +32,7 @@ interface BorrowerApplicationTabSectionProps {
   payslipKycs: BorrowerPayslipKyc[];
   propertyTitleKycs: BorrowerPropertyTitleKyc[];
   otherKycs: BorrowerOtherKyc[];
+  refreshTokensByTab: Record<TabKey, number>;
   auditStatus: string;
   auditUpdatedAt?: string;
   statusUpdatedByName?: string;
@@ -98,6 +99,7 @@ export default function BorrowerApplicationTabSection({
   payslipKycs,
   propertyTitleKycs,
   otherKycs,
+  refreshTokensByTab,
   auditStatus,
   auditUpdatedAt,
   statusUpdatedByName,
@@ -176,6 +178,7 @@ export default function BorrowerApplicationTabSection({
               <DetailRow label="Civil status" value={application.borrower.civilStatus} />
               <DetailRow label="Current address" value={application.borrower.currentAddress} />
               <DetailRow label="Provincial same as current" value={application.borrower.provincialSameAsCurrent} />
+              <DetailRow label="Facebook account" value={application.borrower.facebookAccountName} />
               <DetailRow label="Marketing source" value={application.marketing?.source} />
             </div>
           </div>
@@ -232,6 +235,7 @@ export default function BorrowerApplicationTabSection({
               <DetailRow label="Relationship" value={application.coMaker?.relationshipToBorrower} />
               <DetailRow label="Mobile" value={application.coMaker?.mobileNumber} />
               <DetailRow label="Address" value={application.coMaker?.currentAddress} />
+              <DetailRow label="Facebook account" value={application.coMaker?.facebookAccountName} />
             </div>
           </div>
 
@@ -249,6 +253,7 @@ export default function BorrowerApplicationTabSection({
 
       {activeTab === "bankStatements" && (
         <BorrowerBankStatementPanel
+          key={`bankStatements-${refreshTokensByTab.bankStatements}`}
           borrowerId={borrower.borrowerId}
           applicationId={application.applicationId}
           kycs={bankStatementKycs}
@@ -258,6 +263,7 @@ export default function BorrowerApplicationTabSection({
 
       {activeTab === "payslips" && (
         <BorrowerPayslipPanel
+          key={`payslips-${refreshTokensByTab.payslips}`}
           borrowerId={borrower.borrowerId}
           applicationId={application.applicationId}
           kycs={payslipKycs}
@@ -267,6 +273,7 @@ export default function BorrowerApplicationTabSection({
 
       {activeTab === "propertyTitles" && (
         <BorrowerPropertyTitlePanel
+          key={`propertyTitles-${refreshTokensByTab.propertyTitles}`}
           borrowerId={borrower.borrowerId}
           applicationId={application.applicationId}
           kycs={propertyTitleKycs}
@@ -276,6 +283,7 @@ export default function BorrowerApplicationTabSection({
 
       {activeTab === "otherDocuments" && (
         <BorrowerOtherDocumentPanel
+          key={`otherDocuments-${refreshTokensByTab.otherDocuments}`}
           borrowerId={borrower.borrowerId}
           applicationId={application.applicationId}
           kycs={otherKycs}
@@ -350,6 +358,7 @@ export default function BorrowerApplicationTabSection({
 
       {activeTab === "proof" && (
         <BorrowerProofOfBillingPanel
+          key={`proof-${refreshTokensByTab.proof}`}
           borrowerId={borrower.borrowerId}
           applicationId={application.applicationId}
           kycs={proofOfBillingKycs}

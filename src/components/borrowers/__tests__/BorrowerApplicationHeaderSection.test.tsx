@@ -9,7 +9,7 @@ describe("BorrowerApplicationHeaderSection", () => {
     render(<BorrowerApplicationHeaderSection activeTab="maker" onTabChange={() => undefined} />);
 
     expect(screen.getByText("Application details")).toBeInTheDocument();
-    expect(screen.getByText("Maker's details")).toBeInTheDocument();
+    expect(screen.getByText("Maker")).toBeInTheDocument();
     expect(screen.getByText("Audit")).toBeInTheDocument();
   });
 });

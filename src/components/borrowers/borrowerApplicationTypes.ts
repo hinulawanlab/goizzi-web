@@ -11,12 +11,12 @@ export type TabKey =
 export type ActionState = "idle" | "working" | "success" | "error";
 
 export const tabs: { key: TabKey; label: string }[] = [
-  { key: "maker", label: "Maker's details" },
+  { key: "maker", label: "Maker" },
   { key: "comakers", label: "Co-makers" },
   { key: "references", label: "References" },
   { key: "proof", label: "Proof of billing" },
-  { key: "bankStatements", label: "Bank statements" },
-  { key: "payslips", label: "Payslips" },
+  { key: "bankStatements", label: "Bank records" },
+  { key: "payslips", label: "Income source" },
   { key: "propertyTitles", label: "Property titles" },
   { key: "otherDocuments", label: "Others" },
   { key: "audit", label: "Audit" }

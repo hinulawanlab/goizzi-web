@@ -83,6 +83,10 @@ function mapBorrower(raw: Record<string, unknown>): ApplicationBorrower {
     educationAttainment: normalizeString(raw.educationAttainment, "N/A"),
     email: normalizeString(raw.email, "N/A"),
     facebookAccount: normalizeString(raw.facebookAccount, "N/A"),
+    facebookAccountName: normalizeString(
+      raw.facebookAccountName ?? raw.facebookAccount,
+      "N/A"
+    ),
     fatherName: normalizeString(raw.fatherName, "N/A"),
     fullName: normalizeString(raw.fullName, "Unknown borrower"),
     gender: normalizeString(raw.gender, "N/A"),
@@ -124,6 +128,10 @@ function mapCoMaker(raw: Record<string, unknown>): CoMaker {
     dependents: normalizeString(raw.dependents, "N/A"),
     email: normalizeString(raw.email, "N/A"),
     facebookAccount: normalizeString(raw.facebookAccount, "N/A"),
+    facebookAccountName: normalizeString(
+      raw.facebookAccountName ?? raw.facebookAccount,
+      "N/A"
+    ),
     fullName: normalizeString(raw.fullName, "N/A"),
     homeOwnership: normalizeString(raw.homeOwnership, "N/A"),
     mobileNumber: normalizeString(raw.mobileNumber, "N/A"),

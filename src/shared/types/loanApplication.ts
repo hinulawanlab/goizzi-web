@@ -10,6 +10,7 @@ export interface ApplicationBorrower {
   educationAttainment?: string;
   email?: string;
   facebookAccount?: string;
+  facebookAccountName?: string;
   fatherName?: string;
   fullName?: string;
   gender?: string;
@@ -45,6 +46,7 @@ export interface CoMaker {
   dependents?: string;
   email?: string;
   facebookAccount?: string;
+  facebookAccountName?: string;
   fullName?: string;
   homeOwnership?: string;
   mobileNumber?: string;

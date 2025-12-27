@@ -1,8 +1,9 @@
 // src/components/borrowers/BorrowerApplicationTabs.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { onAuthStateChanged } from "firebase/auth";
+import { useRouter } from "next/navigation";
 
 import BorrowerApplicationHeaderSection from "@/components/borrowers/BorrowerApplicationHeaderSection";
 import BorrowerApplicationNotesActions from "@/components/borrowers/BorrowerApplicationNotesActions";
@@ -46,6 +47,19 @@ export default function BorrowerApplicationTabs({
   notes
 }: BorrowerApplicationTabsProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("maker");
+  const [refreshTokensByTab, setRefreshTokensByTab] = useState<Record<TabKey, number>>({
+    maker: 0,
+    comakers: 0,
+    references: 0,
+    proof: 0,
+    bankStatements: 0,
+    payslips: 0,
+    propertyTitles: 0,
+    otherDocuments: 0,
+    audit: 0
+  });
+  const [isRefreshing, startRefreshing] = useTransition();
+  const router = useRouter();
   const {
     auditStatus,
     auditUpdatedAt,
@@ -89,6 +103,16 @@ export default function BorrowerApplicationTabs({
     return unsubscribe;
   }, [application.applicationId, borrower.borrowerId]);
 
+  const handleRefresh = () => {
+    startRefreshing(() => {
+      setRefreshTokensByTab((prev) => ({
+        ...prev,
+        [activeTab]: (prev[activeTab] ?? 0) + 1
+      }));
+      router.refresh();
+    });
+  };
+
   return (
     <div className="relative flex flex-col gap-6 lg:min-h-[calc(100vh-4rem)] lg:pl-72 lg:pr-6">
       <div className="lg:fixed lg:left-4 lg:top-8 lg:bottom-8 lg:z-20 lg:w-72">
@@ -105,7 +129,12 @@ export default function BorrowerApplicationTabs({
       </div>
 
       <div className="pl-4 flex flex-col gap-6 lg:h-[calc(100vh-4rem)]">
-        <BorrowerApplicationHeaderSection activeTab={activeTab} onTabChange={setActiveTab} />
+        <BorrowerApplicationHeaderSection
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          onRefresh={handleRefresh}
+          isRefreshing={isRefreshing}
+        />
         <div className="lg:flex-1 lg:overflow-y-auto lg:pr-2 pb-4">
           <BorrowerApplicationTabSection
             activeTab={activeTab}
@@ -117,6 +146,7 @@ export default function BorrowerApplicationTabs({
           payslipKycs={payslipKycs}
           propertyTitleKycs={propertyTitleKycs}
           otherKycs={otherKycs}
+          refreshTokensByTab={refreshTokensByTab}
           auditStatus={auditStatus}
             auditUpdatedAt={auditUpdatedAt}
             statusUpdatedByName={statusUpdatedByName}

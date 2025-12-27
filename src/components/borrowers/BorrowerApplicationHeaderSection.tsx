@@ -1,19 +1,40 @@
 "use client";
 
+import { RefreshCw } from "lucide-react";
+
 import type { TabKey } from "@/components/borrowers/borrowerApplicationTypes";
 import { tabs } from "@/components/borrowers/borrowerApplicationTypes";
 
 interface BorrowerApplicationHeaderSectionProps {
   activeTab: TabKey;
   onTabChange: (tab: TabKey) => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
 export default function BorrowerApplicationHeaderSection({
   activeTab,
-  onTabChange
+  onTabChange,
+  onRefresh,
+  isRefreshing = false
 }: BorrowerApplicationHeaderSectionProps) {
   return (
-    <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
+    <section className="relative rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
+      <div className="absolute right-4 top-4">
+        <button
+          type="button"
+          onClick={onRefresh}
+          disabled={isRefreshing || !onRefresh}
+          className={`inline-flex items-center justify-center rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+            isRefreshing || !onRefresh
+              ? "cursor-not-allowed border-slate-200 text-slate-300"
+              : "cursor-pointer border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-900"
+          }`}
+        >
+          <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} aria-hidden />
+          <span className="sr-only">Refresh tab data</span>
+        </button>
+      </div>
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.4em] text-slate-400">Application details</p>

@@ -25,6 +25,10 @@ Purpose: document the reusable KYC document panel, image viewer, and data flow f
 - Rows are sorted by `createdAt` descending.
 - Only the first 5 rows render (no "view more").
 
+## 3.1) Refresh behavior
+- The active tab refresh increments a key on the panel component.
+- This remounts the panel and re-requests signed image URLs.
+
 ## 4) Image loading
 - Signed URLs are requested per `kycId` via `/api/borrowers/{borrowerId}/kyc/{kycId}/images`.
 - The loader handles:
@@ -86,4 +90,3 @@ Each tab passes its result list into `BorrowerApplicationTabSection`.
 - Clicking an image opens `BorrowerKycImageViewer`.
 - Viewer currently supports open/close only.
 - Future viewer actions will be added later.
-

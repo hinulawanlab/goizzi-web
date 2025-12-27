@@ -413,7 +413,7 @@ async function fetchPayslipKycs(borrowerId: string, limit = 10): Promise<Borrowe
     .collection("borrowers")
     .doc(borrowerId)
     .collection("kyc")
-    .where("type", "==", "paySlip")
+    .where("type", "in", ["payslip", "paySlip"])
     .orderBy("createdAt", "desc")
     .limit(limit)
     .get();

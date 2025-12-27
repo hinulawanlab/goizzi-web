@@ -1,3 +1,4 @@
+// src/components/borrowers/BorrowerPayslipPanel.tsx
 "use client";
 
 import BorrowerKycDocumentPanel from "@/components/borrowers/BorrowerKycDocumentPanel";
@@ -22,7 +23,7 @@ export default function BorrowerPayslipPanel({
       borrowerId={borrowerId}
       applicationId={applicationId}
       title="Payslips"
-      sectionLabel="Payslip"
+      sectionLabel="Source of Income"
       decisionLabel="Payslips"
       emptyTitle="No payslips yet"
       emptyMessage="Payslip uploads will appear once submitted."
