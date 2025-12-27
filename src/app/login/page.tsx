@@ -30,7 +30,7 @@ export default function LoginPage() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       setMessage("Authenticated, redirecting...");
-      router.push("/dashboard");
+      router.push("/borrowers");
     } catch (err) {
       setError("Unable to sign in. Please check your credentials.");
     } finally {

@@ -15,9 +15,9 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { label: "Dashboard", href: "/dashboard", icon: ChartBar },
+  // { label: "Dashboard", href: "/dashboard", icon: ChartBar },
   { label: "Borrowers", href: "/borrowers", icon: Users },
-  { label: "Queues", href: "/queues", icon: LayoutGrid },
+  // { label: "Queues", href: "/queues", icon: LayoutGrid },
   { label: "Branches", href: "/branches", icon: Building },
   { label: "Users & Roles", href: "/users", icon: ShieldCheck },
   { label: "Settings", href: "/settings", icon: Settings }
