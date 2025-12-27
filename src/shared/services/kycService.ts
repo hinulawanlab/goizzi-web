@@ -130,6 +130,7 @@ function mapProofOfBillingDoc(doc: DocumentSnapshot, borrowerId: string): Borrow
         : typeof data.isApprove === "boolean"
           ? data.isApprove
           : undefined,
+    isWaived: typeof data.isWaived === "boolean" ? data.isWaived : undefined,
     createdAt: formatTimestamp(data.createdAt)
   };
 }

@@ -116,6 +116,13 @@ export default function BorrowerApplicationTabs({
   const [statusActionState, setStatusActionState] = useState<ActionState>("idle");
   const [statusActionMessage, setStatusActionMessage] = useState("");
 
+  const handleKycDecisionNote = (note: BorrowerNote) => {
+    setNoteEntries((prev) => [note, ...prev]);
+    if (note.createdAt) {
+      setAuditUpdatedAt(note.createdAt);
+    }
+  };
+
   useEffect(() => {
     console.info("Borrower application auth check.", {
       borrowerId: borrower.borrowerId,
@@ -496,7 +503,12 @@ export default function BorrowerApplicationTabs({
       )}
 
       {activeTab === "proof" && (
-        <BorrowerProofOfBillingPanel borrowerId={borrower.borrowerId} kycs={proofOfBillingKycs} />
+        <BorrowerProofOfBillingPanel
+          borrowerId={borrower.borrowerId}
+          applicationId={application.applicationId}
+          kycs={proofOfBillingKycs}
+          onDecisionNoteAdded={handleKycDecisionNote}
+        />
       )}
 
       {activeTab === "audit" && (

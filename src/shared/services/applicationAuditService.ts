@@ -1,5 +1,6 @@
 import { db } from "@/shared/singletons/firebaseAdmin";
 import type { BorrowerNote } from "@/shared/types/borrowerNote";
+import { buildBorrowerNoteData, sanitizeName, sanitizeNote } from "@/shared/services/borrowerNoteUtils";
 
 const validStatuses = ["Reject", "Reviewed", "Approved", "Completed"] as const;
 
@@ -19,38 +20,6 @@ interface StatusActionInput {
   status: ApplicationStatusAction;
   actorName?: string;
   actorUserId?: string;
-}
-
-function sanitizeName(value?: string): string {
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (trimmed.length) {
-      return trimmed;
-    }
-  }
-  return "Unknown staff";
-}
-
-function sanitizeNote(value: string): string {
-  return value.trim();
-}
-
-function buildNoteData(
-  noteId: string,
-  applicationId: string,
-  note: string,
-  createdAt: string,
-  createdByName?: string,
-  createdByUserId?: string
-): BorrowerNote & { createdByName: string } {
-  return {
-    noteId,
-    applicationId,
-    note,
-    createdAt,
-    createdByName: sanitizeName(createdByName),
-    createdByUserId
-  };
 }
 
 export async function addBorrowerApplicationNote(input: NoteInput): Promise<BorrowerNote> {
@@ -74,14 +43,14 @@ export async function addBorrowerApplicationNote(input: NoteInput): Promise<Borr
     .collection("application")
     .doc(input.applicationId);
 
-  const noteData = buildNoteData(
-    noteRef.id,
-    input.applicationId,
-    trimmedNote,
+  const noteData = buildBorrowerNoteData({
+    noteId: noteRef.id,
+    applicationId: input.applicationId,
+    note: trimmedNote,
     createdAt,
-    input.createdByName,
-    input.createdByUserId
-  );
+    createdByName: input.createdByName,
+    createdByUserId: input.createdByUserId
+  });
 
   const batch = db.batch();
   batch.set(noteRef, noteData);
@@ -121,14 +90,14 @@ export async function setBorrowerApplicationStatusWithNote(
     .collection("application")
     .doc(input.applicationId);
 
-  const noteData = buildNoteData(
-    noteRef.id,
-    input.applicationId,
-    noteText,
+  const noteData = buildBorrowerNoteData({
+    noteId: noteRef.id,
+    applicationId: input.applicationId,
+    note: noteText,
     createdAt,
-    actorName,
-    input.actorUserId
-  );
+    createdByName: actorName,
+    createdByUserId: input.actorUserId
+  });
 
   const batch = db.batch();
   batch.set(noteRef, noteData);
