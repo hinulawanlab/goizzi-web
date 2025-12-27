@@ -37,6 +37,7 @@ This schema is optimized for:
 ```
 /borrowers/{borrowerId}
 /borrowerKeys/{keyId}
+/borrowerAccounts/{userId}            (optional; borrower auth mapping)
 /loans/{loanId}
 /branches/{branchId}
 /loanProducts/{productId}
@@ -413,6 +414,18 @@ Firestore automatically indexes single fields. Create composite indexes for comm
 Use a Firestore **transaction**:
 - Create `/borrowerKeys/phone:+63...`
 - Create `/borrowers/{borrowerId}`
+
+---
+
+## 2.1) Borrower Accounts (Auth Mapping) - optional
+
+Use only if borrower Auth UID is not the same as `borrowerId`. This maps a Firebase Auth user to a borrower record.
+
+### `/borrowerAccounts/{userId}`
+**Fields**
+- `borrowerId: string`
+- `createdAt: timestamp`
+- `createdByUserId: string?`
 
 ### Post payment (atomic accounting)
 Use a **transaction** or **Cloud Function** with idempotency:

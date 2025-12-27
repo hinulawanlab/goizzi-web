@@ -3,9 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { getDownloadURL, ref } from "firebase/storage";
 
-import { storage } from "@/shared/singletons/firebase";
+import { fetchSignedKycImageUrls, type KycSignedImageItem } from "@/shared/services/kycImageService";
 import type { BorrowerGovernmentIdKyc } from "@/shared/types/kyc";
 
 type LoadState = "idle" | "loading" | "success" | "error";
@@ -25,6 +24,23 @@ function normalizeStoragePath(path?: string): string | null {
     return null;
   }
   return trimmed.replace(/^\/+/, "");
+}
+
+function findSignedUrl(items: KycSignedImageItem[], storageRef?: string | null): string | null {
+  const normalized = normalizeStoragePath(storageRef ?? undefined);
+  if (!normalized) {
+    return null;
+  }
+  const direct = items.find((item) => item.path === normalized);
+  if (direct) {
+    return direct.url;
+  }
+  const fileName = normalized.split("/").pop();
+  if (!fileName) {
+    return null;
+  }
+  const byFileName = items.find((item) => item.path.endsWith(`/${fileName}`));
+  return byFileName?.url ?? null;
 }
 
 export default function BorrowerGovernmentIdModal({ kycs, borrowerName }: BorrowerGovernmentIdModalProps) {
@@ -145,17 +161,14 @@ export default function BorrowerGovernmentIdModal({ kycs, borrowerName }: Borrow
 
     let cancelled = false;
 
-    Promise.allSettled([
-      frontPath ? getDownloadURL(ref(storage, frontPath)) : Promise.resolve(null),
-      backPath ? getDownloadURL(ref(storage, backPath)) : Promise.resolve(null)
-    ])
-      .then(([frontResult, backResult]) => {
+    fetchSignedKycImageUrls(currentKyc.borrowerId, currentKyc.kycId)
+      .then(({ items }) => {
         if (cancelled) {
           return;
         }
 
-        const resolvedFront = frontResult.status === "fulfilled" ? frontResult.value : null;
-        const resolvedBack = backResult.status === "fulfilled" ? backResult.value : null;
+        const resolvedFront = findSignedUrl(items, frontPath);
+        const resolvedBack = findSignedUrl(items, backPath);
 
         if (!resolvedFront && !resolvedBack) {
           setLoadState("error");

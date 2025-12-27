@@ -4,9 +4,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { getDownloadURL, ref } from "firebase/storage";
 
-import { storage } from "@/shared/singletons/firebase";
+import { fetchSignedKycImageUrls, type KycSignedImageItem } from "@/shared/services/kycImageService";
 import type { BorrowerGovernmentIdKyc } from "@/shared/types/kyc";
 
 type LoadState = "idle" | "loading" | "success" | "error";
@@ -26,6 +25,23 @@ function normalizeStoragePath(path?: string): string | null {
     return null;
   }
   return trimmed.replace(/^\/+/, "");
+}
+
+function findSignedUrl(items: KycSignedImageItem[], storageRef?: string | null): string | null {
+  const normalized = normalizeStoragePath(storageRef ?? undefined);
+  if (!normalized) {
+    return null;
+  }
+  const direct = items.find((item) => item.path === normalized);
+  if (direct) {
+    return direct.url;
+  }
+  const fileName = normalized.split("/").pop();
+  if (!fileName) {
+    return null;
+  }
+  const byFileName = items.find((item) => item.path.endsWith(`/${fileName}`));
+  return byFileName?.url ?? null;
 }
 
 export default function BorrowerSelfieModal({ kycs, borrowerName }: BorrowerSelfieModalProps) {
@@ -149,12 +165,18 @@ export default function BorrowerSelfieModal({ kycs, borrowerName }: BorrowerSelf
 
     let cancelled = false;
 
-    getDownloadURL(ref(storage, selfiePath))
-      .then((url) => {
+    fetchSignedKycImageUrls(currentKyc.borrowerId, currentKyc.kycId)
+      .then(({ items }) => {
         if (cancelled) {
           return;
         }
-        setImageUrl(url);
+        const resolved = findSignedUrl(items, selfiePath);
+        if (!resolved) {
+          setLoadState("error");
+          setErrorMessage("Selfie image could not be loaded. Please retry.");
+          return;
+        }
+        setImageUrl(resolved);
         setLoadState("success");
       })
       .catch((error) => {

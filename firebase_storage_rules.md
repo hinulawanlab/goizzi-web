@@ -3,10 +3,9 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     match /borrowers/{borrowerId}/kyc/{kycId}/{fileName} {
-      allow read: if (isBorrowerOwner(borrowerId) || isUser(request.auth.uid))
-                  && isAllowedKycFile(fileName)
+      allow read: if isBorrowerSelfieRead(borrowerId, fileName)
                   && isUnder2MbForRead();
-      allow write: if (isBorrowerOwner(borrowerId) || isUser(request.auth.uid))
+      allow write: if isBorrowerAuthFor(borrowerId)
                    && isAllowedKycFile(fileName)
                    && isUnder2MbForWrite();
     }
@@ -17,13 +16,20 @@ service firebase.storage {
   }
 }
 
-function isBorrowerOwner(borrowerId) {
-  return request.auth != null;
+function borrowerAccountDoc() {
+  return firestore.get(/databases/(default)/documents/borrowerAccounts/$(request.auth.uid));
 }
 
-function isUser(userId) {
+function isBorrowerAuthFor(borrowerId) {
   return request.auth != null
-    && exists(/databases/(default)/documents/users/$(userId));
+    && (request.auth.uid == borrowerId
+      || (firestore.exists(/databases/(default)/documents/borrowerAccounts/$(request.auth.uid))
+        && borrowerAccountDoc().data.borrowerId == borrowerId));
+}
+
+function isBorrowerSelfieRead(borrowerId, fileName) {
+  return isBorrowerAuthFor(borrowerId)
+    && isSelfieFile(fileName);
 }
 
 function isAllowedKycFile(fileName) {
@@ -65,4 +71,4 @@ function isUnder2MbForWrite() {
 
 
 <!-- firebase_storage_rules.md -->
-lastUpdate: 12/27/2025-3:27PM
+lastUpdate: 12/27/2025-4:50PM

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { auth } from "@/shared/singletons/firebase";
+import { fetchSignedKycImageUrls } from "@/shared/services/kycImageService";
 import type { BorrowerNote } from "@/shared/types/borrowerNote";
 import type { BorrowerProofOfBillingKyc } from "@/shared/types/kyc";
 
@@ -89,22 +90,9 @@ async function fetchKycImageUrls(
         controller.abort();
       }, FETCH_TIMEOUT_MS);
 
-      const response = await fetch(`/api/borrowers/${borrowerId}/kyc/${kycId}/images`, {
-        method: "GET",
-        signal: controller.signal
-      });
+      const { urls } = await fetchSignedKycImageUrls(borrowerId, kycId, { signal: controller.signal });
       clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        console.warn("Proof of billing image URL fetch failed.", {
-          borrowerId,
-          kycId,
-          status: response.status
-        });
-        throw new Error(`Failed to fetch KYC images (${response.status}).`);
-      }
-      const payload = (await response.json()) as { urls?: string[] };
-      const urls = Array.isArray(payload.urls) ? payload.urls.filter((url) => typeof url === "string") : [];
       if (!urls.length) {
         console.warn("Proof of billing image URL response empty.", { borrowerId, kycId });
       }
