@@ -342,7 +342,7 @@ Versioned rules so older loans keep their original terms.
 ### `/users/{userId}`
 **Fields**
 - `displayName: string`
-- `role: string` (`admin|encoder|manager|auditor`)
+- `role: string` (`admin|team|manager|auditor`)
 - `branchId: string?`
 - `status: string` (`active|inactive`)
 - `createdAt: timestamp`

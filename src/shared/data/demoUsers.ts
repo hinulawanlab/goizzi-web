@@ -15,10 +15,10 @@ export const demoUsers: UserSummary[] = [
     permissions: ["KYC:read", "KYC:approve", "Location:edit", "Users:manage"]
   },
   {
-    userId: "user-encoder-002",
+    userId: "user-team-002",
     displayName: "Jorge de Vera",
     email: "jorge.devera@goizzi.com",
-    role: "encoder",
+    role: "team",
     branchId: "branch-cebu",
     branchName: "Branch B - Cebu",
     status: "active",

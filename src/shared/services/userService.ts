@@ -13,8 +13,8 @@ function normalizeDisplayName(value: unknown): string | undefined {
 }
 
 function normalizeRole(role: unknown): UserRole {
-  const validRoles: UserRole[] = ["admin", "encoder", "manager", "auditor"];
-  return typeof role === "string" && validRoles.includes(role as UserRole) ? (role as UserRole) : "encoder";
+  const validRoles: UserRole[] = ["admin", "team", "manager", "auditor"];
+  return typeof role === "string" && validRoles.includes(role as UserRole) ? (role as UserRole) : "team";
 }
 
 function normalizeStatus(status: unknown): UserStatus {

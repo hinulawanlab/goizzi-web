@@ -1,9 +1,10 @@
+// src/components/users/UserDirectory.tsx
 import type { UserRole, UserStatus, UserSummary } from "@/shared/types/user";
 
 const roleBadgeClass: Record<UserRole, string> = {
   admin: "bg-amber-100 text-amber-700",
   manager: "bg-sky-100 text-sky-700",
-  encoder: "bg-emerald-100 text-emerald-700",
+  team: "bg-emerald-100 text-emerald-700",
   auditor: "bg-slate-100 text-slate-600"
 };
 
@@ -15,7 +16,7 @@ const statusBadgeClass: Record<UserStatus, string> = {
 const roleDisplayName: Record<UserRole, string> = {
   admin: "Administrator",
   manager: "Manager",
-  encoder: "Encoder",
+  team: "Team Member",
   auditor: "Auditor"
 };
 
@@ -30,7 +31,7 @@ export default function UserDirectory({ users }: UserDirectoryProps) {
   const roleCounts: Record<UserRole, number> = {
     admin: 0,
     manager: 0,
-    encoder: 0,
+    team: 0,
     auditor: 0
   };
 
@@ -82,7 +83,7 @@ export default function UserDirectory({ users }: UserDirectoryProps) {
         </div>
 
         <div className="mt-6 flex flex-wrap gap-3">
-          {(["admin", "manager", "encoder", "auditor"] as UserRole[]).map((role) => (
+          {(["admin", "manager", "team", "auditor"] as UserRole[]).map((role) => (
             <div key={role} className="flex items-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
               <span className="text-xs uppercase tracking-[0.3em] text-slate-400">{roleDisplayName[role]}</span>
               <span className="text-sm font-semibold text-slate-900">{roleCounts[role]}</span>

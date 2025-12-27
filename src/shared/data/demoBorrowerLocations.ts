@@ -20,7 +20,7 @@ export const demoBorrowerLocations: Record<string, LocationObservation[]> = {
       label: "Makati - Paseo de Roxas",
       geo: { lat: 14.5540, lng: 121.0241 },
       accuracyMeters: 30,
-      createdBy: "user-encoder-002",
+      createdBy: "user-team-002",
       confidenceScore: 0.76
     },
     {
@@ -30,7 +30,7 @@ export const demoBorrowerLocations: Record<string, LocationObservation[]> = {
       label: "Makati - San Lorenzo",
       geo: { lat: 14.5467, lng: 121.0288 },
       accuracyMeters: 50,
-      createdBy: "user-encoder-002",
+      createdBy: "user-team-002",
       confidenceScore: 0.62
     }
   ]
