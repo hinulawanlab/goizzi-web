@@ -11,7 +11,7 @@ import type { BorrowerProofOfBillingKyc } from "@/shared/types/kyc";
 import type { LoanApplication } from "@/shared/types/loanApplication";
 import type { BorrowerNote } from "@/shared/types/borrowerNote";
 
-type TabKey = "maker" | "comakers" | "references" | "proof" | "documents";
+type TabKey = "maker" | "comakers" | "references" | "proof" | "documents" | "audit";
 type ActionState = "idle" | "working" | "success" | "error";
 
 interface BorrowerApplicationTabsProps {
@@ -27,7 +27,8 @@ const tabs: { key: TabKey; label: string }[] = [
   { key: "comakers", label: "Co-makers" },
   { key: "references", label: "References" },
   { key: "proof", label: "Proof of billing" },
-  { key: "documents", label: "Loan documents" }
+  { key: "documents", label: "Loan documents" },
+  { key: "audit", label: "Audit" }
 ];
 
 const documentGroups = [
@@ -477,7 +478,7 @@ export default function BorrowerApplicationTabs({
         <BorrowerProofOfBillingPanel borrowerId={borrower.borrowerId} kycs={proofOfBillingKycs} />
       )}
 
-      <div className="space-y-6">
+      {activeTab === "audit" && (
         <div className="rounded-3xl border border-slate-100 bg-slate-50 p-6">
           <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Audit</p>
           <div className="mt-4 grid gap-3">
@@ -492,7 +493,7 @@ export default function BorrowerApplicationTabs({
               {noteEntries.length ? (
                 noteEntries.map((note) => (
                   <div key={note.noteId} className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                    <p className="text-sm text-slate-700 whitespace-pre-wrap wrap-break-word">{note.note}</p>
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap wrap-break-words">{note.note}</p>
                     <p className="mt-2 text-[11px] uppercase tracking-[0.2em] text-slate-400">
                       {note.createdByName ?? "Unknown staff"} - {formatDate(note.createdAt)}
                     </p>
@@ -504,99 +505,99 @@ export default function BorrowerApplicationTabs({
             </div>
           </div>
         </div>
+      )}
 
-        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Notes & actions</p>
-          <div className="mt-4 space-y-4">
-            <div>
-              <label className="text-[11px] uppercase tracking-[0.3em] text-slate-400" htmlFor="loan-note">
-                Add a note
-              </label>
-              <textarea
-                id="loan-note"
-                value={noteText}
-                onChange={(event) => {
-                  setNoteText(event.target.value);
-                  if (noteActionState !== "idle") {
-                    setNoteActionState("idle");
-                    setNoteActionMessage("");
-                  }
-                }}
-                rows={4}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none"
-                placeholder="Write a note for this loan application."
-              />
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleAddNote}
-                  disabled={noteActionState === "working" || !noteText.trim()}
-                  className={`rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-                    noteActionState === "working" || !noteText.trim()
-                      ? "cursor-not-allowed border-slate-200 text-slate-300"
-                      : "cursor-pointer border-slate-900 bg-slate-900 text-white hover:border-slate-700 hover:bg-slate-800"
-                  }`}
-                >
-                  Add note
-                </button>
-              </div>
-              {noteActionState === "working" && (
-                <div className="mt-3 flex items-center gap-2 text-sm text-slate-500">
-                  <span className="inline-flex h-4 w-4 animate-spin rounded-full border border-slate-300 border-t-transparent" />
-                  {noteActionMessage}
-                </div>
-              )}
-              {noteActionState === "success" && noteActionMessage && (
-                <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                  {noteActionMessage}
-                </div>
-              )}
-              {noteActionState === "error" && noteActionMessage && (
-                <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                  {noteActionMessage}
-                </div>
-              )}
+      <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
+        <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Notes & actions</p>
+        <div className="mt-4 space-y-4">
+          <div>
+            <label className="text-[11px] uppercase tracking-[0.3em] text-slate-400" htmlFor="loan-note">
+              Add a note
+            </label>
+            <textarea
+              id="loan-note"
+              value={noteText}
+              onChange={(event) => {
+                setNoteText(event.target.value);
+                if (noteActionState !== "idle") {
+                  setNoteActionState("idle");
+                  setNoteActionMessage("");
+                }
+              }}
+              rows={4}
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none"
+              placeholder="Write a note for this loan application."
+            />
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={handleAddNote}
+                disabled={noteActionState === "working" || !noteText.trim()}
+                className={`rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+                  noteActionState === "working" || !noteText.trim()
+                    ? "cursor-not-allowed border-slate-200 text-slate-300"
+                    : "cursor-pointer border-slate-900 bg-slate-900 text-white hover:border-slate-700 hover:bg-slate-800"
+                }`}
+              >
+                Add note
+              </button>
             </div>
+            {noteActionState === "working" && (
+              <div className="mt-3 flex items-center gap-2 text-sm text-slate-500">
+                <span className="inline-flex h-4 w-4 animate-spin rounded-full border border-slate-300 border-t-transparent" />
+                {noteActionMessage}
+              </div>
+            )}
+            {noteActionState === "success" && noteActionMessage && (
+              <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                {noteActionMessage}
+              </div>
+            )}
+            {noteActionState === "error" && noteActionMessage && (
+              <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {noteActionMessage}
+              </div>
+            )}
+          </div>
 
-            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Application status</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {loanActions.map((action) => {
-                  const isWorking = statusActionState === "working";
-                  return (
-                    <button
-                      key={action}
-                      type="button"
-                      onClick={() => handleStatusChange(action)}
-                      disabled={isWorking}
-                      className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-                        isWorking
-                          ? "cursor-not-allowed border-slate-200 text-slate-300"
-                          : "cursor-pointer border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
-                      }`}
-                    >
-                      {action}
-                    </button>
-                  );
-                })}
-              </div>
-              {statusActionState === "working" && (
-                <div className="mt-3 flex items-center gap-2 text-sm text-slate-500">
-                  <span className="inline-flex h-4 w-4 animate-spin rounded-full border border-slate-300 border-t-transparent" />
-                  {statusActionMessage}
-                </div>
-              )}
-              {statusActionState === "success" && statusActionMessage && (
-                <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                  {statusActionMessage}
-                </div>
-              )}
-              {statusActionState === "error" && statusActionMessage && (
-                <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                  {statusActionMessage}
-                </div>
-              )}
+          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Application status</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {loanActions.map((action) => {
+                const isWorking = statusActionState === "working";
+                return (
+                  <button
+                    key={action}
+                    type="button"
+                    onClick={() => handleStatusChange(action)}
+                    disabled={isWorking}
+                    className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+                      isWorking
+                        ? "cursor-not-allowed border-slate-200 text-slate-300"
+                        : "cursor-pointer border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                    }`}
+                  >
+                    {action}
+                  </button>
+                );
+              })}
             </div>
+            {statusActionState === "working" && (
+              <div className="mt-3 flex items-center gap-2 text-sm text-slate-500">
+                <span className="inline-flex h-4 w-4 animate-spin rounded-full border border-slate-300 border-t-transparent" />
+                {statusActionMessage}
+              </div>
+            )}
+            {statusActionState === "success" && statusActionMessage && (
+              <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                {statusActionMessage}
+              </div>
+            )}
+            {statusActionState === "error" && statusActionMessage && (
+              <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {statusActionMessage}
+              </div>
+            )}
           </div>
         </div>
       </div>
