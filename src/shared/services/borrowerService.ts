@@ -3,6 +3,8 @@ import type { DocumentSnapshot } from "firebase-admin/firestore";
 
 import { db, hasAdminCredentials } from "@/shared/singletons/firebaseAdmin";
 import { demoDashboardData } from "@/shared/data/demoDashboard";
+import { demoBorrowerFollowUps } from "@/shared/data/demoBorrowerFollowUps";
+import type { BorrowerFollowUpSummary } from "@/shared/types/borrowerFollowUp";
 import type { BorrowerSummary, FrequentArea, KycStatus, LocationQuality } from "@/shared/types/dashboard";
 
 function normalizeStatus(status: unknown): KycStatus {
@@ -121,11 +123,39 @@ function mapBorrowerDoc(doc: DocumentSnapshot): BorrowerSummary {
   };
 }
 
+function mapBorrowerFollowUpDoc(doc: DocumentSnapshot): BorrowerFollowUpSummary {
+  const data = doc.data() || {};
+  const primaryBranchId = typeof data.primaryBranchId === "string" ? data.primaryBranchId : undefined;
+  const fallbackBranchId = typeof data.branchId === "string" ? data.branchId : undefined;
+  const branchDocumentId = primaryBranchId ?? fallbackBranchId;
+  const followUpCount = typeof data.followUpCount === "number" ? data.followUpCount : 1;
+
+  return {
+    borrowerId: doc.id,
+    fullName: typeof data.fullName === "string" && data.fullName.trim() ? data.fullName : "Unknown borrower",
+    phone: typeof data.phone === "string" && data.phone.trim() ? data.phone : "N/A",
+    branch: branchDocumentId || "Unassigned",
+    branchDocumentId,
+    followUpCount,
+    followUpAt: formatTimestamp(data.followUpAt)
+  };
+}
+
 function collectBranchIds(borrowers: BorrowerSummary[]): string[] {
   const ids = new Set<string>();
   for (const borrower of borrowers) {
     if (borrower.branchDocumentId) {
       ids.add(borrower.branchDocumentId);
+    }
+  }
+  return Array.from(ids);
+}
+
+function collectFollowUpBranchIds(followUps: BorrowerFollowUpSummary[]): string[] {
+  const ids = new Set<string>();
+  for (const followUp of followUps) {
+    if (followUp.branchDocumentId) {
+      ids.add(followUp.branchDocumentId);
     }
   }
   return Array.from(ids);
@@ -201,6 +231,48 @@ async function enrichBorrowersWithBranchNames(borrowers: BorrowerSummary[]): Pro
   }
 }
 
+async function enrichFollowUpsWithBranchNames(followUps: BorrowerFollowUpSummary[]): Promise<BorrowerFollowUpSummary[]> {
+  if (!followUps.length || !db || !hasAdminCredentials()) {
+    return followUps;
+  }
+
+  const branchIds = collectFollowUpBranchIds(followUps);
+  if (!branchIds.length) {
+    return followUps;
+  }
+
+  try {
+    const branchNameMap = await fetchBranchNamesByIds(branchIds);
+    if (!Object.keys(branchNameMap).length) {
+      return followUps;
+    }
+
+    return followUps.map((followUp) => {
+      const branchId = followUp.branchDocumentId;
+      if (!branchId) {
+        return followUp;
+      }
+
+      const branchName = branchNameMap[branchId];
+      if (!branchName) {
+        return followUp;
+      }
+
+      if (followUp.branch === branchName) {
+        return followUp;
+      }
+
+      return {
+        ...followUp,
+        branch: branchName
+      };
+    });
+  } catch (error) {
+    console.warn("Unable to resolve branch names for follow-ups:", error);
+    return followUps;
+  }
+}
+
 async function fetchBorrowersFromFirestore(limit = 30): Promise<BorrowerSummary[]> {
   if (!db) {
     throw new Error("Firestore Admin client is not initialized.");
@@ -214,6 +286,25 @@ async function fetchBorrowersFromFirestore(limit = 30): Promise<BorrowerSummary[
   return snapshot.docs.map(mapBorrowerDoc);
 }
 
+async function fetchBorrowerFollowUpsFromFirestore(limit = 50): Promise<BorrowerFollowUpSummary[]> {
+  if (!db) {
+    throw new Error("Firestore Admin client is not initialized.");
+  }
+
+  const snapshot = await db
+    .collection("borrowers")
+    .where("followUp", "==", true)
+    .orderBy("followUpAt", "asc")
+    .limit(limit)
+    .get();
+
+  if (snapshot.empty) {
+    return [];
+  }
+
+  return snapshot.docs.map(mapBorrowerFollowUpDoc);
+}
+
 export async function getBorrowerSummaries(limit = 30): Promise<BorrowerSummary[]> {
   if (hasAdminCredentials()) {
     try {
@@ -225,6 +316,21 @@ export async function getBorrowerSummaries(limit = 30): Promise<BorrowerSummary[
   }
 
   return demoDashboardData.borrowers;
+}
+
+export async function getBorrowerFollowUps(limit = 50): Promise<BorrowerFollowUpSummary[]> {
+  if (hasAdminCredentials()) {
+    try {
+      const followUps = await fetchBorrowerFollowUpsFromFirestore(limit);
+      return await enrichFollowUpsWithBranchNames(followUps);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn("Unable to fetch borrower follow-ups from Firestore:", error);
+      console.warn("Follow-up query error message (copy for index link):", message);
+    }
+  }
+
+  return demoBorrowerFollowUps.slice(0, limit);
 }
 
 export async function getBorrowerSummaryById(borrowerId: string): Promise<BorrowerSummary | null> {
