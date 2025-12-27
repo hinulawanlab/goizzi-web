@@ -21,13 +21,13 @@ This schema is optimized for:
 
 ### Status enums (suggested)
 - Borrower: `active | blocked | archived`
-- Loan: `draft | active | delinquent | closed | writtenOff`
+- Loan: `draft | approved | active | delinquent | closed | writtenOff`
 - Payment: `posted | reversed | pending`
 - Ledger entry: `posted | reversed`
 
 ### Money
-- Store amounts as **integer minor units** (recommended), e.g. PHP centavos:
-  - `amountMinor: number` (e.g., ₱100.00 → `10000`)
+- Store amounts as **integer Amount units** (recommended), e.g. PHP centavos:
+  - `amountAmount: number` (e.g., ₱100.00 → `10000`)
   - `currency: string` (e.g., `"PHP"`)
 
 ---
@@ -184,9 +184,11 @@ Top-level to support queries like “Branch X due today” without scanning borr
 - `pricingPolicyVersion: string` (or `policySnapshot: map`)
 
 **Core terms**
-- `status: string` (`draft|active|delinquent|closed|writtenOff`)
+- `status: string` (`draft|approved|active|delinquent|closed|writtenOff`)
 - `currency: string` (e.g., `"PHP"`)
-- `principalMinor: number`
+- `principalAmount: number`
+- `loanInterest: number`
+- `approvedAt: timestamp`
 - `startDate: timestamp`
 - `termDays: number?` / `termMonths: number?`
 - `paymentFrequency: string` (`daily|weekly|monthly`)
@@ -195,6 +197,7 @@ Top-level to support queries like “Branch X due today” without scanning borr
 **Denormalized borrower fields (optional but useful for lists)**
 - `borrowerName: string`
 - `borrowerPhone: string`
+- `applicationId: string?`
 
 **Operational summary fields (updated after postings)**
 - `nextDueDate: timestamp?`
@@ -203,16 +206,16 @@ Top-level to support queries like “Branch X due today” without scanning borr
 
 **Accounting summary fields (fast read; derived from ledger)**
 - `balances: map`
-  - `principalOutstandingMinor: number`
-  - `interestOutstandingMinor: number`
-  - `feesOutstandingMinor: number`
-  - `penaltiesOutstandingMinor: number`
-  - `totalOutstandingMinor: number`
+  - `principalOutstandingAmount: number`
+  - `interestOutstandingAmount: number`
+  - `feesOutstandingAmount: number`
+  - `penaltiesOutstandingAmount: number`
+  - `totalOutstandingAmount: number`
 - `totals: map`
-  - `totalPaidMinor: number`
-  - `totalFeesChargedMinor: number`
-  - `totalInterestChargedMinor: number`
-  - `totalPenaltiesChargedMinor: number`
+  - `totalPaidAmount: number`
+  - `totalFeesChargedAmount: number`
+  - `totalInterestChargedAmount: number`
+  - `totalPenaltiesChargedAmount: number`
 
 **Audit**
 - `createdAt: timestamp`
@@ -237,7 +240,7 @@ A payment is the “receipt record.” Allocation is explicit because you apply 
 
 **Fields**
 - `status: string` (`posted|reversed|pending`)
-- `amountMinor: number`
+- `amountAmount: number`
 - `currency: string`
 - `paidAt: timestamp`     (when borrower paid/deposited)
 - `encodedAt: timestamp`  (when staff encoded)
@@ -248,17 +251,17 @@ A payment is the “receipt record.” Allocation is explicit because you apply 
 
 **Manual allocation breakdown**
 - `allocation: map`
-  - `principalMinor: number`
-  - `interestMinor: number`
-  - `feesMinor: number`
-  - `penaltiesMinor: number`
+  - `principalAmount: number`
+  - `interestAmount: number`
+  - `feesAmount: number`
+  - `penaltiesAmount: number`
 
 **Optional payment-location**
 - `geo: geopoint?`
 - `geohash: string?`
 
 **Validation rule (app/server)**
-`allocation.principal + allocation.interest + allocation.fees + allocation.penalties == amountMinor`
+`allocation.principal + allocation.interest + allocation.fees + allocation.penalties == amountAmount`
 
 ---
 
@@ -272,7 +275,7 @@ Immutable accounting story. Corrections happen via new entries (reversal/adjustm
 - `type: string`
   - Examples: `principalDisbursed|feeCharged|interestAccrued|penaltyCharged|paymentApplied|adjustment|reversal`
 - `bucket: string` (`principal|interest|fees|penalties`)
-- `amountMinor: number` (positive or negative; choose one convention and stick to it)
+- `amountAmount: number` (positive or negative; choose one convention and stick to it)
 - `currency: string`
 - `effectiveDate: timestamp` (the date it “counts for”)
 - `createdAt: timestamp`
@@ -285,7 +288,7 @@ Immutable accounting story. Corrections happen via new entries (reversal/adjustm
 
 **Posting a payment → ledger writes**
 For each payment, write up to 4 `paymentApplied` entries using the manual allocation:
-- principal (allocation.principalMinor)
+- principal (allocation.principalAmount)
 - interest
 - fees
 - penalties
@@ -326,9 +329,9 @@ Versioned rules so older loans keep their original terms.
 - `version: string` (e.g., `"v3"`)
 - `effectiveFrom: timestamp`
 - `rules: map` (structure defined by you; examples)
-  - `processingFeeMinor: number?`
-  - `monthlyServiceFeeMinor: number?`
-  - `monthlyCollectionFeeMinor: number?`
+  - `processingFeeAmount: number?`
+  - `monthlyServiceFeeAmount: number?`
+  - `monthlyCollectionFeeAmount: number?`
   - `interestRateMonthlyBps: number?` (bps = basis points)
   - `penaltyRule: map?`
 - `createdAt: timestamp`

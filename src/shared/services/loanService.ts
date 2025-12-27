@@ -35,7 +35,7 @@ function formatTimestamp(value: unknown): string {
 }
 
 function normalizeStatus(value: unknown): LoanStatus {
-  const valid: LoanStatus[] = ["draft", "active", "delinquent", "closed", "writtenOff"];
+  const valid: LoanStatus[] = ["draft", "approved", "active", "delinquent", "closed", "writtenOff"];
   return typeof value === "string" && valid.includes(value as LoanStatus)
     ? (value as LoanStatus)
     : "draft";
@@ -61,8 +61,8 @@ function mapLoanDoc(doc: DocumentSnapshot): LoanSummary {
     status: normalizeStatus(data.status),
     productId: typeof data.productId === "string" ? data.productId : undefined,
     productName: typeof data.productName === "string" ? data.productName : undefined,
-    principalMinor: toNumber(data.principalMinor),
-    totalOutstandingMinor: toNumber(data.balances?.totalOutstandingMinor),
+    principalAmount: toNumber(data.principalAmount),
+    totalOutstandingAmount: toNumber(data.balances?.totalOutstandingAmount),
     currency: typeof data.currency === "string" ? data.currency : undefined,
     startDate: formatTimestamp(data.startDate),
     nextDueDate: formatTimestamp(data.nextDueDate),

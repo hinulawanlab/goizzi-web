@@ -73,4 +73,4 @@ function isUnder2MbForWrite() {
 <!-- firebase_storage_rules.md -->
 <!-- Versioning -->
 version: v1
-lastUpdate: 12/27/2025-10:31PM
+lastUpdate: 12/27/2025-11:05PM

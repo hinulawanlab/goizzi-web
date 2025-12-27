@@ -8,8 +8,9 @@ import { useRouter } from "next/navigation";
 import BorrowerApplicationHeaderSection from "@/components/borrowers/BorrowerApplicationHeaderSection";
 import BorrowerApplicationNotesActions from "@/components/borrowers/BorrowerApplicationNotesActions";
 import BorrowerApplicationTabSection from "@/components/borrowers/BorrowerApplicationTabSection";
+import BorrowerApplicationApprovalModal from "@/components/borrowers/BorrowerApplicationApprovalModal";
 import { useBorrowerApplicationActions } from "@/components/borrowers/useBorrowerApplicationActions";
-import type { TabKey } from "@/components/borrowers/borrowerApplicationTypes";
+import type { LoanAction, TabKey } from "@/components/borrowers/borrowerApplicationTypes";
 import { auth } from "@/shared/singletons/firebase";
 import type { BorrowerSummary } from "@/shared/types/dashboard";
 import type { BorrowerReference } from "@/shared/types/borrowerReference";
@@ -59,6 +60,7 @@ export default function BorrowerApplicationTabs({
     audit: 0
   });
   const [isRefreshing, startRefreshing] = useTransition();
+  const [isApprovalOpen, setIsApprovalOpen] = useState(false);
   const router = useRouter();
   const {
     auditStatus,
@@ -73,7 +75,9 @@ export default function BorrowerApplicationTabs({
     handleAddNote,
     handleNoteTextChange,
     handleKycDecisionNote,
-    handleStatusChange
+    handleStatusChange,
+    handleApproveLoan,
+    resetStatusAction
   } = useBorrowerApplicationActions({
     borrowerId: borrower.borrowerId,
     applicationId: application.applicationId,
@@ -82,6 +86,18 @@ export default function BorrowerApplicationTabs({
     initialStatusUpdatedByName: application.statusUpdatedByName,
     initialNotes: notes
   });
+
+  const parseNumberString = (value?: string): string | undefined => {
+    if (!value) {
+      return undefined;
+    }
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed.toString() : undefined;
+  };
+
+  const defaultLoanAmount = parseNumberString(application.loanDetails?.amountApplied);
+  const defaultTermMonths = parseNumberString(application.loanDetails?.term);
+  const defaultApprovedAt = new Date().toISOString().split("T")[0];
 
   useEffect(() => {
     console.info("Borrower application auth check.", {
@@ -113,8 +129,43 @@ export default function BorrowerApplicationTabs({
     });
   };
 
+  const handleStatusAction = (status: LoanAction) => {
+    if (status === "Approved") {
+      resetStatusAction();
+      setIsApprovalOpen(true);
+      return;
+    }
+    void handleStatusChange(status);
+  };
+
+  const handleApprovalSubmit = async (payload: {
+    loanAmount: number;
+    loanInterest: number;
+    termMonths: number;
+    approvedAt: string;
+  }) => {
+    const success = await handleApproveLoan(payload);
+    if (success) {
+      setIsApprovalOpen(false);
+      router.push(`/borrowers/${borrower.borrowerId}`);
+    }
+    return success;
+  };
+
   return (
     <div className="relative flex flex-col gap-6 lg:min-h-[calc(100vh-4rem)] lg:pl-72 lg:pr-6">
+      <BorrowerApplicationApprovalModal
+        key={`approval-${application.applicationId}-${isApprovalOpen ? "open" : "closed"}`}
+        isOpen={isApprovalOpen}
+        defaultAmount={defaultLoanAmount}
+        defaultTerm={defaultTermMonths}
+        defaultInterest={1.5}
+        defaultApprovedAt={defaultApprovedAt}
+        statusActionState={statusActionState}
+        statusActionMessage={statusActionMessage}
+        onClose={() => setIsApprovalOpen(false)}
+        onSubmit={handleApprovalSubmit}
+      />
       <div className="lg:fixed lg:left-4 lg:top-8 lg:bottom-8 lg:z-20 lg:w-72">
         <BorrowerApplicationNotesActions
           noteText={noteText}
@@ -124,7 +175,7 @@ export default function BorrowerApplicationTabs({
           statusActionMessage={statusActionMessage}
           onNoteTextChange={handleNoteTextChange}
           onAddNote={handleAddNote}
-          onStatusChange={handleStatusChange}
+          onStatusChange={handleStatusAction}
         />
       </div>
 

@@ -25,7 +25,7 @@ These are rules that must always be true, regardless of UI or workflow.
 
 ### Data invariants
 - No unbounded arrays in a single document (use subcollections).
-- All money amounts are stored in **minor units** (e.g., centavos) as integers.
+- All money amounts are stored in **amount units** (e.g., centavos) as integers.
 - Every record that matters has:
   - `createdAt`, `createdBy`, and a stable identifier.
 
@@ -188,7 +188,7 @@ Do not throw exceptions for expected validation problems.
 - Allocation sum check
 - Ledger entry generation from payment allocation
 - Reversal logic (negating entries)
-- Money arithmetic (minor units, overflow checks)
+- Money arithmetic (amount units, overflow checks)
 
 ### Use-case tests (Application)
 - Posting payment calls repositories correctly

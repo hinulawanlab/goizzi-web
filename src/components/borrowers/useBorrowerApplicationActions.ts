@@ -4,6 +4,13 @@ import { auth } from "@/shared/singletons/firebase";
 import type { BorrowerNote } from "@/shared/types/borrowerNote";
 import type { ActionState, LoanAction } from "@/components/borrowers/borrowerApplicationTypes";
 
+interface ApprovalPayload {
+  loanAmount: number;
+  loanInterest: number;
+  termMonths: number;
+  approvedAt: string;
+}
+
 interface UseBorrowerApplicationActionsParams {
   borrowerId: string;
   applicationId: string;
@@ -165,6 +172,73 @@ export function useBorrowerApplicationActions({
     }
   };
 
+  const resetStatusAction = () => {
+    setStatusActionState("idle");
+    setStatusActionMessage("");
+  };
+
+  const handleApproveLoan = async (payload: ApprovalPayload): Promise<boolean> => {
+    if (!borrowerId) {
+      setStatusActionState("error");
+      setStatusActionMessage("Borrower id is missing. Refresh and try again.");
+      return false;
+    }
+
+    setStatusActionState("working");
+    setStatusActionMessage("Creating loan and approving application...");
+
+    const actor = getActorProfile();
+
+    try {
+      const response = await fetch(
+        `/api/borrowers/${borrowerId}/application/${applicationId}/approve`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...payload,
+            actorName: actor.name,
+            actorUserId: actor.userId
+          })
+        }
+      );
+
+      if (!response.ok) {
+        const errorPayload = (await response.json()) as { error?: string };
+        const errorMessage =
+          response.status === 409
+            ? "A loan already exists for this application."
+            : errorPayload.error || "Loan approval failed.";
+        throw new Error(errorMessage);
+      }
+
+      const result = (await response.json()) as {
+        updatedAt?: string;
+        status?: LoanAction;
+        statusUpdatedByName?: string;
+        note?: BorrowerNote;
+      };
+
+      setAuditStatus(result.status ?? "Approved");
+      setAuditUpdatedAt(result.updatedAt ?? auditUpdatedAt);
+      setStatusUpdatedByName(result.statusUpdatedByName ?? actor.name);
+
+      if (result.note) {
+        setNoteEntries((prev) => [result.note as BorrowerNote, ...prev]);
+      }
+
+      setStatusActionState("success");
+      setStatusActionMessage("Loan created and application approved.");
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to approve loan. Please retry.";
+      console.warn("Unable to approve loan:", error);
+      setStatusActionState("error");
+      setStatusActionMessage(message);
+      return false;
+    }
+  };
+
   return {
     auditStatus,
     auditUpdatedAt,
@@ -178,6 +252,8 @@ export function useBorrowerApplicationActions({
     handleAddNote,
     handleNoteTextChange,
     handleKycDecisionNote,
-    handleStatusChange
+    handleStatusChange,
+    handleApproveLoan,
+    resetStatusAction
   };
 }

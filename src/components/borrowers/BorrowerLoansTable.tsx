@@ -106,9 +106,9 @@ export default function BorrowerLoansTable({ loans, emptyTitle, emptySubtitle }:
                     {loan.status}
                   </span>
                 </td>
-                <td className="px-3 py-4 text-slate-700">{formatAmount(loan.principalMinor, loan.currency)}</td>
+                <td className="px-3 py-4 text-slate-700">{formatAmount(loan.principalAmount, loan.currency)}</td>
                 <td className="px-3 py-4 text-slate-700">
-                  {formatAmount(loan.totalOutstandingMinor, loan.currency)}
+                  {formatAmount(loan.totalOutstandingAmount, loan.currency)}
                 </td>
                 <td className="px-3 py-4 text-slate-700">{formatDate(loan.nextDueDate)}</td>
                 <td className="px-3 py-4 text-slate-700">{formatDate(loan.lastPaymentAt)}</td>
