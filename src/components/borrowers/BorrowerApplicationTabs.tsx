@@ -9,6 +9,7 @@ import BorrowerApplicationHeaderSection from "@/components/borrowers/BorrowerApp
 import BorrowerApplicationNotesActions from "@/components/borrowers/BorrowerApplicationNotesActions";
 import BorrowerApplicationTabSection from "@/components/borrowers/BorrowerApplicationTabSection";
 import BorrowerApplicationApprovalModal from "@/components/borrowers/BorrowerApplicationApprovalModal";
+import BorrowerApplicationChecklistModal from "@/components/borrowers/BorrowerApplicationChecklistModal";
 import { useBorrowerApplicationActions } from "@/components/borrowers/useBorrowerApplicationActions";
 import type { LoanAction, TabKey } from "@/components/borrowers/borrowerApplicationTypes";
 import { auth } from "@/shared/singletons/firebase";
@@ -19,7 +20,9 @@ import type {
   BorrowerOtherKyc,
   BorrowerPayslipKyc,
   BorrowerProofOfBillingKyc,
-  BorrowerPropertyTitleKyc
+  BorrowerPropertyTitleKyc,
+  BorrowerGovernmentIdKyc,
+  BorrowerHomePhotoKyc
 } from "@/shared/types/kyc";
 import type { LoanApplication } from "@/shared/types/loanApplication";
 import type { BorrowerNote } from "@/shared/types/borrowerNote";
@@ -33,6 +36,9 @@ interface BorrowerApplicationTabsProps {
   payslipKycs: BorrowerPayslipKyc[];
   propertyTitleKycs: BorrowerPropertyTitleKyc[];
   otherKycs: BorrowerOtherKyc[];
+  selfieKycs: BorrowerGovernmentIdKyc[];
+  governmentIdKycs: BorrowerGovernmentIdKyc[];
+  homePhotoKycs: BorrowerHomePhotoKyc[];
   notes: BorrowerNote[];
 }
 
@@ -45,6 +51,9 @@ export default function BorrowerApplicationTabs({
   payslipKycs,
   propertyTitleKycs,
   otherKycs,
+  selfieKycs,
+  governmentIdKycs,
+  homePhotoKycs,
   notes
 }: BorrowerApplicationTabsProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("maker");
@@ -61,6 +70,9 @@ export default function BorrowerApplicationTabs({
   });
   const [isRefreshing, startRefreshing] = useTransition();
   const [isApprovalOpen, setIsApprovalOpen] = useState(false);
+  const [manualVerified, setManualVerified] = useState<string[]>(application.manualVerified ?? []);
+  const [manualChecklistState, setManualChecklistState] = useState<"idle" | "working" | "success" | "error">("idle");
+  const [manualChecklistMessage, setManualChecklistMessage] = useState("");
   const router = useRouter();
   const {
     auditStatus,
@@ -98,6 +110,55 @@ export default function BorrowerApplicationTabs({
   const defaultLoanAmount = parseNumberString(application.loanDetails?.amountApplied);
   const defaultTermMonths = parseNumberString(application.loanDetails?.term);
   const defaultApprovedAt = new Date().toISOString().split("T")[0];
+  const loanAmountNumber = Number(application.loanDetails?.amountApplied);
+  const isCibiOptional = Number.isFinite(loanAmountNumber) && loanAmountNumber < 50000;
+
+  const resolveApprovedOrWaived = (value?: boolean, waived?: boolean) => value === true || waived === true;
+
+  const hasSelfie = selfieKycs.some((entry) => resolveApprovedOrWaived(entry.isApproved));
+  const hasGovernmentId = governmentIdKycs.some((entry) => resolveApprovedOrWaived(entry.isApproved));
+  const hasProofOfIncome = payslipKycs.some((entry) => resolveApprovedOrWaived(entry.isApproved, entry.isWaived));
+  const hasBankStatements = bankStatementKycs.some((entry) => resolveApprovedOrWaived(entry.isApproved, entry.isWaived));
+  const hasProofOfBilling = proofOfBillingKycs.some((entry) => resolveApprovedOrWaived(entry.isApproved, entry.isWaived));
+  const hasHomePhoto = homePhotoKycs.some((entry) => resolveApprovedOrWaived(entry.isApproved, entry.isWaived));
+
+  const agreedReferences = references.filter(
+    (reference) =>
+      reference.contactStatus === "agreed" && reference.applicationId === application.applicationId
+  );
+  const hasReferences = agreedReferences.length >= 2;
+
+  const manualItems = [
+    { key: "homeAddress", label: "Home address", required: true },
+    { key: "officeAddress", label: "Office address", required: true },
+    { key: "loanApplication", label: "Loan application", required: true },
+    { key: "makerFacebook", label: "Maker's facebook", required: true },
+    { key: "makerMobile", label: "Maker's mobile number", required: true },
+    { key: "comakerFacebook", label: "Co-maker's facebook", required: true },
+    { key: "comakerMobile", label: "Co-maker's mobile number", required: true },
+    { key: "cibi", label: "CIBI", required: !isCibiOptional }
+  ];
+
+  const autoChecklistItems = [
+    { key: "selfie", label: "Selfie", checked: hasSelfie },
+    { key: "governmentId", label: "Government ID", checked: hasGovernmentId },
+    { key: "proofOfIncome", label: "Proof of income", checked: hasProofOfIncome },
+    { key: "bankStatements", label: "Bank statements", checked: hasBankStatements },
+    { key: "proofOfBilling", label: "Proof of billing", checked: hasProofOfBilling },
+    { key: "references", label: "References", checked: hasReferences },
+    { key: "homePhoto", label: "Home photo", checked: hasHomePhoto }
+  ];
+
+  const manualChecklistItems = manualItems.map((item) => ({
+    ...item,
+    checked: manualVerified.includes(item.key)
+  }));
+
+  const allAutoComplete = autoChecklistItems.every((item) => item.checked);
+  const allManualRequiredComplete = manualChecklistItems.every(
+    (item) => item.checked || item.required === false
+  );
+  const isChecklistComplete = allAutoComplete && allManualRequiredComplete;
 
   useEffect(() => {
     console.info("Borrower application auth check.", {
@@ -130,12 +191,56 @@ export default function BorrowerApplicationTabs({
   };
 
   const handleStatusAction = (status: LoanAction) => {
-    if (status === "Approved") {
+    if (status === "Approve") {
       resetStatusAction();
+      setManualChecklistState("idle");
+      setManualChecklistMessage("");
       setIsApprovalOpen(true);
       return;
     }
     void handleStatusChange(status);
+  };
+
+  const handleManualToggle = async (key: string, checked: boolean) => {
+    if (!borrower.borrowerId || !application.applicationId) {
+      setManualChecklistState("error");
+      setManualChecklistMessage("Borrower or application id is missing. Refresh and try again.");
+      return;
+    }
+
+    setManualChecklistState("working");
+    setManualChecklistMessage("Saving checklist...");
+
+    const updated = checked
+      ? Array.from(new Set([...manualVerified, key]))
+      : manualVerified.filter((item) => item !== key);
+
+    try {
+      const response = await fetch(
+        `/api/borrowers/${borrower.borrowerId}/application/${application.applicationId}/manual-checks`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            manualVerified: updated,
+            actorUserId: auth.currentUser?.uid ?? null
+          })
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Manual checklist update failed.");
+      }
+
+      const payload = (await response.json()) as { manualVerified?: string[] };
+      setManualVerified(payload.manualVerified ?? updated);
+      setManualChecklistState("success");
+      setManualChecklistMessage("Checklist saved.");
+    } catch (error) {
+      console.warn("Unable to update manual checklist:", error);
+      setManualChecklistState("error");
+      setManualChecklistMessage("Unable to save checklist. Please retry.");
+    }
   };
 
   const handleApprovalSubmit = async (payload: {
@@ -161,10 +266,19 @@ export default function BorrowerApplicationTabs({
         defaultTerm={defaultTermMonths}
         defaultInterest={1.5}
         defaultApprovedAt={defaultApprovedAt}
+        isChecklistComplete={isChecklistComplete}
         statusActionState={statusActionState}
         statusActionMessage={statusActionMessage}
         onClose={() => setIsApprovalOpen(false)}
         onSubmit={handleApprovalSubmit}
+      />
+      <BorrowerApplicationChecklistModal
+        isOpen={isApprovalOpen}
+        autoItems={autoChecklistItems}
+        manualItems={manualChecklistItems}
+        checklistState={manualChecklistState}
+        checklistMessage={manualChecklistMessage}
+        onToggleManualItem={handleManualToggle}
       />
       <div className="lg:fixed lg:left-4 lg:top-8 lg:bottom-8 lg:z-20 lg:w-72">
         <BorrowerApplicationNotesActions

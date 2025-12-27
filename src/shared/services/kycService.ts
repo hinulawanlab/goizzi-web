@@ -9,6 +9,7 @@ import { demoBorrowerPropertyTitleKycs } from "@/shared/data/demoBorrowerPropert
 import type {
   BorrowerBankStatementKyc,
   BorrowerGovernmentIdKyc,
+  BorrowerHomePhotoKyc,
   BorrowerOtherKyc,
   BorrowerPayslipKyc,
   BorrowerPropertyTitleKyc,
@@ -269,6 +270,27 @@ function mapOtherDoc(doc: DocumentSnapshot, borrowerId: string): BorrowerOtherKy
   };
 }
 
+function mapHomePhotoDoc(doc: DocumentSnapshot, borrowerId: string): BorrowerHomePhotoKyc | null {
+  const data = doc.data() || {};
+  const normalizedRefs = normalizeStorageRefs(data.storageRefs);
+  const primaryRef = normalizeStorageRef(data.storageRef);
+  const storageRefs = primaryRef ? [primaryRef, ...normalizedRefs] : normalizedRefs;
+
+  return {
+    borrowerId,
+    kycId: doc.id,
+    storageRefs,
+    isApproved:
+      typeof data.isApproved === "boolean"
+        ? data.isApproved
+        : typeof data.isApprove === "boolean"
+          ? data.isApprove
+          : undefined,
+    isWaived: typeof data.isWaived === "boolean" ? data.isWaived : undefined,
+    createdAt: formatTimestamp(data.createdAt)
+  };
+}
+
 async function fetchGovernmentIdKyc(borrowerId: string): Promise<BorrowerGovernmentIdKyc | null> {
   if (!db) {
     throw new Error("Firestore Admin client is not initialized.");
@@ -512,6 +534,42 @@ async function fetchOtherKycs(borrowerId: string, limit = 10): Promise<BorrowerO
   return withUrls;
 }
 
+async function fetchHomePhotoKycs(borrowerId: string, limit = 10): Promise<BorrowerHomePhotoKyc[]> {
+  if (!db) {
+    throw new Error("Firestore Admin client is not initialized.");
+  }
+
+  const snapshot = await db
+    .collection("borrowers")
+    .doc(borrowerId)
+    .collection("kyc")
+    .where("type", "==", "homePhoto")
+    .orderBy("createdAt", "desc")
+    .limit(limit)
+    .get();
+
+  if (snapshot.empty) {
+    return [];
+  }
+
+  const mapped = snapshot.docs
+    .map((doc) => mapHomePhotoDoc(doc, borrowerId))
+    .filter(Boolean) as BorrowerHomePhotoKyc[];
+
+  if (!storageBucket) {
+    return mapped;
+  }
+
+  const withUrls = await Promise.all(
+    mapped.map(async (kyc) => ({
+      ...kyc,
+      imageUrls: await createSignedUrlsForRefs(kyc.storageRefs ?? [])
+    }))
+  );
+
+  return withUrls;
+}
+
 export async function getBorrowerGovernmentIdKyc(borrowerId: string): Promise<BorrowerGovernmentIdKyc | null> {
   if (!borrowerId) {
     return null;
@@ -648,6 +706,24 @@ export async function getBorrowerOtherKycs(
   }
 
   return demoBorrowerOtherKycs[borrowerId] ?? [];
+}
+
+export async function getBorrowerHomePhotoKycs(
+  borrowerId: string,
+  limit = 10
+): Promise<BorrowerHomePhotoKyc[]> {
+  if (!borrowerId) {
+    return [];
+  }
+  if (hasAdminCredentials()) {
+    try {
+      return await fetchHomePhotoKycs(borrowerId, limit);
+    } catch (error) {
+      console.warn(`Unable to fetch home photo KYC list for ${borrowerId}:`, error);
+    }
+  }
+
+  return [];
 }
 
 export async function setBorrowerGovernmentIdApproval(

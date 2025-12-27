@@ -69,3 +69,13 @@ export interface BorrowerOtherKyc {
   isWaived?: boolean;
   createdAt?: string;
 }
+
+export interface BorrowerHomePhotoKyc {
+  borrowerId: string;
+  kycId: string;
+  storageRefs: string[];
+  imageUrls?: string[];
+  isApproved?: boolean;
+  isWaived?: boolean;
+  createdAt?: string;
+}

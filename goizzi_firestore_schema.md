@@ -89,6 +89,7 @@ Small, fast “profile header” document. Keep PII-heavy KYC in a subcollection
 /borrowers/{borrowerId}/locationObservations/{obsId}
 /borrowers/{borrowerId}/references/{referenceId}
 /borrowers/{borrowerId}/notes/{noteId}            (optional)
+/borrowers/{borrowerId}/application/{applicationId}
 ```
 
 ---
@@ -146,6 +147,17 @@ Raw signals used to compute “usual location.” Keep event-based.
 - `referenceId: string`
 - `contactStatus: string` (`pending|agreed|declined|no_response`)
 - `updatedAt: timestamp?`
+
+### `/borrowers/{borrowerId}/application/{applicationId}`
+Loan application record with approval checklist state.
+
+**Fields**
+- `status: string`
+- `updatedAt: timestamp`
+- `statusUpdatedByName: string?`
+- `statusUpdatedByUserId: string?`
+- `manualVerified: array` (string keys for manual checklist items)
+- `manuallyVerifiedBy: string?`
 
 ---
 

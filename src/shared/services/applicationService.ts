@@ -202,6 +202,8 @@ function mapApplicationDoc(doc: DocumentSnapshot): LoanApplication {
     updatedAt: formatTimestamp(data.updatedAt),
     statusUpdatedByName: typeof data.statusUpdatedByName === "string" ? data.statusUpdatedByName : undefined,
     statusUpdatedByUserId: typeof data.statusUpdatedByUserId === "string" ? data.statusUpdatedByUserId : undefined,
+    manualVerified: Array.isArray(data.manualVerified) ? data.manualVerified.filter((item) => typeof item === "string") : undefined,
+    manuallyVerifiedBy: typeof data.manuallyVerifiedBy === "string" ? data.manuallyVerifiedBy : undefined,
     borrower: mapBorrower(borrower),
     borrowerAssets: mapBorrowerAssets(borrowerAssets),
     borrowerIncome: mapBorrowerIncome(borrowerIncome),

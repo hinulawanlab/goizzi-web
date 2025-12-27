@@ -7,10 +7,13 @@ import { getBorrowerApplicationById } from "@/shared/services/applicationService
 import { getBorrowerReferences } from "@/shared/services/borrowerReferenceService";
 import {
   getBorrowerBankStatementKycs,
+  getBorrowerGovernmentIdKycs,
+  getBorrowerHomePhotoKycs,
   getBorrowerOtherKycs,
   getBorrowerPayslipKycs,
   getBorrowerProofOfBillingKycs,
-  getBorrowerPropertyTitleKycs
+  getBorrowerPropertyTitleKycs,
+  getBorrowerSelfieKycs
 } from "@/shared/services/kycService";
 import { getBorrowerNotesByApplication } from "@/shared/services/borrowerNoteService";
 
@@ -35,6 +38,9 @@ export default async function BorrowerApplicationPage({ params }: BorrowerApplic
   const payslipPromise = getBorrowerPayslipKycs(borrowerId);
   const propertyTitlePromise = getBorrowerPropertyTitleKycs(borrowerId);
   const otherPromise = getBorrowerOtherKycs(borrowerId);
+  const selfiePromise = getBorrowerSelfieKycs(borrowerId);
+  const governmentIdPromise = getBorrowerGovernmentIdKycs(borrowerId);
+  const homePhotoPromise = getBorrowerHomePhotoKycs(borrowerId);
   const notesPromise = getBorrowerNotesByApplication(borrowerId, applicationId);
 
   const borrower = await borrowerPromise;
@@ -45,6 +51,9 @@ export default async function BorrowerApplicationPage({ params }: BorrowerApplic
   const payslipKycs = await payslipPromise;
   const propertyTitleKycs = await propertyTitlePromise;
   const otherKycs = await otherPromise;
+  const selfieKycs = await selfiePromise;
+  const governmentIdKycs = await governmentIdPromise;
+  const homePhotoKycs = await homePhotoPromise;
   const notes = await notesPromise;
 
   if (!borrower || !application) {
@@ -64,6 +73,9 @@ export default async function BorrowerApplicationPage({ params }: BorrowerApplic
             payslipKycs={payslipKycs}
             propertyTitleKycs={propertyTitleKycs}
             otherKycs={otherKycs}
+            selfieKycs={selfieKycs}
+            governmentIdKycs={governmentIdKycs}
+            homePhotoKycs={homePhotoKycs}
             notes={notes}
           />
         </main>

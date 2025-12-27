@@ -97,6 +97,8 @@ export interface LoanApplication {
   updatedAt?: string;
   statusUpdatedByName?: string;
   statusUpdatedByUserId?: string;
+  manualVerified?: string[];
+  manuallyVerifiedBy?: string;
   borrower: ApplicationBorrower;
   borrowerAssets?: BorrowerAssets;
   borrowerIncome?: BorrowerIncome;

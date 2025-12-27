@@ -17,7 +17,7 @@ interface LoanApprovalInput {
 interface LoanApprovalResult {
   loanId: string;
   updatedAt: string;
-  status: "Approved";
+  status: "approved";
   statusUpdatedByName: string;
   note: BorrowerNote;
 }
@@ -83,7 +83,7 @@ export async function approveBorrowerApplicationToLoan(input: LoanApprovalInput)
 
   const actorName = await resolveActorName(input.actorUserId, input.actorName);
   const createdAt = new Date().toISOString();
-  const noteText = sanitizeNote("Status set to Approved.");
+  const noteText = sanitizeNote("Status set to approved.");
 
   const noteRef = borrowerRef.collection("notes").doc();
   const loanRef = db.collection("loans").doc();
@@ -135,7 +135,7 @@ export async function approveBorrowerApplicationToLoan(input: LoanApprovalInput)
   batch.set(
     applicationRef,
     {
-      status: "Approved",
+      status: "approved",
       updatedAt: createdAt,
       statusUpdatedByName: actorName,
       statusUpdatedByUserId: input.actorUserId ?? null
@@ -148,7 +148,7 @@ export async function approveBorrowerApplicationToLoan(input: LoanApprovalInput)
   return {
     loanId: loanRef.id,
     updatedAt: createdAt,
-    status: "Approved",
+    status: "approved",
     statusUpdatedByName: actorName,
     note: noteData
   };

@@ -59,6 +59,7 @@ function mapReferenceDoc(doc: DocumentSnapshot): BorrowerReference {
   const data = doc.data() || {};
   return {
     referenceId: doc.id,
+    applicationId: typeof data.applicationId === "string" ? data.applicationId : undefined,
     name: normalizeString(data.name, "Unknown"),
     mobileNumber: normalizeString(data.mobileNumber, "N/A"),
     address: normalizeString(data.address, "N/A"),

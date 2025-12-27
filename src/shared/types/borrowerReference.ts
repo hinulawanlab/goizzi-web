@@ -2,6 +2,7 @@ export type ReferenceContactStatus = "pending" | "agreed" | "declined" | "no_res
 
 export interface BorrowerReference {
   referenceId: string;
+  applicationId?: string;
   name: string;
   mobileNumber: string;
   address: string;

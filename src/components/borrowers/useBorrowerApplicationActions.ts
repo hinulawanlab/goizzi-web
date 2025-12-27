@@ -229,7 +229,7 @@ export function useBorrowerApplicationActions({
         note?: BorrowerNote;
       };
 
-      setAuditStatus(result.status ?? "Approved");
+      setAuditStatus(result.status ?? "approved");
       setAuditUpdatedAt(result.updatedAt ?? auditUpdatedAt);
       setStatusUpdatedByName(result.statusUpdatedByName ?? actor.name);
 

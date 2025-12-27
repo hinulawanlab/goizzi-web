@@ -18,6 +18,7 @@ interface BorrowerApplicationApprovalModalProps {
   defaultTerm?: string;
   defaultInterest?: number;
   defaultApprovedAt: string;
+  isChecklistComplete: boolean;
   statusActionState: ActionState;
   statusActionMessage: string;
   onClose: () => void;
@@ -35,6 +36,7 @@ export default function BorrowerApplicationApprovalModal({
   defaultTerm,
   defaultInterest = 1.5,
   defaultApprovedAt,
+  isChecklistComplete,
   statusActionState,
   statusActionMessage,
   onClose,
@@ -52,6 +54,11 @@ export default function BorrowerApplicationApprovalModal({
 
   const handleSubmit = async () => {
     setLocalError("");
+
+    if (!isChecklistComplete) {
+      setLocalError("Complete the checklist before proceeding.");
+      return;
+    }
 
     const amountValue = toNumber(loanAmount);
     const interestValue = toNumber(loanInterest);
@@ -87,6 +94,7 @@ export default function BorrowerApplicationApprovalModal({
   };
 
   const isWorking = statusActionState === "working";
+  const isProceedDisabled = isWorking || !isChecklistComplete;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8">
@@ -212,9 +220,9 @@ export default function BorrowerApplicationApprovalModal({
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={isWorking}
+              disabled={isProceedDisabled}
               className={`rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-                isWorking
+                isProceedDisabled
                   ? "cursor-not-allowed border-slate-200 text-slate-300"
                   : "cursor-pointer border-slate-900 bg-slate-900 text-white hover:border-slate-700 hover:bg-slate-800"
               }`}
