@@ -17,7 +17,7 @@ export default function BorrowerApplicationHeaderSection({
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.4em] text-slate-400">Application details</p>
-          <h2 className="text-2xl font-semibold text-black/80">Borrower and loan insights</h2>
+          <h2 className="text-2xl font-semibold text-black/90">Borrower and loan insights</h2>
           <p className="text-sm text-slate-500">
             Review maker details, co-maker information, references, proof of billing, and loan documents.
           </p>
