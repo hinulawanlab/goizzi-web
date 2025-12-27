@@ -76,30 +76,37 @@ export default function BorrowerApplicationTabs({
   }, [application.applicationId, borrower.borrowerId]);
 
   return (
-    <div className="space-y-6">
-      <BorrowerApplicationHeaderSection activeTab={activeTab} onTabChange={setActiveTab} />
-      <BorrowerApplicationTabSection
-        activeTab={activeTab}
-        borrower={borrower}
-        application={application}
-        references={references}
-        proofOfBillingKycs={proofOfBillingKycs}
-        auditStatus={auditStatus}
-        auditUpdatedAt={auditUpdatedAt}
-        statusUpdatedByName={statusUpdatedByName}
-        noteEntries={noteEntries}
-        onDecisionNoteAdded={handleKycDecisionNote}
-      />
-      <BorrowerApplicationNotesActions
-        noteText={noteText}
-        noteActionState={noteActionState}
-        noteActionMessage={noteActionMessage}
-        statusActionState={statusActionState}
-        statusActionMessage={statusActionMessage}
-        onNoteTextChange={handleNoteTextChange}
-        onAddNote={handleAddNote}
-        onStatusChange={handleStatusChange}
-      />
+    <div className="relative flex flex-col gap-6 lg:min-h-[calc(100vh-4rem)] lg:pl-[18rem] lg:pr-6">
+      <div className="lg:fixed lg:left-4 lg:top-8 lg:bottom-8 lg:z-20 lg:w-64">
+        <BorrowerApplicationNotesActions
+          noteText={noteText}
+          noteActionState={noteActionState}
+          noteActionMessage={noteActionMessage}
+          statusActionState={statusActionState}
+          statusActionMessage={statusActionMessage}
+          onNoteTextChange={handleNoteTextChange}
+          onAddNote={handleAddNote}
+          onStatusChange={handleStatusChange}
+        />
+      </div>
+
+      <div className="flex flex-col gap-6 lg:h-[calc(100vh-4rem)]">
+        <BorrowerApplicationHeaderSection activeTab={activeTab} onTabChange={setActiveTab} />
+        <div className="lg:flex-1 lg:overflow-y-auto lg:pr-2">
+          <BorrowerApplicationTabSection
+            activeTab={activeTab}
+            borrower={borrower}
+            application={application}
+            references={references}
+            proofOfBillingKycs={proofOfBillingKycs}
+            auditStatus={auditStatus}
+            auditUpdatedAt={auditUpdatedAt}
+            statusUpdatedByName={statusUpdatedByName}
+            noteEntries={noteEntries}
+            onDecisionNoteAdded={handleKycDecisionNote}
+          />
+        </div>
+      </div>
     </div>
   );
 }

@@ -39,7 +39,7 @@ export default async function BorrowerApplicationPage({ params }: BorrowerApplic
 
   return (
     <div className="min-h-screen bg-transparent px-4 py-8 text-slate-900">
-      <div className="mx-auto w-full max-w-6xl">
+      <div className="mx-auto w-full max-w-none">
         <main className="space-y-6">
           <BorrowerApplicationTabs
             borrower={borrower}

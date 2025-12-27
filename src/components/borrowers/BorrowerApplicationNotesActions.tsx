@@ -25,10 +25,10 @@ export default function BorrowerApplicationNotesActions({
   onStatusChange
 }: BorrowerApplicationNotesActionsProps) {
   return (
-    <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
+    <div className="flex h-full flex-col rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
       <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Notes & actions</p>
-      <div className="mt-4 space-y-4">
-        <div>
+      <div className="mt-4 flex flex-1 flex-col gap-4">
+        <div className="flex flex-1 flex-col">
           <label className="text-[11px] uppercase tracking-[0.3em] text-slate-400" htmlFor="loan-note">
             Add a note
           </label>
@@ -36,8 +36,8 @@ export default function BorrowerApplicationNotesActions({
             id="loan-note"
             value={noteText}
             onChange={(event) => onNoteTextChange(event.target.value)}
-            rows={4}
-            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none"
+            rows={6}
+            className="mt-2 w-full flex-1 resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none"
             placeholder="Write a note for this loan application."
           />
           <div className="mt-3 flex flex-wrap items-center gap-3">
