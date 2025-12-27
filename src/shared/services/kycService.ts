@@ -1,6 +1,6 @@
 import type { DocumentSnapshot } from "firebase-admin/firestore";
 
-import { db, hasAdminCredentials } from "@/shared/singletons/firebaseAdmin";
+import { db, hasAdminCredentials, storageBucket } from "@/shared/singletons/firebaseAdmin";
 import { demoBorrowerProofOfBillingKycs } from "@/shared/data/demoBorrowerProofOfBillingKycs";
 import type { BorrowerGovernmentIdKyc, BorrowerProofOfBillingKyc } from "@/shared/types/kyc";
 
@@ -51,6 +51,36 @@ function normalizeStorageRefs(refs: unknown): string[] {
     return [];
   }
   return refs.map(normalizeStorageRef).filter(Boolean) as string[];
+}
+
+function stripLeadingSlash(value: string): string {
+  return value.replace(/^\/+/, "");
+}
+
+async function createSignedUrlsForRefs(refs: string[]): Promise<string[]> {
+  if (!storageBucket) {
+    return [];
+  }
+  const bucket = storageBucket;
+  const normalized = refs.map(stripLeadingSlash).filter(Boolean);
+  if (!normalized.length) {
+    return [];
+  }
+
+  try {
+    const signedUrls: [string][] = await Promise.all(
+      normalized.map((path) =>
+        bucket.file(path).getSignedUrl({
+          action: "read",
+          expires: Date.now() + 15 * 60 * 1000
+        })
+      )
+    );
+    return signedUrls.map((entry) => entry[0]);
+  } catch (error) {
+    console.warn("Unable to sign proof of billing image URLs:", error);
+    return [];
+  }
 }
 
 function findStorageRef(refs: string[], keyword: string): string | undefined {
@@ -216,7 +246,22 @@ async function fetchProofOfBillingKycs(borrowerId: string, limit = 10): Promise<
     return [];
   }
 
-  return snapshot.docs.map((doc) => mapProofOfBillingDoc(doc, borrowerId)).filter(Boolean) as BorrowerProofOfBillingKyc[];
+  const mapped = snapshot.docs
+    .map((doc) => mapProofOfBillingDoc(doc, borrowerId))
+    .filter(Boolean) as BorrowerProofOfBillingKyc[];
+
+  if (!storageBucket) {
+    return mapped;
+  }
+
+  const withUrls = await Promise.all(
+    mapped.map(async (kyc) => ({
+      ...kyc,
+      imageUrls: await createSignedUrlsForRefs(kyc.storageRefs ?? [])
+    }))
+  );
+
+  return withUrls;
 }
 
 export async function getBorrowerGovernmentIdKyc(borrowerId: string): Promise<BorrowerGovernmentIdKyc | null> {

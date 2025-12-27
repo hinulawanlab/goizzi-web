@@ -15,6 +15,8 @@ interface ProofImageState {
   status: LoadState;
   urls: string[];
   errorMessage?: string;
+  startedAt?: number;
+  attempts?: number;
 }
 
 interface BorrowerProofOfBillingPanelProps {
@@ -94,10 +96,19 @@ async function fetchKycImageUrls(
       clearTimeout(timeoutId);
 
       if (!response.ok) {
+        console.warn("Proof of billing image URL fetch failed.", {
+          borrowerId,
+          kycId,
+          status: response.status
+        });
         throw new Error(`Failed to fetch KYC images (${response.status}).`);
       }
       const payload = (await response.json()) as { urls?: string[] };
-      return Array.isArray(payload.urls) ? payload.urls.filter((url) => typeof url === "string") : [];
+      const urls = Array.isArray(payload.urls) ? payload.urls.filter((url) => typeof url === "string") : [];
+      if (!urls.length) {
+        console.warn("Proof of billing image URL response empty.", { borrowerId, kycId });
+      }
+      return urls;
     } catch (error) {
       lastError = error;
       if (isTimeoutError(error) && attempt < attempts) {
@@ -162,8 +173,25 @@ export default function BorrowerProofOfBillingPanel({
     sortedKycs.forEach((kyc) => {
       const refs = kyc.storageRefs ?? [];
       const currentState = imageStatesRef.current[kyc.kycId];
-      if (currentState?.status === "loading" || currentState?.status === "success" || currentState?.status === "error") {
+      if (currentState?.status === "success" || currentState?.status === "error") {
         return;
+      }
+      if (currentState?.status === "loading") {
+        const startedAt = currentState.startedAt ?? 0;
+        const elapsedMs = startedAt ? Date.now() - startedAt : 0;
+        if (elapsedMs && elapsedMs < FETCH_TIMEOUT_MS) {
+          console.info("Proof of billing image load already in progress.", {
+            borrowerId,
+            kycId: kyc.kycId,
+            elapsedMs
+          });
+          return;
+        }
+        console.warn("Proof of billing image load stalled; retrying.", {
+          borrowerId,
+          kycId: kyc.kycId,
+          elapsedMs
+        });
       }
 
       if (!refs.length) {
@@ -174,9 +202,22 @@ export default function BorrowerProofOfBillingPanel({
         return;
       }
 
+      if (Array.isArray(kyc.imageUrls) && kyc.imageUrls.length > 0) {
+        setImageStates((prev) => ({
+          ...prev,
+          [kyc.kycId]: { status: "success", urls: kyc.imageUrls ?? [] }
+        }));
+        return;
+      }
+
       setImageStates((prev) => ({
         ...prev,
-        [kyc.kycId]: { status: "loading", urls: [] }
+        [kyc.kycId]: {
+          status: "loading",
+          urls: [],
+          startedAt: Date.now(),
+          attempts: (prev[kyc.kycId]?.attempts ?? 0) + 1
+        }
       }));
 
       const normalizedRefs = refs.map(normalizeStoragePath).filter(Boolean) as string[];
@@ -208,6 +249,7 @@ export default function BorrowerProofOfBillingPanel({
         }
       }, FETCH_TIMEOUT_MS);
 
+      console.info("Proof of billing image URL fetch start.", { borrowerId, kycId: kyc.kycId });
       fetchKycImageUrls(borrowerId, kyc.kycId)
         .then((urls) => {
           if (!isMountedRef.current) {

@@ -15,6 +15,7 @@ export interface BorrowerProofOfBillingKyc {
   kycId: string;
   documentType?: string;
   storageRefs: string[];
+  imageUrls?: string[];
   isApproved?: boolean;
   isWaived?: boolean;
   createdAt?: string;
