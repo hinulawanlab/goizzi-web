@@ -1,6 +1,8 @@
 import { cert, getApps, initializeApp, type App } from "firebase-admin/app";
 import { getAuth, type Auth } from "firebase-admin/auth";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
+import type { Bucket } from "@google-cloud/storage";
 
 function hasAdminCredentials(): boolean {
   const privateKey = process.env.FIREBASE_PRIVATE_KEY;
@@ -45,5 +47,7 @@ function ensureAdminApp(): App | null {
 const adminApp: App | null = ensureAdminApp();
 const db: Firestore | null = adminApp ? getFirestore(adminApp) : null;
 const auth: Auth | null = adminApp ? getAuth(adminApp) : null;
+const storageBucketName = process.env.FIREBASE_STORAGE_BUCKET ?? process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+const storageBucket: Bucket | null = adminApp && storageBucketName ? getStorage(adminApp).bucket(storageBucketName) : null;
 
-export { adminApp, db, auth, hasAdminCredentials };
+export { adminApp, db, auth, storageBucket, hasAdminCredentials };

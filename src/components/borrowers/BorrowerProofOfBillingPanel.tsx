@@ -2,18 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { onAuthStateChanged } from "firebase/auth";
-import { getDownloadURL, ref } from "firebase/storage";
-
-import { auth, storage } from "@/shared/singletons/firebase";
+import { auth } from "@/shared/singletons/firebase";
 import type { BorrowerNote } from "@/shared/types/borrowerNote";
 import type { BorrowerProofOfBillingKyc } from "@/shared/types/kyc";
 
 type ActionState = "idle" | "working" | "success" | "error";
 type LoadState = "idle" | "loading" | "success" | "error";
 
-const DOWNLOAD_TIMEOUT_MS = 10000;
-const AUTH_TIMEOUT_MS = 8000;
+const FETCH_TIMEOUT_MS = 10000;
 
 interface ProofImageState {
   status: LoadState;
@@ -72,38 +68,42 @@ function isTimeoutError(error: unknown) {
     return error === "timeout";
   }
   if (typeof error === "object" && "name" in error) {
-    return (error as { name?: string }).name === "TimeoutError";
+    const name = (error as { name?: string }).name;
+    return name === "TimeoutError" || name === "AbortError";
   }
   return false;
 }
 
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number) {
-  let timeoutId: ReturnType<typeof setTimeout> | undefined;
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutId = setTimeout(() => {
-      const timeoutError = new Error("timeout");
-      timeoutError.name = "TimeoutError";
-      reject(timeoutError);
-    }, timeoutMs);
-  });
-
-  return Promise.race([promise, timeoutPromise]).finally(() => {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
-  });
-}
-
-async function fetchDownloadUrlWithRetry(path: string, attempts = 2): Promise<string> {
+async function fetchKycImageUrls(
+  borrowerId: string,
+  kycId: string,
+  attempts = 2
+): Promise<string[]> {
   let lastError: unknown;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
-      return await withTimeout(getDownloadURL(ref(storage, path)), DOWNLOAD_TIMEOUT_MS);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        controller.abort();
+      }, FETCH_TIMEOUT_MS);
+
+      const response = await fetch(`/api/borrowers/${borrowerId}/kyc/${kycId}/images`, {
+        method: "GET",
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch KYC images (${response.status}).`);
+      }
+      const payload = (await response.json()) as { urls?: string[] };
+      return Array.isArray(payload.urls) ? payload.urls.filter((url) => typeof url === "string") : [];
     } catch (error) {
       lastError = error;
       if (isTimeoutError(error) && attempt < attempts) {
         console.warn("Proof of billing image download timed out; retrying.", {
-          path,
+          borrowerId,
+          kycId,
           attempt,
           attempts
         });
@@ -126,8 +126,6 @@ export default function BorrowerProofOfBillingPanel({
   const [actionMessages, setActionMessages] = useState<Record<string, string>>({});
   const [approvalOverrides, setApprovalOverrides] = useState<Record<string, boolean>>({});
   const [waiveOverrides, setWaiveOverrides] = useState<Record<string, boolean>>({});
-  const [authReady, setAuthReady] = useState(() => Boolean(auth.currentUser));
-  const [authUserId, setAuthUserId] = useState(() => auth.currentUser?.uid ?? null);
   const imageStatesRef = useRef(imageStates);
   const isMountedRef = useRef(true);
   const sortedKycs = useMemo(() => {
@@ -143,182 +141,107 @@ export default function BorrowerProofOfBillingPanel({
   }, [imageStates]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (!isMountedRef.current) {
-        return;
-      }
-      setAuthReady(true);
-      setAuthUserId(user?.uid ?? null);
-      console.info("Proof of billing auth state changed.", {
-        borrowerId,
-        hasAuthUser: Boolean(user),
-        userId: user?.uid ?? null
-      });
-    });
-
-    return unsubscribe;
-  }, [borrowerId]);
-
-  useEffect(() => {
     return () => {
       isMountedRef.current = false;
     };
   }, []);
 
   useEffect(() => {
-    if (!authReady || !authUserId) {
-      if (sortedKycs.length > 0) {
-        console.warn("Proof of billing image load skipped; auth not ready.", {
-          borrowerId,
-          authReady,
-          authUserId
-        });
-      }
-      return;
+    if (sortedKycs.length > 0) {
+      console.info("Proof of billing KYC load start.", {
+        borrowerId,
+        kycCount: sortedKycs.length,
+        kycs: sortedKycs.map((kyc) => ({
+          kycId: kyc.kycId,
+          refCount: kyc.storageRefs?.length ?? 0,
+          refs: kyc.storageRefs ?? []
+        }))
+      });
     }
-    const ensureTokenAndLoad = async () => {
-      const user = auth.currentUser;
-      if (!user) {
+
+    sortedKycs.forEach((kyc) => {
+      const refs = kyc.storageRefs ?? [];
+      const currentState = imageStatesRef.current[kyc.kycId];
+      if (currentState?.status === "loading" || currentState?.status === "success" || currentState?.status === "error") {
         return;
       }
 
-      try {
-        await withTimeout(user.getIdToken(), AUTH_TIMEOUT_MS);
-      } catch (error) {
-        console.warn("Proof of billing token check failed.", { borrowerId, error });
+      if (!refs.length) {
+        setImageStates((prev) => ({
+          ...prev,
+          [kyc.kycId]: { status: "success", urls: [] }
+        }));
+        return;
+      }
+
+      setImageStates((prev) => ({
+        ...prev,
+        [kyc.kycId]: { status: "loading", urls: [] }
+      }));
+
+      const normalizedRefs = refs.map(normalizeStoragePath).filter(Boolean) as string[];
+      const debugContext = {
+        borrowerId,
+        kycId: kyc.kycId,
+        rawRefs: refs,
+        normalizedRefs
+      };
+      if (!normalizedRefs.length) {
+        console.warn("Proof of billing has no valid storage paths.", debugContext);
+        setImageStates((prev) => ({
+          ...prev,
+          [kyc.kycId]: { status: "error", urls: [], errorMessage: "No valid storage paths." }
+        }));
+        return;
+      }
+
+      const timeoutId = window.setTimeout(() => {
         if (!isMountedRef.current) {
           return;
         }
-        sortedKycs.forEach((kyc) => {
-          const currentState = imageStatesRef.current[kyc.kycId];
-          if (currentState?.status === "loading" || currentState?.status === "success" || currentState?.status === "error") {
-            return;
-          }
-          setImageStates((prev) => ({
-            ...prev,
-            [kyc.kycId]: { status: "error", urls: [], errorMessage: "Unable to authenticate for image download." }
-          }));
-        });
-        return;
-      }
-
-      if (sortedKycs.length > 0) {
-        console.info("Proof of billing KYC load start.", {
-          borrowerId,
-          kycCount: sortedKycs.length,
-          storageBucket: storage.app.options.storageBucket ?? "unknown",
-          kycs: sortedKycs.map((kyc) => ({
-            kycId: kyc.kycId,
-            refCount: kyc.storageRefs?.length ?? 0,
-            refs: kyc.storageRefs ?? []
-          }))
-        });
-      }
-
-      sortedKycs.forEach((kyc) => {
-        const refs = kyc.storageRefs ?? [];
-        const currentState = imageStatesRef.current[kyc.kycId];
-        if (currentState?.status === "loading" || currentState?.status === "success" || currentState?.status === "error") {
-          return;
+        const current = imageStatesRef.current[kyc.kycId];
+        if (current?.status === "loading") {
+          console.warn("Proof of billing image load still pending.", {
+            ...debugContext,
+            pendingMs: FETCH_TIMEOUT_MS
+          });
         }
+      }, FETCH_TIMEOUT_MS);
 
-        if (!refs.length) {
-          setImageStates((prev) => ({
-            ...prev,
-            [kyc.kycId]: { status: "success", urls: [] }
-          }));
-          return;
-        }
-
-        setImageStates((prev) => ({
-          ...prev,
-          [kyc.kycId]: { status: "loading", urls: [] }
-        }));
-
-        const normalizedRefs = refs.map(normalizeStoragePath).filter(Boolean) as string[];
-        const debugContext = {
-          borrowerId,
-          kycId: kyc.kycId,
-          rawRefs: refs,
-          normalizedRefs
-        };
-        if (!normalizedRefs.length) {
-          console.warn("Proof of billing has no valid storage paths.", debugContext);
-          setImageStates((prev) => ({
-            ...prev,
-            [kyc.kycId]: { status: "error", urls: [], errorMessage: "No valid storage paths." }
-          }));
-          return;
-        }
-
-        const timeoutId = window.setTimeout(() => {
+      fetchKycImageUrls(borrowerId, kyc.kycId)
+        .then((urls) => {
           if (!isMountedRef.current) {
             return;
           }
-          const current = imageStatesRef.current[kyc.kycId];
-          if (current?.status === "loading") {
-            console.warn("Proof of billing image load still pending.", {
-              ...debugContext,
-              pendingMs: DOWNLOAD_TIMEOUT_MS
-            });
-          }
-        }, DOWNLOAD_TIMEOUT_MS);
-
-        Promise.allSettled(
-          normalizedRefs.map((path) => {
-            console.info("Proof of billing image download start.", { ...debugContext, path });
-            return fetchDownloadUrlWithRetry(path);
-          })
-        )
-          .then((results) => {
-            if (!isMountedRef.current) {
-              return;
-            }
-            window.clearTimeout(timeoutId);
-            const urls = results
-              .filter((result): result is PromiseFulfilledResult<string> => result.status === "fulfilled")
-              .map((result) => result.value);
-
-            const failures = results
-              .map((result, index) =>
-                result.status === "rejected" ? { path: normalizedRefs[index], error: result.reason } : null
-              )
-              .filter(Boolean);
-            if (failures.length > 0) {
-              console.warn("Proof of billing image load failures.", { ...debugContext, failures });
-            }
-
-            if (!urls.length) {
-              setImageStates((prev) => ({
-                ...prev,
-                [kyc.kycId]: { status: "error", urls: [], errorMessage: "Images could not be loaded." }
-              }));
-              return;
-            }
-
-            console.info("Proof of billing image URLs resolved.", { ...debugContext, urls });
-
-            setImageStates((prev) => ({
-              ...prev,
-              [kyc.kycId]: { status: "success", urls }
-            }));
-          })
-          .catch((error) => {
-            if (!isMountedRef.current) {
-              return;
-            }
-            window.clearTimeout(timeoutId);
-            console.warn("Proof of billing image load error.", { ...debugContext, error });
+          window.clearTimeout(timeoutId);
+          if (!urls.length) {
             setImageStates((prev) => ({
               ...prev,
               [kyc.kycId]: { status: "error", urls: [], errorMessage: "Images could not be loaded." }
             }));
-          });
-      });
-    };
+            return;
+          }
 
-    void ensureTokenAndLoad();
-  }, [sortedKycs, borrowerId, authReady, authUserId]);
+          console.info("Proof of billing image URLs resolved.", { ...debugContext, urls });
+
+          setImageStates((prev) => ({
+            ...prev,
+            [kyc.kycId]: { status: "success", urls }
+          }));
+        })
+        .catch((error) => {
+          if (!isMountedRef.current) {
+            return;
+          }
+          window.clearTimeout(timeoutId);
+          console.warn("Proof of billing image load error.", { ...debugContext, error });
+          setImageStates((prev) => ({
+            ...prev,
+            [kyc.kycId]: { status: "error", urls: [], errorMessage: "Images could not be loaded." }
+          }));
+        });
+    });
+  }, [sortedKycs, borrowerId]);
 
   type DecisionAction = "approve" | "reject" | "waive" | "unwaive";
   const decisionMessages: Record<DecisionAction, string> = {
