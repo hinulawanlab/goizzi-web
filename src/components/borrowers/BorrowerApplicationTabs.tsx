@@ -76,8 +76,8 @@ export default function BorrowerApplicationTabs({
   }, [application.applicationId, borrower.borrowerId]);
 
   return (
-    <div className="relative flex flex-col gap-6 lg:min-h-[calc(100vh-4rem)] lg:pl-[18rem] lg:pr-6">
-      <div className="lg:fixed lg:left-4 lg:top-8 lg:bottom-8 lg:z-20 lg:w-64">
+    <div className="relative flex flex-col gap-6 lg:min-h-[calc(100vh-4rem)] lg:pl-72 lg:pr-6">
+      <div className="lg:fixed lg:left-4 lg:top-8 lg:bottom-8 lg:z-20 lg:w-72">
         <BorrowerApplicationNotesActions
           noteText={noteText}
           noteActionState={noteActionState}
@@ -90,9 +90,9 @@ export default function BorrowerApplicationTabs({
         />
       </div>
 
-      <div className="flex flex-col gap-6 lg:h-[calc(100vh-4rem)]">
+      <div className="pl-4 flex flex-col gap-6 lg:h-[calc(100vh-4rem)]">
         <BorrowerApplicationHeaderSection activeTab={activeTab} onTabChange={setActiveTab} />
-        <div className="lg:flex-1 lg:overflow-y-auto lg:pr-2">
+        <div className="lg:flex-1 lg:overflow-y-auto lg:pr-2 pb-4">
           <BorrowerApplicationTabSection
             activeTab={activeTab}
             borrower={borrower}

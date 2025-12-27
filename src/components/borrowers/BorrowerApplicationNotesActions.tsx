@@ -1,3 +1,4 @@
+// src/components/borrowers/BorrowerApplicationNotesActions.tsx
 "use client";
 
 import { loanActions } from "@/components/borrowers/borrowerApplicationTypes";
@@ -25,11 +26,11 @@ export default function BorrowerApplicationNotesActions({
   onStatusChange
 }: BorrowerApplicationNotesActionsProps) {
   return (
-    <div className="flex h-full flex-col rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
-      <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Notes & actions</p>
+    <div className="flex h-full flex-col rounded-3xl border border-slate-100 bg-black/70 p-6 shadow-sm">
+      <p className="font-semibold text-md uppercase tracking-[0.3em] text-white">Notes & actions</p>
       <div className="mt-4 flex flex-1 flex-col gap-4">
         <div className="flex flex-1 flex-col">
-          <label className="text-[11px] uppercase tracking-[0.3em] text-slate-400" htmlFor="loan-note">
+          <label className="text-[11px] uppercase tracking-[0.3em] text-white/90" htmlFor="loan-note">
             Add a note
           </label>
           <textarea
@@ -73,7 +74,7 @@ export default function BorrowerApplicationNotesActions({
         </div>
 
         <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Application status</p>
+          <p className="text-sm uppercase tracking-[0.2em] text-black/90">Application status</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {loanActions.map((action) => {
               const isWorking = statusActionState === "working";

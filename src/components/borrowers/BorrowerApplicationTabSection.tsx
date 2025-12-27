@@ -153,7 +153,7 @@ export default function BorrowerApplicationTabSection({
     <>
       {activeTab === "maker" && (
         <div className="space-y-6">
-          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
+          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
             <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Borrower snapshot</p>
             <p className="mt-2 text-lg font-semibold text-slate-900">
               {application.borrower.fullName ?? borrower.fullName}
@@ -169,7 +169,7 @@ export default function BorrowerApplicationTabSection({
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
+          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
             <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Loan details</p>
             <div className="mt-4 grid gap-3">
               <DetailRow label="Loan type" value={application.loanDetails?.productName} />
@@ -182,7 +182,7 @@ export default function BorrowerApplicationTabSection({
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
+          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
             <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Source of income details</p>
             <div className="mt-4 grid gap-3">
               <DetailRow label="Employer / Business Name" value={application.borrowerIncome?.employerName} />
@@ -192,17 +192,17 @@ export default function BorrowerApplicationTabSection({
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
+          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
             <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Spouse</p>
             <div className="mt-4 grid gap-3">
               <DetailRow label="Full name" value={application.spouse?.fullName} />
               <DetailRow label="Source of income" value={application.spouse?.occupation} />
               <DetailRow label="Net income (in Pesos)" value={application.spouse?.netIncome} />
-              <DetailRow label="Contact number" value={application.spouse?.contactNumber} />
+              <DetailRow label="Mobile" value={application.spouse?.contactNumber} />
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
+          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
             <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Assets & estimated value</p>
             <div className="mt-4 grid gap-3">
               <DetailRow label="Assets" value={application.borrowerAssets?.selections?.join(", ")} />
@@ -214,7 +214,7 @@ export default function BorrowerApplicationTabSection({
 
       {activeTab === "comakers" && (
         <div className="space-y-6">
-          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
+          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
             <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Co-maker</p>
             <div className="mt-4 grid gap-3">
               <DetailRow label="Full name" value={application.coMaker?.fullName} />
@@ -224,13 +224,13 @@ export default function BorrowerApplicationTabSection({
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
+          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
             <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Co-maker income</p>
             <div className="mt-4 grid gap-3">
-              <DetailRow label="Employer" value={application.coMakerIncome?.employerName} />
-              <DetailRow label="Net income" value={application.coMakerIncome?.netIncome} />
-              <DetailRow label="Occupation" value={application.coMakerIncome?.occupation} />
-              <DetailRow label="Years in role" value={application.coMakerIncome?.yearsInRole} />
+              <DetailRow label="Employer / Business Name" value={application.coMakerIncome?.employerName} />
+              <DetailRow label="Net income (in Pesos)" value={application.coMakerIncome?.netIncome} />
+              <DetailRow label="Source" value={application.coMakerIncome?.occupation} />
+              <DetailRow label="Number of years employed or in business" value={application.coMakerIncome?.yearsInRole} />
             </div>
           </div>
         </div>
@@ -239,7 +239,7 @@ export default function BorrowerApplicationTabSection({
       {activeTab === "documents" && (
         <div className="grid gap-4 md:grid-cols-2">
           {documentGroups.map((group) => (
-            <div key={group.title} className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
+            <div key={group.title} className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
               <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{group.title}</p>
               <p className="mt-3 text-sm text-slate-600">{group.description}</p>
               <p className="mt-2 text-xs text-slate-400">Logic will be added in a later iteration.</p>
@@ -252,7 +252,7 @@ export default function BorrowerApplicationTabSection({
         <div className="space-y-4">
           {references.length ? (
             references.map((reference) => (
-              <div key={reference.referenceId} className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
+              <div key={reference.referenceId} className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
                 <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Reference</p>
                 <p className="mt-2 text-lg font-semibold text-slate-900">{reference.name}</p>
                 <div className="mt-4 grid gap-3">
@@ -305,7 +305,7 @@ export default function BorrowerApplicationTabSection({
               </div>
             ))
           ) : (
-            <div className="rounded-3xl border border-slate-100 bg-white p-6 text-center shadow-lg">
+            <div className="rounded-3xl border border-slate-100 bg-white p-6 text-center shadow-sm">
               <p className="text-xs uppercase tracking-[0.3em] text-slate-400">No references yet</p>
               <p className="mt-3 text-sm text-slate-600">Reference entries will appear once added.</p>
             </div>
