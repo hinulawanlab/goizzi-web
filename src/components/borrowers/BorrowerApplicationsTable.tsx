@@ -78,7 +78,7 @@ export default function BorrowerApplicationsTable({
               >
                 <td className="px-3 py-4">
                   <strong className="block text-sm text-slate-900">{application.applicationId}</strong>
-                  <span className="text-xs text-slate-500">{application.borrower.fullName ?? "Borrower"}</span>
+                  {/* <span className="text-xs text-slate-500">{application.borrower.fullName ?? "Borrower"}</span> */}
                 </td>
                 <td className="px-3 py-4 text-slate-700">
                   {application.loanDetails?.productName ?? "Loan product"}

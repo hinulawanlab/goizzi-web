@@ -89,6 +89,23 @@ export default function BorrowerProfileTabs({
     [loans]
   );
 
+  const tabCounts = useMemo(
+    () => ({
+      submitted: submittedApplications.length,
+      reviewed: reviewedApplications.length,
+      cancelled: cancelledApplications.length,
+      approved: approvedLoans.length,
+      active: activeLoans.length
+    }),
+    [
+      activeLoans.length,
+      approvedLoans.length,
+      cancelledApplications.length,
+      reviewedApplications.length,
+      submittedApplications.length
+    ]
+  );
+
   return (
     <section className="rounded-3xl border border-slate-100 bg-white p-8 shadow-lg">
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
@@ -117,7 +134,14 @@ export default function BorrowerProfileTabs({
                 : "border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-900"
             }`}
           >
-            {tab.label}
+            <span className="inline-flex items-center gap-2">
+              {tab.label}
+              {tab.key in tabCounts && tabCounts[tab.key as keyof typeof tabCounts] > 0 && (
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold tracking-[0.2em] text-slate-600">
+                  {tabCounts[tab.key as keyof typeof tabCounts]}
+                </span>
+              )}
+            </span>
           </button>
         ))}
       </div>
