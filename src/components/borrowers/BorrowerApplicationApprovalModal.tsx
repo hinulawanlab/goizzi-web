@@ -90,6 +90,20 @@ export default function BorrowerApplicationApprovalModal({
 
     if (success) {
       onClose();
+      if (typeof window !== "undefined") {
+        const openerWindow = window.opener;
+        if (openerWindow && !openerWindow.closed) {
+          try {
+            openerWindow.postMessage(
+              { type: "borrower-profile-refresh" },
+              window.location.origin
+            );
+          } catch {
+            // Ignore refresh failures (cross-origin or blocked).
+          }
+        }
+        window.close();
+      }
     }
   };
 

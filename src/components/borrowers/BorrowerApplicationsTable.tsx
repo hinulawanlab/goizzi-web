@@ -1,3 +1,4 @@
+// src/components/borrowers/BorrowerApplicationsTable.tsx
 "use client";
 
 import LoanStatusBadge from "@/components/borrowers/LoanStatusBadge";
