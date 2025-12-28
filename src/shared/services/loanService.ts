@@ -62,6 +62,8 @@ function mapLoanDoc(doc: DocumentSnapshot): LoanSummary {
     productId: typeof data.productId === "string" ? data.productId : undefined,
     productName: typeof data.productName === "string" ? data.productName : undefined,
     principalAmount: toNumber(data.principalAmount),
+    termMonths: toNumber(data.termMonths),
+    termDays: toNumber(data.termDays),
     totalOutstandingAmount: toNumber(data.balances?.totalOutstandingAmount),
     currency: typeof data.currency === "string" ? data.currency : undefined,
     startDate: formatTimestamp(data.startDate),

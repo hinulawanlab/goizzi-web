@@ -7,6 +7,8 @@ export interface LoanSummary {
   productId?: string;
   productName?: string;
   principalAmount?: number;
+  termMonths?: number;
+  termDays?: number;
   totalOutstandingAmount?: number;
   currency?: string;
   startDate?: string;
