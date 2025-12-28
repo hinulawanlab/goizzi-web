@@ -11,7 +11,7 @@ import type { LoanApplication } from "@/shared/types/loanApplication";
 import type { LoanSummary } from "@/shared/types/loan";
 import type { LocationObservation } from "@/shared/types/location";
 
-type TabKey = "location" | "submitted" | "reviewed" | "approved" | "active" | "completed";
+type TabKey = "location" | "submitted" | "reviewed" | "cancelled" | "approved" | "active" | "completed";
 
 interface BorrowerProfileTabsProps {
   borrower: BorrowerSummary;
@@ -29,11 +29,12 @@ interface BorrowerProfileTabsProps {
 
 const tabs: { key: TabKey; label: string }[] = [
   { key: "location", label: "Map & location" },
-  { key: "submitted", label: "Submitted loans" },
-  { key: "reviewed", label: "Reviewed loans" },
-  { key: "approved", label: "Approved loans" },
-  { key: "active", label: "Active loans" },
-  { key: "completed", label: "Completed loans" }
+  { key: "submitted", label: "Submitted" },
+  { key: "reviewed", label: "Reviewed" },
+  { key: "cancelled", label: "Cancelled" },
+  { key: "approved", label: "Approved" },
+  { key: "active", label: "Active" },
+  { key: "completed", label: "Completed" }
 ];
 
 export default function BorrowerProfileTabs({
@@ -60,6 +61,15 @@ export default function BorrowerProfileTabs({
       applications.filter((application) => {
         const normalized = application.status.trim().toLowerCase();
         return ["reviewed", "approve", "completed", "reject", "rejected"].includes(normalized);
+      }),
+    [applications]
+  );
+
+  const cancelledApplications = useMemo(
+    () =>
+      applications.filter((application) => {
+        const normalized = application.status.trim().toLowerCase();
+        return normalized === "cancelled";
       }),
     [applications]
   );
@@ -128,6 +138,10 @@ export default function BorrowerProfileTabs({
 
         {activeTab === "reviewed" && (
           <BorrowerApplicationsTable borrowerId={borrower.borrowerId} applications={reviewedApplications} />
+        )}
+
+        {activeTab === "cancelled" && (
+          <BorrowerApplicationsTable borrowerId={borrower.borrowerId} applications={cancelledApplications} />
         )}
 
         {activeTab === "approved" && (
