@@ -89,6 +89,29 @@ async function fetchBorrowerLoansFromFirestore(borrowerId: string, limit = 50): 
   return snapshot.docs.map(mapLoanDoc);
 }
 
+async function fetchLoanByIdFromFirestore(loanId: string): Promise<LoanSummary | null> {
+  if (!db) {
+    throw new Error("Firestore Admin client is not initialized.");
+  }
+
+  const doc = await db.collection("loans").doc(loanId).get();
+  if (!doc.exists) {
+    return null;
+  }
+
+  return mapLoanDoc(doc);
+}
+
+function findDemoLoanById(loanId: string): LoanSummary | null {
+  for (const loans of Object.values(demoBorrowerLoans)) {
+    const found = loans.find((loan) => loan.loanId === loanId);
+    if (found) {
+      return found;
+    }
+  }
+  return null;
+}
+
 export async function getBorrowerLoans(borrowerId: string, limit = 50): Promise<LoanSummary[]> {
   if (!borrowerId) {
     return [];
@@ -103,4 +126,20 @@ export async function getBorrowerLoans(borrowerId: string, limit = 50): Promise<
   }
 
   return demoBorrowerLoans[borrowerId] ?? [];
+}
+
+export async function getLoanById(loanId: string): Promise<LoanSummary | null> {
+  if (!loanId) {
+    return null;
+  }
+
+  if (hasAdminCredentials()) {
+    try {
+      return await fetchLoanByIdFromFirestore(loanId);
+    } catch (error) {
+      console.warn(`Unable to fetch loan ${loanId}:`, error);
+    }
+  }
+
+  return findDemoLoanById(loanId);
 }

@@ -11,7 +11,7 @@ import type { LoanApplication } from "@/shared/types/loanApplication";
 import type { LoanSummary } from "@/shared/types/loan";
 import type { LocationObservation } from "@/shared/types/location";
 
-type TabKey = "location" | "submitted" | "reviewed" | "active" | "completed";
+type TabKey = "location" | "submitted" | "reviewed" | "approved" | "active" | "completed";
 
 interface BorrowerProfileTabsProps {
   borrower: BorrowerSummary;
@@ -31,6 +31,7 @@ const tabs: { key: TabKey; label: string }[] = [
   { key: "location", label: "Map & location" },
   { key: "submitted", label: "Submitted loans" },
   { key: "reviewed", label: "Reviewed loans" },
+  { key: "approved", label: "Approved loans" },
   { key: "active", label: "Active loans" },
   { key: "completed", label: "Completed loans" }
 ];
@@ -61,6 +62,11 @@ export default function BorrowerProfileTabs({
         return ["reviewed", "approve", "completed", "reject", "rejected"].includes(normalized);
       }),
     [applications]
+  );
+
+  const approvedLoans = useMemo(
+    () => loans.filter((loan) => loan.status === "approved"),
+    [loans]
   );
 
   const activeLoans = useMemo(
@@ -124,8 +130,18 @@ export default function BorrowerProfileTabs({
           <BorrowerApplicationsTable borrowerId={borrower.borrowerId} applications={reviewedApplications} />
         )}
 
+        {activeTab === "approved" && (
+          <BorrowerLoansTable
+            borrowerId={borrower.borrowerId}
+            loans={approvedLoans}
+            emptyTitle="No approved loans yet."
+            emptySubtitle="Approved loans will appear here once they are ready for release."
+          />
+        )}
+
         {activeTab === "active" && (
           <BorrowerLoansTable
+            borrowerId={borrower.borrowerId}
             loans={activeLoans}
             emptyTitle="No active loans yet."
             emptySubtitle="Active loans will appear here once they are posted."
@@ -134,6 +150,7 @@ export default function BorrowerProfileTabs({
 
         {activeTab === "completed" && (
           <BorrowerLoansTable
+            borrowerId={borrower.borrowerId}
             loans={completedLoans}
             emptyTitle="No completed loans yet."
             emptySubtitle="Closed or written-off loans will appear here when available."

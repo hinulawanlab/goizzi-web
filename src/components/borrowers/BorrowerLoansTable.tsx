@@ -3,6 +3,7 @@
 import type { LoanSummary } from "@/shared/types/loan";
 
 interface BorrowerLoansTableProps {
+  borrowerId: string;
   loans: LoanSummary[];
   emptyTitle: string;
   emptySubtitle: string;
@@ -37,6 +38,8 @@ function formatAmount(value?: number, currency?: string) {
 
 function getStatusClass(status: string) {
   switch (status) {
+    case "approved":
+      return "bg-emerald-100 text-emerald-700";
     case "active":
       return "bg-emerald-100 text-emerald-700";
     case "delinquent":
@@ -51,9 +54,9 @@ function getStatusClass(status: string) {
   }
 }
 
-export default function BorrowerLoansTable({ loans, emptyTitle, emptySubtitle }: BorrowerLoansTableProps) {
+export default function BorrowerLoansTable({ borrowerId, loans, emptyTitle, emptySubtitle }: BorrowerLoansTableProps) {
   const handleOpen = (loanId: string) => {
-    const href = `/loans/${loanId}`;
+    const href = `/borrowers/${borrowerId}/loan/${loanId}`;
     window.open(href, "_blank", "noopener,noreferrer");
   };
 
@@ -76,7 +79,7 @@ export default function BorrowerLoansTable({ loans, emptyTitle, emptySubtitle }:
         <table className="w-full min-w-200px text-left text-sm text-slate-600">
           <thead>
             <tr className="text-xs uppercase tracking-[0.3em] text-slate-400">
-              <th className="px-3 py-3">Loan</th>
+              <th className="px-3 py-3">Loan ID</th>
               <th className="px-3 py-3">Product</th>
               <th className="px-3 py-3">Status</th>
               <th className="px-3 py-3">Principal</th>
@@ -94,7 +97,6 @@ export default function BorrowerLoansTable({ loans, emptyTitle, emptySubtitle }:
               >
                 <td className="px-3 py-4">
                   <strong className="block text-sm text-slate-900">{loan.loanId}</strong>
-                  <span className="text-xs text-slate-500">{loan.borrowerId}</span>
                 </td>
                 <td className="px-3 py-4 text-slate-700">{loan.productName ?? loan.productId ?? "Loan product"}</td>
                 <td className="px-3 py-4">
