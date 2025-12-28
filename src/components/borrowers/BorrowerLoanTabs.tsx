@@ -29,7 +29,11 @@ export default function BorrowerLoanTabs({ borrower, loan }: BorrowerLoanTabsPro
     handleNoteTextChange,
     handleAddNote,
     handleAction
-  } = useBorrowerLoanActions({ borrowerId: borrower.borrowerId, loanId: loan.loanId });
+  } = useBorrowerLoanActions({
+    borrowerId: borrower.borrowerId,
+    loanId: loan.loanId,
+    applicationId: loan.applicationId
+  });
 
   const handleRefresh = () => {
     startRefreshing(() => {

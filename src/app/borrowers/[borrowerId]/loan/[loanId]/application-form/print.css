@@ -1,0 +1,42 @@
+@media print {
+  @page {
+    margin: 20mm 16mm 20mm 24mm;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-vertical-brand {
+    display: block;
+    position: fixed;
+    left: -6mm;
+    top: 50%;
+    transform: rotate(-90deg);
+    transform-origin: left top;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: #64748b;
+  }
+
+  .print-footer {
+    display: block;
+    position: fixed;
+    bottom: 6mm;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 10px;
+    color: #64748b;
+  }
+
+  .print-footer::after {
+    content: "Page " counter(page) " of " counter(pages);
+  }
+}
+
+.print-vertical-brand,
+.print-footer {
+  display: none;
+}

@@ -8,12 +8,13 @@ import type { BorrowerLoanAction } from "@/components/borrowers/borrowerLoanType
 interface UseBorrowerLoanActionsParams {
   borrowerId: string;
   loanId: string;
+  applicationId?: string;
 }
 
 const NOTE_SUCCESS_MESSAGE = "Note saved.";
 const ACTION_SUCCESS_MESSAGE = "Request queued.";
 
-export function useBorrowerLoanActions({ borrowerId, loanId }: UseBorrowerLoanActionsParams) {
+export function useBorrowerLoanActions({ borrowerId, loanId, applicationId }: UseBorrowerLoanActionsParams) {
   const [noteText, setNoteText] = useState("");
   const [noteActionState, setNoteActionState] = useState<ActionState>("idle");
   const [noteActionMessage, setNoteActionMessage] = useState("");
@@ -96,6 +97,24 @@ export function useBorrowerLoanActions({ borrowerId, loanId }: UseBorrowerLoanAc
         return;
       }
 
+      if (action === "Print application form") {
+        if (!applicationId) {
+          setActionState("error");
+          setActionMessage("Application id is missing for this loan.");
+          return;
+        }
+
+        window.open(`/borrowers/${borrowerId}/loan/${loanId}/application-form`, "_blank", "noopener,noreferrer");
+        runWithFeedback(
+          setActionState,
+          setActionMessage,
+          actionTimeoutRef,
+          "Opening application form...",
+          "Application form opened."
+        );
+        return;
+      }
+
       if (action === "Send notes" && !noteText.trim()) {
         setActionState("error");
         setActionMessage("Add a note before sending.");
@@ -110,7 +129,7 @@ export function useBorrowerLoanActions({ borrowerId, loanId }: UseBorrowerLoanAc
         ACTION_SUCCESS_MESSAGE
       );
     },
-    [borrowerId, loanId, noteText, runWithFeedback]
+    [borrowerId, loanId, applicationId, noteText, runWithFeedback]
   );
 
   return {
