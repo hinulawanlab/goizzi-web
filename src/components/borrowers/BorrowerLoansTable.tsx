@@ -48,6 +48,8 @@ function getStatusClass(status: string) {
       return "bg-slate-100 text-slate-600";
     case "writtenOff":
       return "bg-amber-100 text-amber-700";
+    case "cancelled":
+      return "bg-rose-100 text-rose-700";
     case "draft":
     default:
       return "bg-slate-100 text-slate-600";

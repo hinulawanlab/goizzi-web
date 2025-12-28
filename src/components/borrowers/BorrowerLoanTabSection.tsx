@@ -93,16 +93,6 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
     return addMonths(startDateInput, termValue);
   }, [startDateInput, termMonthsInput]);
 
-  const triggerActionFeedback = (message: string, onSuccess?: () => void) => {
-    setActionState("working");
-    setActionMessage(message);
-    window.setTimeout(() => {
-      setActionState("success");
-      setActionMessage("Request queued.");
-      onSuccess?.();
-    }, 600);
-  };
-
   const handleCancelEdit = () => {
     setPrincipalInput(formatEditableAmount(loan.principalAmount));
     setTermMonthsInput(loan.termMonths ? loan.termMonths.toString() : "");
@@ -111,6 +101,56 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
     setActionState("idle");
     setActionMessage("");
   };
+
+  const patchLoan = async (
+    payload: Record<string, unknown>,
+    workingMessage: string,
+    successMessage: string,
+    onSuccess?: () => void
+  ) => {
+    setActionState("working");
+    setActionMessage(workingMessage);
+    try {
+      const response = await fetch(`/api/loans/${loan.loanId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errorPayload = (await response.json()) as { error?: string };
+        throw new Error(errorPayload.error ?? "Unable to update loan.");
+      }
+
+      setActionState("success");
+      setActionMessage(successMessage);
+      onSuccess?.();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to update loan.";
+      setActionState("error");
+      setActionMessage(message);
+    }
+  };
+
+  const resolvePrincipalAmount = () => {
+    const parsed = Number(principalInput);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      return null;
+    }
+    return Math.round(parsed * 100);
+  };
+
+  const resolveTermMonths = () => {
+    const parsed = Number(termMonthsInput);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return null;
+    }
+    return Math.round(parsed);
+  };
+
+  const resolveStartDate = () => (startDateInput ? startDateInput : null);
+
+  const isWorking = actionState === "working";
 
   if (activeTab === "payments") {
     return (
@@ -166,7 +206,7 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
                 step="0.01"
                 value={principalInput}
                 onChange={(event) => setPrincipalInput(event.target.value)}
-                disabled={!isEditable || isLocked}
+                disabled={!isEditable || isLocked || isWorking}
                 className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm shadow-sm focus:outline-none ${
                   !isEditable || isLocked
                     ? "border-slate-200 bg-slate-100 text-slate-400"
@@ -186,7 +226,7 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
                 step="1"
                 value={termMonthsInput}
                 onChange={(event) => setTermMonthsInput(event.target.value)}
-                disabled={!isEditable || isLocked}
+                disabled={!isEditable || isLocked || isWorking}
                 className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm shadow-sm focus:outline-none ${
                   !isEditable || isLocked
                     ? "border-slate-200 bg-slate-100 text-slate-400"
@@ -205,7 +245,7 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
                 type="date"
                 value={startDateInput}
                 onChange={(event) => setStartDateInput(event.target.value)}
-                disabled={!isEditable || isLocked}
+                disabled={!isEditable || isLocked || isWorking}
                 className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm shadow-sm focus:outline-none ${
                   !isEditable || isLocked
                     ? "border-slate-200 bg-slate-100 text-slate-400"
@@ -234,8 +274,27 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <button
           type="button"
-          onClick={() => triggerActionFeedback("Canceling loan...")}
-          className="cursor-pointer rounded-full border border-rose-200 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-rose-600 transition hover:border-rose-300 hover:text-rose-700"
+          onClick={() => {
+            void patchLoan(
+              {
+                action: "cancel",
+                borrowerId: borrower.borrowerId,
+                applicationId: loan.applicationId
+              },
+              "Canceling loan...",
+              "Loan cancelled.",
+              () => {
+                setIsEditable(false);
+                setIsLocked(true);
+              }
+            );
+          }}
+          disabled={isWorking}
+          className={`rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+            isWorking
+              ? "cursor-not-allowed border-slate-200 text-slate-300"
+              : "border-rose-200 text-rose-600 hover:border-rose-300 hover:text-rose-700"
+          }`}
         >
           Cancel loan
         </button>
@@ -250,9 +309,9 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
                   setActionMessage("");
                 }
               }}
-              disabled={isLocked}
-              className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-                isLocked
+              disabled={isLocked || isWorking}
+              className={`rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+                isLocked || isWorking
                   ? "cursor-not-allowed border-slate-200 text-slate-300"
                   : "border-slate-900 text-slate-900 hover:border-slate-700 hover:text-slate-700"
               }`}
@@ -261,15 +320,35 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
             </button>
             <button
               type="button"
-              onClick={() =>
-                triggerActionFeedback("Proceeding with loan...", () => {
-                  setIsEditable(false);
-                  setIsLocked(true);
-                })
-              }
-              disabled={isLocked}
-              className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-                isLocked
+              onClick={() => {
+                const resolvedPrincipal = resolvePrincipalAmount();
+                const resolvedTermMonths = resolveTermMonths();
+                const resolvedStartDate = resolveStartDate();
+
+                if (!resolvedPrincipal || !resolvedTermMonths || !resolvedStartDate) {
+                  setActionState("error");
+                  setActionMessage("Fill out principal, term, and loan date cycle.");
+                  return;
+                }
+
+                void patchLoan(
+                  {
+                    action: "proceed",
+                    principalAmount: resolvedPrincipal,
+                    termMonths: resolvedTermMonths,
+                    startDate: resolvedStartDate
+                  },
+                  "Proceeding with loan...",
+                  "Loan marked as active.",
+                  () => {
+                    setIsEditable(false);
+                    setIsLocked(true);
+                  }
+                );
+              }}
+              disabled={isLocked || isWorking}
+              className={`rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+                isLocked || isWorking
                   ? "cursor-not-allowed border-slate-200 text-slate-300"
                   : "border-slate-900 bg-slate-900 text-white hover:border-slate-700 hover:bg-slate-800"
               }`}
@@ -282,17 +361,49 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
           <>
             <button
               type="button"
-              onClick={() => triggerActionFeedback("Updating loan details...", () => setIsEditable(false))}
-              className="cursor-pointer rounded-full border border-slate-900 bg-slate-900 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:border-slate-700 hover:bg-slate-800"
+              onClick={() => {
+                const resolvedPrincipal = resolvePrincipalAmount();
+                const resolvedTermMonths = resolveTermMonths();
+                const resolvedStartDate = resolveStartDate();
+
+                if (!resolvedPrincipal || !resolvedTermMonths || !resolvedStartDate) {
+                  setActionState("error");
+                  setActionMessage("Fill out principal, term, and loan date cycle.");
+                  return;
+                }
+
+                void patchLoan(
+                  {
+                    action: "update",
+                    principalAmount: resolvedPrincipal,
+                    termMonths: resolvedTermMonths,
+                    startDate: resolvedStartDate
+                  },
+                  "Updating loan details...",
+                  "Loan details updated.",
+                  () => setIsEditable(false)
+                );
+              }}
+              disabled={isWorking}
+              className={`rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+                isWorking
+                  ? "cursor-not-allowed border-slate-200 text-slate-300"
+                  : "border-slate-900 bg-slate-900 text-white hover:border-slate-700 hover:bg-slate-800"
+              }`}
             >
               Update loan details
             </button>
             <button
               type="button"
               onClick={handleCancelEdit}
-              className="cursor-pointer rounded-full border border-slate-200 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+              disabled={isWorking}
+              className={`rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+                isWorking
+                  ? "cursor-not-allowed border-slate-200 text-slate-300"
+                  : "border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
+              }`}
             >
-              Cancel edit
+              Cancel
             </button>
           </>
         )}

@@ -18,7 +18,7 @@ function getStatusClass(status: string) {
     case "completed":
       return "bg-slate-200 text-slate-700";
     case "cancelled":
-      return "bg-slate-200 text-slate-700";
+      return "bg-rose-100 text-rose-700";
     case "reject":
     case "rejected":
       return "bg-rose-100 text-rose-700";

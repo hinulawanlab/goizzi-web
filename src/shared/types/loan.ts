@@ -1,8 +1,9 @@
-export type LoanStatus = "draft" | "approved" | "active" | "delinquent" | "closed" | "writtenOff";
+export type LoanStatus = "draft" | "approved" | "active" | "delinquent" | "closed" | "writtenOff" | "cancelled";
 
 export interface LoanSummary {
   loanId: string;
   borrowerId: string;
+  applicationId?: string;
   status: LoanStatus;
   productId?: string;
   productName?: string;
