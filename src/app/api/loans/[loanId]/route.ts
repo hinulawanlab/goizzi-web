@@ -8,6 +8,7 @@ interface LoanUpdatePayload {
   applicationId?: string;
   principalAmount?: number;
   termMonths?: number;
+  paymentFrequency?: number;
   startDate?: string;
 }
 
@@ -43,6 +44,7 @@ export async function PATCH(
       loanId,
       principalAmount: payload.principalAmount,
       termMonths: payload.termMonths,
+      paymentFrequency: payload.paymentFrequency,
       startDate: payload.startDate,
       status: action === "proceed" ? "active" : undefined
     });

@@ -4,6 +4,7 @@ interface LoanUpdateInput {
   loanId: string;
   principalAmount?: number;
   termMonths?: number;
+  paymentFrequency?: number;
   startDate?: string;
   status?: string;
 }
@@ -14,14 +15,90 @@ interface LoanCancelInput {
   applicationId?: string;
 }
 
-function addMonths(value: string, months: number): string | null {
-  const parsed = Date.parse(value);
+function formatDateValue(value: unknown): string | null {
+  if (!value) {
+    return null;
+  }
+  if (typeof value === "string") {
+    return value.split("T")[0];
+  }
+  if (value instanceof Date) {
+    return value.toISOString().split("T")[0];
+  }
+  if (typeof (value as { toDate?: () => Date }).toDate === "function") {
+    return ((value as { toDate?: () => Date }).toDate as () => Date)().toISOString().split("T")[0];
+  }
+  const toMillisFn = (value as { toMillis?: () => number }).toMillis;
+  if (typeof toMillisFn === "function") {
+    return new Date(toMillisFn()).toISOString().split("T")[0];
+  }
+  const seconds = (value as { _seconds?: number })._seconds;
+  if (typeof seconds === "number") {
+    return new Date(seconds * 1000).toISOString().split("T")[0];
+  }
+  return null;
+}
+
+function toNumber(value: unknown): number | undefined {
+  if (typeof value === "number") {
+    return value;
+  }
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? undefined : parsed;
+  }
+  return undefined;
+}
+
+function addDays(value: Date, days: number) {
+  const next = new Date(value);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function resolveMaturityDate(startDate: string, termMonths: number): string | null {
+  if (termMonths <= 0) {
+    return null;
+  }
+  const parsed = Date.parse(startDate);
   if (Number.isNaN(parsed)) {
     return null;
   }
-  const date = new Date(parsed);
-  date.setMonth(date.getMonth() + months);
-  return date.toISOString().split("T")[0];
+  const start = new Date(parsed);
+  const endMonth = new Date(start.getFullYear(), start.getMonth() + termMonths, 1);
+  const lastDay = new Date(endMonth.getFullYear(), endMonth.getMonth() + 1, 0);
+  return lastDay.toISOString().split("T")[0];
+}
+
+function buildRepaymentSchedule(startDate: string, termMonths: number, paymentFrequency: number): string[] {
+  if (termMonths <= 0 || paymentFrequency <= 0) {
+    return [];
+  }
+  const start = new Date(startDate);
+  if (Number.isNaN(start.getTime())) {
+    return [];
+  }
+  const totalPayments = termMonths * paymentFrequency;
+  const schedule: string[] = [];
+  let current = new Date(start);
+
+  for (let index = 0; index < totalPayments; index += 1) {
+    const daysInMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
+    const intervalDays = Math.ceil(daysInMonth / paymentFrequency);
+    current = addDays(current, intervalDays);
+    schedule.push(current.toISOString().split("T")[0]);
+  }
+
+  return schedule;
+}
+
+function resolveNextDueDate(schedule: string[]): string | null {
+  if (!schedule.length) {
+    return null;
+  }
+  const today = new Date().toISOString().split("T")[0];
+  const upcoming = schedule.find((date) => date >= today);
+  return upcoming ?? schedule[0];
 }
 
 export async function updateLoanDetails(input: LoanUpdateInput) {
@@ -34,6 +111,8 @@ export async function updateLoanDetails(input: LoanUpdateInput) {
 
   const updatedAt = new Date().toISOString();
   const payload: Record<string, unknown> = { updatedAt };
+  const loanRef = db.collection("loans").doc(input.loanId);
+  let existingLoanData: Record<string, unknown> | null = null;
 
   if (typeof input.principalAmount === "number") {
     payload.principalAmount = input.principalAmount;
@@ -41,6 +120,10 @@ export async function updateLoanDetails(input: LoanUpdateInput) {
 
   if (typeof input.termMonths === "number") {
     payload.termMonths = input.termMonths;
+  }
+
+  if (typeof input.paymentFrequency === "number") {
+    payload.paymentFrequency = input.paymentFrequency;
   }
 
   if (typeof input.startDate === "string") {
@@ -51,14 +134,59 @@ export async function updateLoanDetails(input: LoanUpdateInput) {
     payload.status = input.status;
   }
 
-  if (typeof input.startDate === "string" && typeof input.termMonths === "number") {
-    const maturityDate = addMonths(input.startDate, input.termMonths);
-    if (maturityDate) {
-      payload.maturityDate = maturityDate;
+  const needsLoanData =
+    input.startDate === undefined || input.termMonths === undefined || input.paymentFrequency === undefined;
+  if (needsLoanData) {
+    const loanDoc = await loanRef.get();
+    if (loanDoc.exists) {
+      existingLoanData = (loanDoc.data() as Record<string, unknown>) ?? null;
     }
   }
 
-  await db.collection("loans").doc(input.loanId).set(payload, { merge: true });
+  const resolvedStartDate =
+    typeof input.startDate === "string" ? input.startDate : formatDateValue(existingLoanData?.startDate);
+  const resolvedTermMonths =
+    typeof input.termMonths === "number" ? input.termMonths : toNumber(existingLoanData?.termMonths);
+  const resolvedPaymentFrequency =
+    typeof input.paymentFrequency === "number"
+      ? input.paymentFrequency
+      : toNumber(existingLoanData?.paymentFrequency);
+
+  let schedule: string[] = [];
+  if (
+    typeof resolvedStartDate === "string" &&
+    typeof resolvedTermMonths === "number" &&
+    typeof resolvedPaymentFrequency === "number"
+  ) {
+    schedule = buildRepaymentSchedule(resolvedStartDate, resolvedTermMonths, resolvedPaymentFrequency);
+    const maturityDate = resolveMaturityDate(resolvedStartDate, resolvedTermMonths);
+    const nextDueDate = resolveNextDueDate(schedule);
+
+    if (maturityDate) {
+      payload.maturityDate = maturityDate;
+    }
+    if (nextDueDate) {
+      payload.nextDueDate = nextDueDate;
+    }
+  }
+
+  const batch = db.batch();
+  batch.set(loanRef, payload, { merge: true });
+
+  if (schedule.length) {
+    const scheduleSnapshot = await loanRef.collection("repaymentSchedule").get();
+    scheduleSnapshot.docs.forEach((doc) => batch.delete(doc.ref));
+    schedule.forEach((dueDate, index) => {
+      const entryRef = loanRef.collection("repaymentSchedule").doc(`installment-${index + 1}`);
+      batch.set(entryRef, {
+        dueDate,
+        installmentNumber: index + 1,
+        createdAt: updatedAt
+      });
+    });
+  }
+
+  await batch.commit();
 
   return { updatedAt };
 }

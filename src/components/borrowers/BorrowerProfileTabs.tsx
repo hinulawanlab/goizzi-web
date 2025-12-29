@@ -80,7 +80,7 @@ export default function BorrowerProfileTabs({
   );
 
   const activeLoans = useMemo(
-    () => loans.filter((loan) => loan.status === "active" || loan.status === "delinquent"),
+    () => loans.filter((loan) => ["active", "delinquent", "pastdue"].includes(loan.status)),
     [loans]
   );
 

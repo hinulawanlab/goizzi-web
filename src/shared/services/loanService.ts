@@ -35,7 +35,16 @@ function formatTimestamp(value: unknown): string {
 }
 
 function normalizeStatus(value: unknown): LoanStatus {
-  const valid: LoanStatus[] = ["draft", "approved", "active", "delinquent", "closed", "writtenOff", "cancelled"];
+  const valid: LoanStatus[] = [
+    "draft",
+    "approved",
+    "active",
+    "delinquent",
+    "pastdue",
+    "closed",
+    "writtenOff",
+    "cancelled"
+  ];
   return typeof value === "string" && valid.includes(value as LoanStatus)
     ? (value as LoanStatus)
     : "draft";
@@ -65,13 +74,58 @@ function mapLoanDoc(doc: DocumentSnapshot): LoanSummary {
     principalAmount: toNumber(data.principalAmount),
     termMonths: toNumber(data.termMonths),
     termDays: toNumber(data.termDays),
+    paymentFrequency: toNumber(data.paymentFrequency),
     totalOutstandingAmount: toNumber(data.balances?.totalOutstandingAmount),
     currency: typeof data.currency === "string" ? data.currency : undefined,
     startDate: formatTimestamp(data.startDate),
     nextDueDate: formatTimestamp(data.nextDueDate),
+    maturityDate: formatTimestamp(data.maturityDate),
     lastPaymentAt: formatTimestamp(data.lastPaymentAt),
-    updatedAt: formatTimestamp(data.updatedAt)
+    updatedAt: formatTimestamp(data.updatedAt),
+    isFullpayment: typeof data.isFullpayment === "boolean" ? data.isFullpayment : undefined
   };
+}
+
+function isPastDueEligible(loan: LoanSummary) {
+  if (loan.isFullpayment !== false) {
+    return false;
+  }
+  if (!loan.maturityDate || loan.maturityDate === "N/A") {
+    return false;
+  }
+  if (["pastdue", "closed", "writtenOff", "cancelled"].includes(loan.status)) {
+    return false;
+  }
+  const maturityMs = Date.parse(loan.maturityDate);
+  if (Number.isNaN(maturityMs)) {
+    return false;
+  }
+  return maturityMs <= Date.now();
+}
+
+async function updatePastDueStatuses(loans: LoanSummary[]): Promise<LoanSummary[]> {
+  if (!db) {
+    return loans;
+  }
+
+  const updates = loans.filter(isPastDueEligible);
+  if (!updates.length) {
+    return loans;
+  }
+
+  const updatedAt = new Date().toISOString();
+  const batch = db.batch();
+  const updatedIds = new Set<string>();
+  for (const loan of updates) {
+    const loanRef = db.collection("loans").doc(loan.loanId);
+    batch.set(loanRef, { status: "pastdue", updatedAt }, { merge: true });
+    updatedIds.add(loan.loanId);
+  }
+  await batch.commit();
+
+  return loans.map((loan) =>
+    updatedIds.has(loan.loanId) ? { ...loan, status: "pastdue", updatedAt } : loan
+  );
 }
 
 async function fetchBorrowerLoansFromFirestore(borrowerId: string, limit = 50): Promise<LoanSummary[]> {
@@ -89,7 +143,8 @@ async function fetchBorrowerLoansFromFirestore(borrowerId: string, limit = 50): 
     return [];
   }
 
-  return snapshot.docs.map(mapLoanDoc);
+  const loans = snapshot.docs.map(mapLoanDoc);
+  return updatePastDueStatuses(loans);
 }
 
 async function fetchLoanByIdFromFirestore(loanId: string): Promise<LoanSummary | null> {
@@ -102,7 +157,9 @@ async function fetchLoanByIdFromFirestore(loanId: string): Promise<LoanSummary |
     return null;
   }
 
-  return mapLoanDoc(doc);
+  const loan = mapLoanDoc(doc);
+  const [updatedLoan] = await updatePastDueStatuses([loan]);
+  return updatedLoan ?? loan;
 }
 
 function findDemoLoanById(loanId: string): LoanSummary | null {

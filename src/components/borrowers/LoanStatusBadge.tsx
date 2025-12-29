@@ -13,6 +13,9 @@ function getStatusClass(status: string) {
     case "approve":
     case "approved":
       return "bg-emerald-100 text-emerald-700";
+    case "delinquent":
+    case "pastdue":
+      return "bg-rose-100 text-rose-700";
     case "reviewed":
       return "bg-sky-100 text-sky-700";
     case "completed":

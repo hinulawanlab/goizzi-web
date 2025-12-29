@@ -21,7 +21,7 @@ This schema is optimized for:
 
 ### Status enums (suggested)
 - Borrower: `active | blocked | archived`
-- Loan: `draft | approved | active | delinquent | closed | writtenOff`
+- Loan: `draft | approved | active | delinquent | pastdue | closed | writtenOff`
 - Payment: `posted | reversed | pending`
 - Ledger entry: `posted | reversed`
 
@@ -203,8 +203,9 @@ Top-level to support queries like “Branch X due today” without scanning borr
 - `approvedAt: timestamp`
 - `startDate: timestamp`
 - `termDays: number?` / `termMonths: number?`
-- `paymentFrequency: string` (`daily|weekly|monthly`)
+- `paymentFrequency: number` (payments per month, used for repayment schedule)
 - `maturityDate: timestamp?`
+ - `isFullpayment: boolean?`
 
 **Denormalized borrower fields (optional but useful for lists)**
 - `borrowerName: string`
@@ -241,7 +242,16 @@ Top-level to support queries like “Branch X due today” without scanning borr
 /loans/{loanId}/ledger/{entryId}
 /loans/{loanId}/documents/{docId}          (optional)
 /loans/{loanId}/adjustments/{adjId}        (optional; can be ledger-only)
+/loans/{loanId}/repaymentSchedule/{scheduleId}
 ```
+
+### `/loans/{loanId}/repaymentSchedule/{scheduleId}`
+Repayment schedule entries generated from `startDate`, `termMonths`, and `paymentFrequency`.
+
+**Fields**
+- `dueDate: timestamp`
+- `installmentNumber: number`
+- `createdAt: timestamp`
 
 ---
 

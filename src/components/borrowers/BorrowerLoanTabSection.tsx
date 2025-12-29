@@ -1,7 +1,8 @@
 // src/components/borrowers/BorrowerLoanTabSection.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import type { BorrowerSummary } from "@/shared/types/dashboard";
 import type { LoanSummary } from "@/shared/types/loan";
@@ -74,28 +75,116 @@ function addMonths(value: string, months: number) {
   return date.toISOString().split("T")[0];
 }
 
+function buildRepaymentSchedule(startDate: string, termMonths: number, paymentFrequency: number) {
+  if (termMonths <= 0 || paymentFrequency <= 0) {
+    return [];
+  }
+  const start = new Date(startDate);
+  if (Number.isNaN(start.getTime())) {
+    return [];
+  }
+  const totalPayments = termMonths * paymentFrequency;
+  const schedule: string[] = [];
+  let current = new Date(start);
+
+  for (let index = 0; index < totalPayments; index += 1) {
+    const daysInMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
+    const intervalDays = Math.ceil(daysInMonth / paymentFrequency);
+    current = new Date(current);
+    current.setDate(current.getDate() + intervalDays);
+    schedule.push(current.toISOString().split("T")[0]);
+  }
+
+  return schedule;
+}
+
+function resolveNextDueDate(schedule: string[]) {
+  if (!schedule.length) {
+    return "N/A";
+  }
+  const today = new Date().toISOString().split("T")[0];
+  return schedule.find((date) => date >= today) ?? schedule[0];
+}
+
+function resolveMaturityDate(startDate: string, termMonths: number) {
+  if (termMonths <= 0) {
+    return "N/A";
+  }
+  const parsed = Date.parse(startDate);
+  if (Number.isNaN(parsed)) {
+    return "N/A";
+  }
+  const start = new Date(parsed);
+  const endMonth = new Date(start.getFullYear(), start.getMonth() + termMonths, 1);
+  const lastDay = new Date(endMonth.getFullYear(), endMonth.getMonth() + 1, 0);
+  return lastDay.toISOString().split("T")[0];
+}
+
+const EDITABLE_STATUSES = new Set(["approved", "draft"]);
+
+function isLoanEditable(status: string) {
+  return EDITABLE_STATUSES.has(status);
+}
+
 export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: BorrowerLoanTabSectionProps) {
+  const router = useRouter();
   const [principalInput, setPrincipalInput] = useState(() => formatEditableAmount(loan.principalAmount));
   const [termMonthsInput, setTermMonthsInput] = useState(
     loan.termMonths ? loan.termMonths.toString() : ""
   );
+  const [paymentFrequencyInput, setPaymentFrequencyInput] = useState(
+    loan.paymentFrequency ? loan.paymentFrequency.toString() : ""
+  );
   const [startDateInput, setStartDateInput] = useState(() => formatInputDate(loan.startDate));
   const [isEditable, setIsEditable] = useState(false);
-  const [isLocked, setIsLocked] = useState(false);
+  const [isLocked, setIsLocked] = useState(() => !isLoanEditable(loan.status));
   const [actionState, setActionState] = useState<ActionState>("idle");
   const [actionMessage, setActionMessage] = useState("");
 
+  useEffect(() => {
+    const nextLocked = !isLoanEditable(loan.status);
+    setIsLocked(nextLocked);
+    if (nextLocked) {
+      setIsEditable(false);
+    }
+  }, [loan.status]);
+
   const maturityDate = useMemo(() => {
     const termValue = Number(termMonthsInput);
+    const paymentFrequencyValue = Number(paymentFrequencyInput);
     if (!startDateInput || !Number.isFinite(termValue) || termValue <= 0) {
       return "N/A";
     }
+    if (Number.isFinite(paymentFrequencyValue) && paymentFrequencyValue > 0) {
+      return resolveMaturityDate(startDateInput, termValue);
+    }
     return addMonths(startDateInput, termValue);
-  }, [startDateInput, termMonthsInput]);
+  }, [paymentFrequencyInput, startDateInput, termMonthsInput]);
+
+  const nextDueDate = useMemo(() => {
+    if (loan.nextDueDate) {
+      return loan.nextDueDate;
+    }
+    const startDateValue = startDateInput || loan.startDate;
+    const termValue = Number(termMonthsInput);
+    const paymentFrequencyValue = Number(paymentFrequencyInput);
+    if (
+      !startDateValue ||
+      !Number.isFinite(termValue) ||
+      termValue <= 0 ||
+      !Number.isFinite(paymentFrequencyValue) ||
+      paymentFrequencyValue <= 0
+    ) {
+      return "N/A";
+    }
+    const schedule = buildRepaymentSchedule(startDateValue, termValue, paymentFrequencyValue);
+    return resolveNextDueDate(schedule);
+  }, [loan.nextDueDate, paymentFrequencyInput, startDateInput, termMonthsInput, loan.startDate]);
 
   const handleCancelEdit = () => {
     setPrincipalInput(formatEditableAmount(loan.principalAmount));
     setTermMonthsInput(loan.termMonths ? loan.termMonths.toString() : "");
+    setPaymentFrequencyInput(loan.paymentFrequency ? loan.paymentFrequency.toString() : "");
     setStartDateInput(formatInputDate(loan.startDate));
     setIsEditable(false);
     setActionState("idle");
@@ -125,6 +214,7 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
       setActionState("success");
       setActionMessage(successMessage);
       onSuccess?.();
+      router.refresh();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to update loan.";
       setActionState("error");
@@ -142,6 +232,14 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
 
   const resolveTermMonths = () => {
     const parsed = Number(termMonthsInput);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return null;
+    }
+    return Math.round(parsed);
+  };
+
+  const resolvePaymentFrequency = () => {
+    const parsed = Number(paymentFrequencyInput);
     if (!Number.isFinite(parsed) || parsed <= 0) {
       return null;
     }
@@ -188,7 +286,8 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
           <DetailRow label="Status" value={loan.status} />
           <DetailRow label="Product" value={loan.productName ?? loan.productId} />
           <DetailRow label="Outstanding" value={formatAmount(loan.totalOutstandingAmount, loan.currency)} />
-          <DetailRow label="Next due" value={formatDate(loan.nextDueDate)} />
+          <DetailRow label="Next due" value={formatDate(nextDueDate)} />
+          <DetailRow label="Maturity date" value={formatDate(loan.maturityDate)} />
           <DetailRow label="Last payment" value={formatDate(loan.lastPaymentAt)} />
           <DetailRow label="Last updated" value={formatDate(loan.updatedAt)} />
         </div>
@@ -237,6 +336,28 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
             </div>
 
             <div>
+              <label className="text-[11px] uppercase tracking-[0.3em] text-slate-400" htmlFor="loan-frequency">
+                Payments per month
+              </label>
+              <select
+                id="loan-frequency"
+                value={paymentFrequencyInput}
+                onChange={(event) => setPaymentFrequencyInput(event.target.value)}
+                disabled={!isEditable || isLocked || isWorking}
+                className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm shadow-sm focus:outline-none ${
+                  !isEditable || isLocked
+                    ? "border-slate-200 bg-slate-100 text-slate-400"
+                    : "border-slate-200 bg-white text-slate-700 focus:border-slate-400"
+                }`}
+              >
+                <option value="">Select payment frequency</option>
+                <option value="1">Once a month</option>
+                <option value="2">Bi-monthly</option>
+                <option value="4">Weekly</option>
+              </select>
+            </div>
+
+            <div>
               <label className="text-[11px] uppercase tracking-[0.3em] text-slate-400" htmlFor="loan-start-date">
                 Loan date cycle
               </label>
@@ -271,63 +392,65 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
         </div>
       </div>
 
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={() => {
-            void patchLoan(
-              {
-                action: "cancel",
-                borrowerId: borrower.borrowerId,
-                applicationId: loan.applicationId
-              },
-              "Canceling loan...",
-              "Loan cancelled.",
-              () => {
-                setIsEditable(false);
-                setIsLocked(true);
-              }
-            );
-          }}
-          disabled={isWorking}
-          className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-            isWorking
-              ? "cursor-not-allowed border-slate-200 text-slate-300"
-              : "border-rose-200 text-rose-600 hover:border-rose-300 hover:text-rose-700"
-          }`}
-        >
-          Cancel loan
-        </button>
-        {!isEditable && (
-          <>
-            <button
-              type="button"
-              onClick={() => {
-                if (!isLocked) {
-                  setIsEditable(true);
-                  setActionState("idle");
-                  setActionMessage("");
+      {!isLocked && (
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              void patchLoan(
+                {
+                  action: "cancel",
+                  borrowerId: borrower.borrowerId,
+                  applicationId: loan.applicationId
+                },
+                "Canceling loan...",
+                "Loan cancelled.",
+                () => {
+                  setIsEditable(false);
+                  setIsLocked(true);
                 }
-              }}
-              disabled={isLocked || isWorking}
-              className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-                isLocked || isWorking
-                  ? "cursor-not-allowed border-slate-200 text-slate-300"
-                  : "border-slate-900 text-slate-900 hover:border-slate-700 hover:text-slate-700"
-              }`}
-            >
-              Edit loan
-            </button>
-            <button
-              type="button"
-              onClick={() => {
+              );
+            }}
+            disabled={isWorking}
+            className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+              isWorking
+                ? "cursor-not-allowed border-slate-200 text-slate-300"
+                : "border-rose-200 text-rose-600 hover:border-rose-300 hover:text-rose-700"
+            }`}
+          >
+            Cancel loan
+          </button>
+          {!isEditable && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isLocked) {
+                    setIsEditable(true);
+                    setActionState("idle");
+                    setActionMessage("");
+                  }
+                }}
+                disabled={isLocked || isWorking}
+                className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+                  isLocked || isWorking
+                    ? "cursor-not-allowed border-slate-200 text-slate-300"
+                    : "border-slate-900 text-slate-900 hover:border-slate-700 hover:text-slate-700"
+                }`}
+              >
+                Edit loan
+              </button>
+              <button
+                type="button"
+                onClick={() => {
                 const resolvedPrincipal = resolvePrincipalAmount();
                 const resolvedTermMonths = resolveTermMonths();
+                const resolvedPaymentFrequency = resolvePaymentFrequency();
                 const resolvedStartDate = resolveStartDate();
 
-                if (!resolvedPrincipal || !resolvedTermMonths || !resolvedStartDate) {
+                if (!resolvedPrincipal || !resolvedTermMonths || !resolvedPaymentFrequency || !resolvedStartDate) {
                   setActionState("error");
-                  setActionMessage("Fill out principal, term, and loan date cycle.");
+                  setActionMessage("Fill out principal, term, payment frequency, and loan date cycle.");
                   return;
                 }
 
@@ -336,39 +459,41 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
                     action: "proceed",
                     principalAmount: resolvedPrincipal,
                     termMonths: resolvedTermMonths,
+                    paymentFrequency: resolvedPaymentFrequency,
                     startDate: resolvedStartDate
                   },
                   "Proceeding with loan...",
                   "Loan marked as active.",
                   () => {
-                    setIsEditable(false);
-                    setIsLocked(true);
-                  }
-                );
-              }}
-              disabled={isLocked || isWorking}
-              className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-                isLocked || isWorking
-                  ? "cursor-not-allowed border-slate-200 text-slate-300"
-                  : "border-slate-900 bg-slate-900 text-white hover:border-slate-700 hover:bg-slate-800"
-              }`}
-            >
-              Proceed with loan
-            </button>
-          </>
-        )}
-        {isEditable && (
-          <>
-            <button
-              type="button"
-              onClick={() => {
+                      setIsEditable(false);
+                      setIsLocked(true);
+                    }
+                  );
+                }}
+                disabled={isLocked || isWorking}
+                className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+                  isLocked || isWorking
+                    ? "cursor-not-allowed border-slate-200 text-slate-300"
+                    : "border-slate-900 bg-slate-900 text-white hover:border-slate-700 hover:bg-slate-800"
+                }`}
+              >
+                Proceed with loan
+              </button>
+            </>
+          )}
+          {isEditable && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
                 const resolvedPrincipal = resolvePrincipalAmount();
                 const resolvedTermMonths = resolveTermMonths();
+                const resolvedPaymentFrequency = resolvePaymentFrequency();
                 const resolvedStartDate = resolveStartDate();
 
-                if (!resolvedPrincipal || !resolvedTermMonths || !resolvedStartDate) {
+                if (!resolvedPrincipal || !resolvedTermMonths || !resolvedPaymentFrequency || !resolvedStartDate) {
                   setActionState("error");
-                  setActionMessage("Fill out principal, term, and loan date cycle.");
+                  setActionMessage("Fill out principal, term, payment frequency, and loan date cycle.");
                   return;
                 }
 
@@ -377,37 +502,39 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
                     action: "update",
                     principalAmount: resolvedPrincipal,
                     termMonths: resolvedTermMonths,
+                    paymentFrequency: resolvedPaymentFrequency,
                     startDate: resolvedStartDate
                   },
                   "Updating loan details...",
                   "Loan details updated.",
-                  () => setIsEditable(false)
-                );
-              }}
-              disabled={isWorking}
-              className={`rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-                isWorking
-                  ? "cursor-not-allowed border-slate-200 text-slate-300"
-                  : "border-slate-900 bg-slate-900 text-white hover:border-slate-700 hover:bg-slate-800"
-              }`}
-            >
-              Update loan details
-            </button>
-            <button
-              type="button"
-              onClick={handleCancelEdit}
-              disabled={isWorking}
-              className={`rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-                isWorking
-                  ? "cursor-not-allowed border-slate-200 text-slate-300"
-                  : "border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
-              }`}
-            >
-              Cancel
-            </button>
-          </>
-        )}
-      </div>
+                    () => setIsEditable(false)
+                  );
+                }}
+                disabled={isWorking}
+                className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+                  isWorking
+                    ? "cursor-not-allowed border-slate-200 text-slate-300"
+                    : "border-slate-900 bg-slate-900 text-white hover:border-slate-700 hover:bg-slate-800"
+                }`}
+              >
+                Update loan details
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                disabled={isWorking}
+                className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+                  isWorking
+                    ? "cursor-not-allowed border-slate-200 text-slate-300"
+                    : "border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                }`}
+              >
+                Cancel
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {actionState === "working" && (
         <div className="mt-4 flex items-center gap-2 text-sm text-slate-500">

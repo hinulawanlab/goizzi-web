@@ -44,6 +44,8 @@ function getStatusClass(status: string) {
       return "bg-emerald-100 text-emerald-700";
     case "delinquent":
       return "bg-rose-100 text-rose-700";
+    case "pastdue":
+      return "bg-rose-100 text-rose-700";
     case "closed":
       return "bg-slate-100 text-slate-600";
     case "writtenOff":
