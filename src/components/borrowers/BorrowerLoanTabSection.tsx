@@ -290,7 +290,7 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
             );
           }}
           disabled={isWorking}
-          className={`rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+          className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
             isWorking
               ? "cursor-not-allowed border-slate-200 text-slate-300"
               : "border-rose-200 text-rose-600 hover:border-rose-300 hover:text-rose-700"
@@ -310,7 +310,7 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
                 }
               }}
               disabled={isLocked || isWorking}
-              className={`rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+              className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
                 isLocked || isWorking
                   ? "cursor-not-allowed border-slate-200 text-slate-300"
                   : "border-slate-900 text-slate-900 hover:border-slate-700 hover:text-slate-700"
@@ -347,7 +347,7 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
                 );
               }}
               disabled={isLocked || isWorking}
-              className={`rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+              className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
                 isLocked || isWorking
                   ? "cursor-not-allowed border-slate-200 text-slate-300"
                   : "border-slate-900 bg-slate-900 text-white hover:border-slate-700 hover:bg-slate-800"

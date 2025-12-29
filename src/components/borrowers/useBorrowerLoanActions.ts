@@ -97,7 +97,7 @@ export function useBorrowerLoanActions({ borrowerId, loanId, applicationId }: Us
         return;
       }
 
-      if (action === "Print application form") {
+      if (action === "Print loan form") {
         if (!applicationId) {
           setActionState("error");
           setActionMessage("Application id is missing for this loan.");

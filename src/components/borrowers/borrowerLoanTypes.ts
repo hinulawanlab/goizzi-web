@@ -6,5 +6,5 @@ export const borrowerLoanTabs: { key: BorrowerLoanTabKey; label: string }[] = [
   { key: "statement", label: "Statement of account" }
 ];
 
-export const borrowerLoanActions = ["Print application form", "Send push notif", "Send notes"] as const;
+export const borrowerLoanActions = ["Print loan form", "Send push notif", "Send notes"] as const;
 export type BorrowerLoanAction = (typeof borrowerLoanActions)[number];
