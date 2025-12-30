@@ -10,6 +10,7 @@ import type { BorrowerLoanTabKey } from "@/components/borrowers/borrowerLoanType
 import type { ActionState } from "@/components/borrowers/borrowerApplicationTypes";
 import BorrowerLoanPaymentsTab from "@/components/borrowers/BorrowerLoanPaymentsTab";
 import type { RepaymentScheduleEntry } from "@/shared/types/repaymentSchedule";
+import type { LoanNote } from "@/shared/types/loanNote";
 import {
   buildRepaymentSchedule,
   resolveMaturityDate,
@@ -21,6 +22,8 @@ interface BorrowerLoanTabSectionProps {
   borrower: BorrowerSummary;
   loan: LoanSummary;
   repaymentSchedule: RepaymentScheduleEntry[];
+  loanNotes: LoanNote[];
+  loanNotesError?: string;
 }
 
 function formatDate(value?: string) {
@@ -114,7 +117,9 @@ export default function BorrowerLoanTabSection({
   activeTab,
   borrower,
   loan,
-  repaymentSchedule
+  repaymentSchedule,
+  loanNotes,
+  loanNotesError
 }: BorrowerLoanTabSectionProps) {
   const router = useRouter();
   const [principalInput, setPrincipalInput] = useState(() => formatEditableAmount(loan.principalAmount));
@@ -130,6 +135,10 @@ export default function BorrowerLoanTabSection({
   const [isLocked, setIsLocked] = useState(() => !isLoanEditable(loan.status));
   const [actionState, setActionState] = useState<ActionState>("idle");
   const [actionMessage, setActionMessage] = useState("");
+  const [auditState, setAuditState] = useState<"loading" | "ready">("loading");
+  const [auditTypeFilter, setAuditTypeFilter] = useState<"all" | "borrower" | "loanNotes" | "uncategorized">(
+    "all"
+  );
 
   useEffect(() => {
     const nextLocked = !isLoanEditable(loan.status);
@@ -155,6 +164,10 @@ export default function BorrowerLoanTabSection({
     loan.interestRate,
     loan.startDate
   ]);
+
+  useEffect(() => {
+    setAuditState("ready");
+  }, [loanNotes, loanNotesError]);
 
   const maturityDate = useMemo(() => {
     const termValue = Number(termMonthsInput);
@@ -342,6 +355,98 @@ export default function BorrowerLoanTabSection({
                       {formatPaymentAmount(payment.breakdown.otherAmount)}
                     </td>
                     <td className="px-3 py-4 text-slate-500">{payment.remarks || ""}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    );
+  }
+
+  if (activeTab === "audit") {
+    const notes = loanNotes ?? [];
+    const filteredNotes = notes.filter((note) => {
+      if (auditTypeFilter === "all") {
+        return true;
+      }
+      if (auditTypeFilter === "uncategorized") {
+        return !note.type;
+      }
+      return note.type === auditTypeFilter;
+    });
+
+    return (
+      <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Audit notes</p>
+            <h3 className="mt-2 text-xl font-semibold text-slate-900">Loan note history</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Review notes saved for this loan, including author and type.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-slate-400">
+            <label htmlFor="loan-note-filter">Filter</label>
+            <select
+              id="loan-note-filter"
+              value={auditTypeFilter}
+              onChange={(event) =>
+                setAuditTypeFilter(event.target.value as "all" | "borrower" | "loanNotes" | "uncategorized")
+              }
+              className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 shadow-sm focus:border-slate-400 focus:outline-none"
+            >
+              <option value="all">All</option>
+              <option value="borrower">Borrower</option>
+              <option value="loanNotes">Loan notes</option>
+              <option value="uncategorized">Uncategorized</option>
+            </select>
+          </div>
+        </div>
+
+        {loanNotesError ? (
+          <div className="mt-6 rounded-3xl border border-rose-200 bg-rose-50 p-6 text-center">
+            <p className="text-sm font-semibold text-rose-700">Unable to load loan notes.</p>
+            <p className="mt-2 text-xs text-rose-600">{loanNotesError}</p>
+            <button
+              type="button"
+              onClick={() => router.refresh()}
+              className="mt-4 rounded-full border border-rose-200 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-rose-700 hover:border-rose-300 hover:text-rose-800"
+            >
+              Retry
+            </button>
+          </div>
+        ) : auditState === "loading" ? (
+          <div className="mt-6 rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
+            <p className="text-sm font-semibold text-slate-900">Loading notes.</p>
+            <p className="mt-2 text-xs text-slate-500">Fetching loan audit history.</p>
+          </div>
+        ) : filteredNotes.length === 0 ? (
+          <div className="mt-6 rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
+            <p className="text-sm font-semibold text-slate-900">No notes yet.</p>
+            <p className="mt-2 text-xs text-slate-500">Notes created from the sidebar will appear here.</p>
+          </div>
+        ) : (
+          <div className="mt-6 overflow-x-auto">
+            <table className="w-full min-w-700px text-left text-sm text-slate-600">
+              <thead>
+                <tr className="text-xs uppercase tracking-[0.3em] text-slate-400">
+                  <th className="px-3 py-3">Type</th>
+                  <th className="px-3 py-3">Author</th>
+                  <th className="px-3 py-3">Created</th>
+                  <th className="px-3 py-3">Note</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredNotes.map((note) => (
+                  <tr key={note.noteId} className="bg-white">
+                    <td className="px-3 py-4 font-semibold text-slate-900">
+                      {note.type ? note.type : "Uncategorized"}
+                    </td>
+                    <td className="px-3 py-4">{note.createdByName || "Unknown staff"}</td>
+                    <td className="px-3 py-4">{formatDate(note.createdAt)}</td>
+                    <td className="px-3 py-4 text-slate-500">{note.note}</td>
                   </tr>
                 ))}
               </tbody>

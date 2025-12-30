@@ -245,7 +245,19 @@ Top-level to support queries like “Branch X due today” without scanning borr
 /loans/{loanId}/documents/{docId}          (optional)
 /loans/{loanId}/adjustments/{adjId}        (optional; can be ledger-only)
 /loans/{loanId}/repaymentSchedule/{scheduleId}
+/loans/{loanId}/notes/{noteId}             (optional)
 ```
+
+### `/loans/{loanId}/notes/{noteId}` (optional)
+**Fields**
+- `note: string`
+- `type: string?` (`borrower|loanNotes`)
+- `borrowerId: string?`
+- `applicationId: string?`
+- `createdAt: timestamp`
+- `createdByUserId: string`
+- `createdByName: string?` (displayName snapshot)
+- `noteId: string`
 
 ### `/loans/{loanId}/repaymentSchedule/{scheduleId}`
 Repayment schedule entries generated from `startDate`, `termMonths`, and `paymentFrequency`.

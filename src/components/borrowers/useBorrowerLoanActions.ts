@@ -108,10 +108,11 @@ export function useBorrowerLoanActions({ borrowerId, loanId, applicationId }: Us
 
       const actor = getActorProfile();
       try {
-        const response = await fetch(`/api/borrowers/${borrowerId}/notes`, {
+        const response = await fetch(`/api/loans/${loanId}/notes`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            borrowerId,
             applicationId,
             type: noteType,
             note: trimmedNote,

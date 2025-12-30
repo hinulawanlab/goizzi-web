@@ -11,14 +11,23 @@ import type { BorrowerLoanTabKey } from "@/components/borrowers/borrowerLoanType
 import type { BorrowerSummary } from "@/shared/types/dashboard";
 import type { LoanSummary } from "@/shared/types/loan";
 import type { RepaymentScheduleEntry } from "@/shared/types/repaymentSchedule";
+import type { LoanNote } from "@/shared/types/loanNote";
 
 interface BorrowerLoanTabsProps {
   borrower: BorrowerSummary;
   loan: LoanSummary;
   repaymentSchedule: RepaymentScheduleEntry[];
+  loanNotes: LoanNote[];
+  loanNotesError?: string;
 }
 
-export default function BorrowerLoanTabs({ borrower, loan, repaymentSchedule }: BorrowerLoanTabsProps) {
+export default function BorrowerLoanTabs({
+  borrower,
+  loan,
+  repaymentSchedule,
+  loanNotes,
+  loanNotesError
+}: BorrowerLoanTabsProps) {
   const [activeTab, setActiveTab] = useState<BorrowerLoanTabKey>("details");
   const [isRefreshing, startRefreshing] = useTransition();
   const router = useRouter();
@@ -73,6 +82,8 @@ export default function BorrowerLoanTabs({ borrower, loan, repaymentSchedule }: 
             borrower={borrower}
             loan={loan}
             repaymentSchedule={repaymentSchedule}
+            loanNotes={loanNotes}
+            loanNotesError={loanNotesError}
           />
         </div>
       </div>

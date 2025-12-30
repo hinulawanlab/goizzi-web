@@ -109,6 +109,10 @@ service cloud.firestore {
       match /adjustments/{adjId} {
         allow read, write: if isStaff();
       }
+
+      match /notes/{noteId} {
+        allow read, write: if isStaff();
+      }
     }
 
     /* =========================
@@ -186,5 +190,5 @@ service cloud.firestore {
 
 <!-- firebase_database_rules.md -->
 <!-- Versioning -->
-version: v1.1
+version: v1.2
 lastUpdate: 2025-12-30
