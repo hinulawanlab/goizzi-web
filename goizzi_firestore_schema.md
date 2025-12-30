@@ -200,6 +200,7 @@ Top-level to support queries like “Branch X due today” without scanning borr
 - `currency: string` (e.g., `"PHP"`)
 - `principalAmount: number`
 - `loanInterest: number`
+- `interestRate: number` (monthly rate, e.g., `0.03` for 3%)
 - `approvedAt: timestamp`
 - `startDate: timestamp`
 - `termDays: number?` / `termMonths: number?`
@@ -252,6 +253,35 @@ Repayment schedule entries generated from `startDate`, `termMonths`, and `paymen
 - `dueDate: timestamp`
 - `installmentNumber: number`
 - `createdAt: timestamp`
+- `expectedPaymentAmount: number?` (simple estimate per schedule)
+- `amountPaidAmount: number?`
+- `scheduleType: string?` (`regular|custom`)
+- `breakdown: map?`
+  - `principalAmount: number`
+  - `interestAmount: number`
+  - `financeChargeAmount: number`
+  - `lateChargeAmount: number`
+  - `otherAmount: number`
+- `remarks: string?`
+- `paymentStatus: string?` (`paid|unpaid`)
+- `paidAt: timestamp?`
+- `updatedAt: timestamp?`
+
+**Subcollections**
+```
+/loans/{loanId}/repaymentSchedule/{scheduleId}/paymentHistory/{paymentId}
+```
+
+### `/loans/{loanId}/repaymentSchedule/{scheduleId}/paymentHistory/{paymentId}`
+Immutable payment audit trail for schedule edits.
+
+**Fields**
+- `status: string` (`posted|reversed`)
+- `amountPaidAmount: number`
+- `breakdown: map`
+- `remarks: string?`
+- `createdAt: timestamp`
+- `reversalOfPaymentId: string?`
 
 ---
 

@@ -10,13 +10,15 @@ import { useBorrowerLoanActions } from "@/components/borrowers/useBorrowerLoanAc
 import type { BorrowerLoanTabKey } from "@/components/borrowers/borrowerLoanTypes";
 import type { BorrowerSummary } from "@/shared/types/dashboard";
 import type { LoanSummary } from "@/shared/types/loan";
+import type { RepaymentScheduleEntry } from "@/shared/types/repaymentSchedule";
 
 interface BorrowerLoanTabsProps {
   borrower: BorrowerSummary;
   loan: LoanSummary;
+  repaymentSchedule: RepaymentScheduleEntry[];
 }
 
-export default function BorrowerLoanTabs({ borrower, loan }: BorrowerLoanTabsProps) {
+export default function BorrowerLoanTabs({ borrower, loan, repaymentSchedule }: BorrowerLoanTabsProps) {
   const [activeTab, setActiveTab] = useState<BorrowerLoanTabKey>("details");
   const [isRefreshing, startRefreshing] = useTransition();
   const router = useRouter();
@@ -66,7 +68,12 @@ export default function BorrowerLoanTabs({ borrower, loan }: BorrowerLoanTabsPro
           isRefreshing={isRefreshing}
         />
         <div className="lg:flex-1 lg:overflow-y-auto lg:pr-2 pb-4">
-          <BorrowerLoanTabSection activeTab={activeTab} borrower={borrower} loan={loan} />
+          <BorrowerLoanTabSection
+            activeTab={activeTab}
+            borrower={borrower}
+            loan={loan}
+            repaymentSchedule={repaymentSchedule}
+          />
         </div>
       </div>
     </div>

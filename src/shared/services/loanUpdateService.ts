@@ -1,9 +1,15 @@
 import { db } from "@/shared/singletons/firebaseAdmin";
+import {
+  buildRepaymentSchedule,
+  resolveMaturityDate,
+  resolveNextDueDate
+} from "@/shared/utils/repaymentSchedule";
 
 interface LoanUpdateInput {
   loanId: string;
   principalAmount?: number;
   termMonths?: number;
+  interestRate?: number;
   paymentFrequency?: number;
   startDate?: string;
   status?: string;
@@ -50,86 +56,18 @@ function toNumber(value: unknown): number | undefined {
   return undefined;
 }
 
-function addDays(value: Date, days: number) {
-  const next = new Date(value);
-  next.setDate(next.getDate() + days);
-  return next;
-}
-
-function isLeapYear(year: number) {
-  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
-}
-
-function resolveMaturityDate(startDate: string, termMonths: number): string | null {
-  if (termMonths <= 0) {
-    return null;
-  }
-  const parsed = Date.parse(startDate);
-  if (Number.isNaN(parsed)) {
-    return null;
-  }
-  const start = new Date(parsed);
-  if (termMonths === 1) {
-    return addDays(start, 30).toISOString().split("T")[0];
-  }
-
-  const targetMonthStart = new Date(start.getFullYear(), start.getMonth() + termMonths, 1);
-  const targetMonth = targetMonthStart.getMonth();
-  const targetYear = targetMonthStart.getFullYear();
-  const startDay = start.getDate();
-  const daysInTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
-
-  if (targetMonth === 1 && startDay > (isLeapYear(targetYear) ? 29 : 28)) {
-    return new Date(targetYear, targetMonth + 1, 1).toISOString().split("T")[0];
-  }
-
-  const day = Math.min(startDay, daysInTargetMonth);
-  return new Date(targetYear, targetMonth, day).toISOString().split("T")[0];
-}
-
-function buildRepaymentSchedule(startDate: string, termMonths: number, paymentFrequency: number): string[] {
+function resolveExpectedPaymentAmount(
+  principalAmount: number,
+  termMonths: number,
+  interestRate: number,
+  paymentFrequency: number
+) {
   if (termMonths <= 0 || paymentFrequency <= 0) {
-    return [];
-  }
-  const start = new Date(startDate);
-  if (Number.isNaN(start.getTime())) {
-    return [];
-  }
-  const schedule: string[] = [];
-
-  if (termMonths === 1) {
-    const intervalDays = Math.ceil(30 / paymentFrequency);
-    let current = new Date(start);
-    for (let index = 0; index < paymentFrequency; index += 1) {
-      current = addDays(current, intervalDays);
-      schedule.push(current.toISOString().split("T")[0]);
-    }
-    const maturityDate = resolveMaturityDate(startDate, termMonths);
-    if (maturityDate && schedule.length) {
-      schedule[schedule.length - 1] = maturityDate;
-    }
-    return schedule;
-  }
-
-  const totalPayments = termMonths * paymentFrequency;
-  let current = new Date(start);
-  for (let index = 0; index < totalPayments; index += 1) {
-    const daysInMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
-    const intervalDays = Math.ceil(daysInMonth / paymentFrequency);
-    current = addDays(current, intervalDays);
-    schedule.push(current.toISOString().split("T")[0]);
-  }
-
-  return schedule;
-}
-
-function resolveNextDueDate(schedule: string[]): string | null {
-  if (!schedule.length) {
     return null;
   }
-  const today = new Date().toISOString().split("T")[0];
-  const upcoming = schedule.find((date) => date >= today);
-  return upcoming ?? schedule[0];
+  const totalPayments = termMonths * paymentFrequency;
+  const totalInterest = principalAmount * termMonths * interestRate;
+  return Math.round(totalInterest / totalPayments);
 }
 
 export async function updateLoanDetails(input: LoanUpdateInput) {
@@ -151,6 +89,10 @@ export async function updateLoanDetails(input: LoanUpdateInput) {
 
   if (typeof input.termMonths === "number") {
     payload.termMonths = input.termMonths;
+  }
+
+  if (typeof input.interestRate === "number") {
+    payload.interestRate = input.interestRate;
   }
 
   if (typeof input.paymentFrequency === "number") {
@@ -182,6 +124,9 @@ export async function updateLoanDetails(input: LoanUpdateInput) {
     typeof input.paymentFrequency === "number"
       ? input.paymentFrequency
       : toNumber(existingLoanData?.paymentFrequency);
+  const resolvedPrincipalAmount =
+    typeof input.principalAmount === "number" ? input.principalAmount : toNumber(existingLoanData?.principalAmount);
+  const resolvedInterestRate = toNumber(existingLoanData?.interestRate);
 
   let schedule: string[] = [];
   if (
@@ -205,6 +150,15 @@ export async function updateLoanDetails(input: LoanUpdateInput) {
   batch.set(loanRef, payload, { merge: true });
 
   if (schedule.length) {
+    const expectedPaymentAmount =
+      typeof resolvedPrincipalAmount === "number" && typeof resolvedInterestRate === "number"
+        ? resolveExpectedPaymentAmount(
+            resolvedPrincipalAmount,
+            resolvedTermMonths ?? 0,
+            resolvedInterestRate,
+            resolvedPaymentFrequency ?? 0
+          )
+        : null;
     const scheduleSnapshot = await loanRef.collection("repaymentSchedule").get();
     scheduleSnapshot.docs.forEach((doc) => batch.delete(doc.ref));
     schedule.forEach((dueDate, index) => {
@@ -212,7 +166,9 @@ export async function updateLoanDetails(input: LoanUpdateInput) {
       batch.set(entryRef, {
         dueDate,
         installmentNumber: index + 1,
-        createdAt: updatedAt
+        createdAt: updatedAt,
+        expectedPaymentAmount,
+        scheduleType: "regular"
       });
     });
   }

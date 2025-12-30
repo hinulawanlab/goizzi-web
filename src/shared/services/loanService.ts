@@ -75,6 +75,7 @@ function mapLoanDoc(doc: DocumentSnapshot): LoanSummary {
     termMonths: toNumber(data.termMonths),
     termDays: toNumber(data.termDays),
     paymentFrequency: toNumber(data.paymentFrequency),
+    interestRate: toNumber(data.interestRate),
     totalOutstandingAmount: toNumber(data.balances?.totalOutstandingAmount),
     currency: typeof data.currency === "string" ? data.currency : undefined,
     startDate: formatTimestamp(data.startDate),

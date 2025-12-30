@@ -19,6 +19,7 @@ export interface LoanSummary {
   termMonths?: number;
   termDays?: number;
   paymentFrequency?: number;
+  interestRate?: number;
   totalOutstandingAmount?: number;
   currency?: string;
   startDate?: string;

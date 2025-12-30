@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import BorrowerLoanTabs from "@/components/borrowers/BorrowerLoanTabs";
 import { getBorrowerSummaryById } from "@/shared/services/borrowerService";
 import { getLoanById } from "@/shared/services/loanService";
+import { getLoanRepaymentSchedule } from "@/shared/services/loanRepaymentScheduleService";
 
 interface BorrowerLoanPageProps {
   params: Promise<{
@@ -20,8 +21,9 @@ export default async function BorrowerLoanPage({ params }: BorrowerLoanPageProps
 
   const borrowerPromise = getBorrowerSummaryById(borrowerId);
   const loanPromise = getLoanById(loanId);
+  const schedulePromise = getLoanRepaymentSchedule(loanId);
 
-  const [borrower, loan] = await Promise.all([borrowerPromise, loanPromise]);
+  const [borrower, loan, repaymentSchedule] = await Promise.all([borrowerPromise, loanPromise, schedulePromise]);
 
   if (!borrower || !loan || loan.borrowerId !== borrowerId) {
     notFound();
@@ -31,7 +33,7 @@ export default async function BorrowerLoanPage({ params }: BorrowerLoanPageProps
     <div className="min-h-screen bg-transparent px-4 py-8 text-slate-900">
       <div className="mx-auto w-full max-w-none">
         <main className="space-y-6">
-          <BorrowerLoanTabs borrower={borrower} loan={loan} />
+          <BorrowerLoanTabs borrower={borrower} loan={loan} repaymentSchedule={repaymentSchedule} />
         </main>
       </div>
     </div>

@@ -8,11 +8,19 @@ import type { BorrowerSummary } from "@/shared/types/dashboard";
 import type { LoanSummary } from "@/shared/types/loan";
 import type { BorrowerLoanTabKey } from "@/components/borrowers/borrowerLoanTypes";
 import type { ActionState } from "@/components/borrowers/borrowerApplicationTypes";
+import BorrowerLoanPaymentsTab from "@/components/borrowers/BorrowerLoanPaymentsTab";
+import type { RepaymentScheduleEntry } from "@/shared/types/repaymentSchedule";
+import {
+  buildRepaymentSchedule,
+  resolveMaturityDate,
+  resolveNextDueDate
+} from "@/shared/utils/repaymentSchedule";
 
 interface BorrowerLoanTabSectionProps {
   activeTab: BorrowerLoanTabKey;
   borrower: BorrowerSummary;
   loan: LoanSummary;
+  repaymentSchedule: RepaymentScheduleEntry[];
 }
 
 function formatDate(value?: string) {
@@ -42,6 +50,13 @@ function formatAmount(value?: number, currency?: string) {
   return currency ? `${currency} ${formatted}` : formatted;
 }
 
+function formatRate(value?: number) {
+  if (typeof value !== "number") {
+    return "N/A";
+  }
+  return `${(value * 100).toFixed(2)}%`;
+}
+
 function DetailRow({ label, value }: { label: string; value?: string }) {
   return (
     <div className="flex items-center justify-between border-b border-slate-100 py-3 text-sm text-slate-600 last:border-b-0">
@@ -58,6 +73,13 @@ function formatEditableAmount(value?: number) {
   return (value / 100).toFixed(2);
 }
 
+function formatEditableRate(value?: number) {
+  if (typeof value !== "number") {
+    return "";
+  }
+  return (value * 100).toFixed(2);
+}
+
 function formatInputDate(value?: string) {
   if (!value || value === "N/A") {
     return "";
@@ -65,92 +87,11 @@ function formatInputDate(value?: string) {
   return value;
 }
 
-function addMonths(value: string, months: number) {
-  const parsed = Date.parse(value);
-  if (Number.isNaN(parsed)) {
+function formatMaturityDate(value: string | null) {
+  if (!value) {
     return "N/A";
   }
-  const date = new Date(parsed);
-  date.setMonth(date.getMonth() + months);
-  return date.toISOString().split("T")[0];
-}
-
-function buildRepaymentSchedule(startDate: string, termMonths: number, paymentFrequency: number) {
-  if (termMonths <= 0 || paymentFrequency <= 0) {
-    return [];
-  }
-  const start = new Date(startDate);
-  if (Number.isNaN(start.getTime())) {
-    return [];
-  }
-  const schedule: string[] = [];
-
-  if (termMonths === 1) {
-    const intervalDays = Math.ceil(30 / paymentFrequency);
-    let current = new Date(start);
-    for (let index = 0; index < paymentFrequency; index += 1) {
-      current = new Date(current);
-      current.setDate(current.getDate() + intervalDays);
-      schedule.push(current.toISOString().split("T")[0]);
-    }
-    const maturity = resolveMaturityDate(startDate, termMonths);
-    if (maturity !== "N/A" && schedule.length) {
-      schedule[schedule.length - 1] = maturity;
-    }
-    return schedule;
-  }
-
-  const totalPayments = termMonths * paymentFrequency;
-  let current = new Date(start);
-  for (let index = 0; index < totalPayments; index += 1) {
-    const daysInMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
-    const intervalDays = Math.ceil(daysInMonth / paymentFrequency);
-    current = new Date(current);
-    current.setDate(current.getDate() + intervalDays);
-    schedule.push(current.toISOString().split("T")[0]);
-  }
-
-  return schedule;
-}
-
-function resolveNextDueDate(schedule: string[]) {
-  if (!schedule.length) {
-    return "N/A";
-  }
-  const today = new Date().toISOString().split("T")[0];
-  return schedule.find((date) => date >= today) ?? schedule[0];
-}
-
-function isLeapYear(year: number) {
-  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
-}
-
-function resolveMaturityDate(startDate: string, termMonths: number) {
-  if (termMonths <= 0) {
-    return "N/A";
-  }
-  const parsed = Date.parse(startDate);
-  if (Number.isNaN(parsed)) {
-    return "N/A";
-  }
-  const start = new Date(parsed);
-  if (termMonths === 1) {
-    const maturity = new Date(start);
-    maturity.setDate(maturity.getDate() + 30);
-    return maturity.toISOString().split("T")[0];
-  }
-  const endMonth = new Date(start.getFullYear(), start.getMonth() + termMonths, 1);
-  const targetMonth = endMonth.getMonth();
-  const targetYear = endMonth.getFullYear();
-  const startDay = start.getDate();
-  const daysInTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
-
-  if (targetMonth === 1 && startDay > (isLeapYear(targetYear) ? 29 : 28)) {
-    return new Date(targetYear, targetMonth + 1, 1).toISOString().split("T")[0];
-  }
-
-  const day = Math.min(startDay, daysInTargetMonth);
-  return new Date(targetYear, targetMonth, day).toISOString().split("T")[0];
+  return value;
 }
 
 const EDITABLE_STATUSES = new Set(["approved", "draft"]);
@@ -159,7 +100,12 @@ function isLoanEditable(status: string) {
   return EDITABLE_STATUSES.has(status);
 }
 
-export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: BorrowerLoanTabSectionProps) {
+export default function BorrowerLoanTabSection({
+  activeTab,
+  borrower,
+  loan,
+  repaymentSchedule
+}: BorrowerLoanTabSectionProps) {
   const router = useRouter();
   const [principalInput, setPrincipalInput] = useState(() => formatEditableAmount(loan.principalAmount));
   const [termMonthsInput, setTermMonthsInput] = useState(
@@ -168,6 +114,7 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
   const [paymentFrequencyInput, setPaymentFrequencyInput] = useState(
     loan.paymentFrequency ? loan.paymentFrequency.toString() : ""
   );
+  const [interestRateInput, setInterestRateInput] = useState(() => formatEditableRate(loan.interestRate));
   const [startDateInput, setStartDateInput] = useState(() => formatInputDate(loan.startDate));
   const [isEditable, setIsEditable] = useState(false);
   const [isLocked, setIsLocked] = useState(() => !isLoanEditable(loan.status));
@@ -189,9 +136,9 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
       return "N/A";
     }
     if (Number.isFinite(paymentFrequencyValue) && paymentFrequencyValue > 0) {
-      return resolveMaturityDate(startDateInput, termValue);
+      return formatMaturityDate(resolveMaturityDate(startDateInput, termValue));
     }
-    return addMonths(startDateInput, termValue);
+    return formatMaturityDate(resolveMaturityDate(startDateInput, termValue));
   }, [paymentFrequencyInput, startDateInput, termMonthsInput]);
 
   const nextDueDate = useMemo(() => {
@@ -211,13 +158,14 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
       return "N/A";
     }
     const schedule = buildRepaymentSchedule(startDateValue, termValue, paymentFrequencyValue);
-    return resolveNextDueDate(schedule);
+    return resolveNextDueDate(schedule) ?? "N/A";
   }, [loan.nextDueDate, paymentFrequencyInput, startDateInput, termMonthsInput, loan.startDate]);
 
   const handleCancelEdit = () => {
     setPrincipalInput(formatEditableAmount(loan.principalAmount));
     setTermMonthsInput(loan.termMonths ? loan.termMonths.toString() : "");
     setPaymentFrequencyInput(loan.paymentFrequency ? loan.paymentFrequency.toString() : "");
+    setInterestRateInput(formatEditableRate(loan.interestRate));
     setStartDateInput(formatInputDate(loan.startDate));
     setIsEditable(false);
     setActionState("idle");
@@ -279,17 +227,20 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
     return Math.round(parsed);
   };
 
+  const resolveInterestRate = () => {
+    const parsed = Number(interestRateInput);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      return null;
+    }
+    return parsed / 100;
+  };
+
   const resolveStartDate = () => (startDateInput ? startDateInput : null);
 
   const isWorking = actionState === "working";
 
   if (activeTab === "payments") {
-    return (
-      <section className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
-        <p className="text-sm font-semibold text-slate-900">Payments view is being prepared.</p>
-        <p className="mt-2 text-xs text-slate-500">Loan payments will appear here once the module is connected.</p>
-      </section>
-    );
+    return <BorrowerLoanPaymentsTab loanId={loan.loanId} scheduleEntries={repaymentSchedule} />;
   }
 
   if (activeTab === "statement") {
@@ -302,8 +253,8 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
   }
 
   return (
-    <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
-      <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Loan snapshot</p>
+    <section className="rounded-3xl border border-slate-100 bg-white p-3 pl-6 shadow-md">
+      {/* <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Loan snapshot</p> */}
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-xl font-semibold text-slate-900">Loan details</h3>
         <span className="text-xs uppercase tracking-[0.2em] text-slate-400">
@@ -311,22 +262,23 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
         </span>
       </div>
 
-      <div className="mt-4 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+      <div className="mt-2 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         <div>
           <DetailRow label="Borrower" value={borrower.fullName} />
           <DetailRow label="Borrower ID" value={borrower.borrowerId} />
           <DetailRow label="Loan ID" value={loan.loanId} />
           <DetailRow label="Status" value={loan.status} />
           <DetailRow label="Product" value={loan.productName ?? loan.productId} />
+          <DetailRow label="Interest rate" value={formatRate(loan.interestRate)} />
           <DetailRow label="Outstanding" value={formatAmount(loan.totalOutstandingAmount, loan.currency)} />
           <DetailRow label="Next due" value={formatDate(nextDueDate)} />
-          <DetailRow label="Maturity date" value={formatDate(loan.maturityDate)} />
+          <DetailRow label="Maturity date" value={formatDate(loan.maturityDate ?? maturityDate)} />
           <DetailRow label="Last payment" value={formatDate(loan.lastPaymentAt)} />
           <DetailRow label="Last updated" value={formatDate(loan.updatedAt)} />
         </div>
 
         <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-          <div className="space-y-4">
+          <div className="space-y-1">
             <div>
               <label className="text-[11px] uppercase tracking-[0.3em] text-slate-400" htmlFor="loan-principal">
                 Principal ({loan.currency ?? "PHP"})
@@ -365,6 +317,27 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
                     : "border-slate-200 bg-white text-slate-700 focus:border-slate-400"
                 }`}
                 placeholder="Enter term in months"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] uppercase tracking-[0.3em] text-slate-400" htmlFor="loan-interest-rate">
+                Interest rate (%)
+              </label>
+              <input
+                id="loan-interest-rate"
+                type="number"
+                min="0"
+                step="0.01"
+                value={interestRateInput}
+                onChange={(event) => setInterestRateInput(event.target.value)}
+                disabled={!isEditable || isLocked || isWorking}
+                className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm shadow-sm focus:outline-none ${
+                  !isEditable || isLocked
+                    ? "border-slate-200 bg-slate-100 text-slate-400"
+                    : "border-slate-200 bg-white text-slate-700 focus:border-slate-400"
+                }`}
+                placeholder="Enter interest rate"
               />
             </div>
 
@@ -476,28 +449,36 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
               <button
                 type="button"
                 onClick={() => {
-                const resolvedPrincipal = resolvePrincipalAmount();
-                const resolvedTermMonths = resolveTermMonths();
-                const resolvedPaymentFrequency = resolvePaymentFrequency();
-                const resolvedStartDate = resolveStartDate();
+                  const resolvedPrincipal = resolvePrincipalAmount();
+                  const resolvedTermMonths = resolveTermMonths();
+                  const resolvedInterestRate = resolveInterestRate();
+                  const resolvedPaymentFrequency = resolvePaymentFrequency();
+                  const resolvedStartDate = resolveStartDate();
 
-                if (!resolvedPrincipal || !resolvedTermMonths || !resolvedPaymentFrequency || !resolvedStartDate) {
-                  setActionState("error");
-                  setActionMessage("Fill out principal, term, payment frequency, and loan date cycle.");
-                  return;
-                }
+                  if (
+                    !resolvedPrincipal ||
+                    !resolvedTermMonths ||
+                    resolvedInterestRate === null ||
+                    !resolvedPaymentFrequency ||
+                    !resolvedStartDate
+                  ) {
+                    setActionState("error");
+                    setActionMessage("Fill out principal, term, interest rate, payment frequency, and loan date cycle.");
+                    return;
+                  }
 
-                void patchLoan(
-                  {
-                    action: "proceed",
-                    principalAmount: resolvedPrincipal,
-                    termMonths: resolvedTermMonths,
-                    paymentFrequency: resolvedPaymentFrequency,
-                    startDate: resolvedStartDate
-                  },
-                  "Proceeding with loan...",
-                  "Loan marked as active.",
-                  () => {
+                  void patchLoan(
+                    {
+                      action: "proceed",
+                      principalAmount: resolvedPrincipal,
+                      termMonths: resolvedTermMonths,
+                      interestRate: resolvedInterestRate,
+                      paymentFrequency: resolvedPaymentFrequency,
+                      startDate: resolvedStartDate
+                    },
+                    "Proceeding with loan...",
+                    "Loan marked as active.",
+                    () => {
                       setIsEditable(false);
                       setIsLocked(true);
                     }
@@ -519,27 +500,35 @@ export default function BorrowerLoanTabSection({ activeTab, borrower, loan }: Bo
               <button
                 type="button"
                 onClick={() => {
-                const resolvedPrincipal = resolvePrincipalAmount();
-                const resolvedTermMonths = resolveTermMonths();
-                const resolvedPaymentFrequency = resolvePaymentFrequency();
-                const resolvedStartDate = resolveStartDate();
+                  const resolvedPrincipal = resolvePrincipalAmount();
+                  const resolvedTermMonths = resolveTermMonths();
+                  const resolvedInterestRate = resolveInterestRate();
+                  const resolvedPaymentFrequency = resolvePaymentFrequency();
+                  const resolvedStartDate = resolveStartDate();
 
-                if (!resolvedPrincipal || !resolvedTermMonths || !resolvedPaymentFrequency || !resolvedStartDate) {
-                  setActionState("error");
-                  setActionMessage("Fill out principal, term, payment frequency, and loan date cycle.");
-                  return;
-                }
+                  if (
+                    !resolvedPrincipal ||
+                    !resolvedTermMonths ||
+                    resolvedInterestRate === null ||
+                    !resolvedPaymentFrequency ||
+                    !resolvedStartDate
+                  ) {
+                    setActionState("error");
+                    setActionMessage("Fill out principal, term, interest rate, payment frequency, and loan date cycle.");
+                    return;
+                  }
 
-                void patchLoan(
-                  {
-                    action: "update",
-                    principalAmount: resolvedPrincipal,
-                    termMonths: resolvedTermMonths,
-                    paymentFrequency: resolvedPaymentFrequency,
-                    startDate: resolvedStartDate
-                  },
-                  "Updating loan details...",
-                  "Loan details updated.",
+                  void patchLoan(
+                    {
+                      action: "update",
+                      principalAmount: resolvedPrincipal,
+                      termMonths: resolvedTermMonths,
+                      interestRate: resolvedInterestRate,
+                      paymentFrequency: resolvedPaymentFrequency,
+                      startDate: resolvedStartDate
+                    },
+                    "Updating loan details...",
+                    "Loan details updated.",
                     () => setIsEditable(false)
                   );
                 }}
