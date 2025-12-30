@@ -507,7 +507,7 @@ async function fetchOtherKycs(borrowerId: string, limit = 10): Promise<BorrowerO
     .collection("borrowers")
     .doc(borrowerId)
     .collection("kyc")
-    .where("type", "==", "others")
+    .where("type", "in", ["others", "residence", "cibi"])
     .orderBy("createdAt", "desc")
     .limit(limit)
     .get();

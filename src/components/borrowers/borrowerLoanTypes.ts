@@ -1,3 +1,4 @@
+// src/components/borrowers/borrowerLoanTypes.ts
 export type BorrowerLoanTabKey = "details" | "payments" | "statement";
 
 export const borrowerLoanTabs: { key: BorrowerLoanTabKey; label: string }[] = [

@@ -211,7 +211,17 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
           const effectiveWaived = entry.kycId in waiveOverrides ? waiveOverrides[entry.kycId] : entry.isWaived ?? false;
           const statusLabel = resolveStatusLabel(effectiveApproval);
           const rowTitle = resolveDecisionLabel(entry, title);
-          const visibleMetadata = metadataFields ?? [];
+          const visibleMetadata = (metadataFields ?? [])
+            .map((field) => ({
+              field,
+              value: field.value(entry)
+            }))
+            .filter(({ value }) => {
+              if (typeof value !== "string") {
+                return false;
+              }
+              return value.trim().length > 0;
+            });
 
           return (
             <section key={entry.kycId} className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
@@ -226,8 +236,8 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
 
               {visibleMetadata.length > 0 && (
                 <div className="mt-4 grid gap-3 md:grid-cols-3">
-                  {visibleMetadata.map((field) => (
-                    <DetailRow key={field.label} label={field.label} value={field.value(entry)} />
+                  {visibleMetadata.map(({ field, value }) => (
+                    <DetailRow key={field.label} label={field.label} value={value} />
                   ))}
                 </div>
               )}

@@ -1,3 +1,4 @@
+// src/components/borrowers/borrowerApplicationTypes.ts
 export type TabKey =
   | "maker"
   | "comakers"
@@ -5,7 +6,7 @@ export type TabKey =
   | "proof"
   | "bankStatements"
   | "payslips"
-  | "propertyTitles"
+  // | "propertyTitles"
   | "otherDocuments"
   | "audit";
 export type ActionState = "idle" | "working" | "success" | "error";
@@ -17,7 +18,7 @@ export const tabs: { key: TabKey; label: string }[] = [
   { key: "proof", label: "Proof of billing" },
   { key: "bankStatements", label: "Bank records" },
   { key: "payslips", label: "Income source" },
-  { key: "propertyTitles", label: "Property titles" },
+  // { key: "propertyTitles", label: "Property titles" },
   { key: "otherDocuments", label: "Others" },
   { key: "audit", label: "Audit" }
 ];
