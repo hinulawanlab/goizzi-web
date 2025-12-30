@@ -59,6 +59,7 @@ function mapNoteDoc(doc: DocumentSnapshot): BorrowerNote {
   return {
     noteId: doc.id,
     applicationId: normalizeOptionalString(data.applicationId),
+    type: normalizeOptionalString(data.type),
     note: normalizeString(data.note, ""),
     createdAt: formatTimestamp(data.createdAt),
     createdByName: normalizeOptionalString(data.createdByName),

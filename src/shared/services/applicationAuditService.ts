@@ -9,7 +9,8 @@ export type ApplicationStatusAction = (typeof validStatuses)[number];
 
 interface NoteInput {
   borrowerId: string;
-  applicationId: string;
+  applicationId?: string;
+  type?: string;
   note: string;
   createdByName?: string;
   createdByUserId?: string;
@@ -27,8 +28,8 @@ export async function addBorrowerApplicationNote(input: NoteInput): Promise<Borr
   if (!db) {
     throw new Error("Firestore Admin client is not initialized.");
   }
-  if (!input.borrowerId || !input.applicationId) {
-    throw new Error("Borrower or application id is missing.");
+  if (!input.borrowerId) {
+    throw new Error("Borrower id is missing.");
   }
 
   const trimmedNote = sanitizeNote(input.note);
@@ -39,15 +40,11 @@ export async function addBorrowerApplicationNote(input: NoteInput): Promise<Borr
   const createdAt = new Date().toISOString();
   const actorName = await resolveActorName(input.createdByUserId, input.createdByName);
   const noteRef = db.collection("borrowers").doc(input.borrowerId).collection("notes").doc();
-  const applicationRef = db
-    .collection("borrowers")
-    .doc(input.borrowerId)
-    .collection("application")
-    .doc(input.applicationId);
 
   const noteData = buildBorrowerNoteData({
     noteId: noteRef.id,
     applicationId: input.applicationId,
+    type: input.type,
     note: trimmedNote,
     createdAt,
     createdByName: actorName,
@@ -56,13 +53,20 @@ export async function addBorrowerApplicationNote(input: NoteInput): Promise<Borr
 
   const batch = db.batch();
   batch.set(noteRef, noteData);
-  batch.set(
-    applicationRef,
-    {
-      updatedAt: createdAt
-    },
-    { merge: true }
-  );
+  if (input.applicationId) {
+    const applicationRef = db
+      .collection("borrowers")
+      .doc(input.borrowerId)
+      .collection("application")
+      .doc(input.applicationId);
+    batch.set(
+      applicationRef,
+      {
+        updatedAt: createdAt
+      },
+      { merge: true }
+    );
+  }
   await batch.commit();
 
   return noteData;

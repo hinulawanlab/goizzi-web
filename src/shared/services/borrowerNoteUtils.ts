@@ -2,7 +2,8 @@ import type { BorrowerNote } from "@/shared/types/borrowerNote";
 
 interface BorrowerNoteInput {
   noteId: string;
-  applicationId: string;
+  applicationId?: string;
+  type?: string;
   note: string;
   createdAt: string;
   createdByName?: string;
@@ -27,6 +28,7 @@ export function buildBorrowerNoteData(input: BorrowerNoteInput): BorrowerNote & 
   return {
     noteId: input.noteId,
     applicationId: input.applicationId,
+    type: input.type,
     note: input.note,
     createdAt: input.createdAt,
     createdByName: sanitizeName(input.createdByName),

@@ -5,6 +5,7 @@ import { addBorrowerApplicationNote } from "@/shared/services/applicationAuditSe
 
 interface NotePayload {
   applicationId?: string;
+  type?: string;
   note?: string;
   createdByName?: string;
   createdByUserId?: string;
@@ -27,10 +28,6 @@ export async function POST(request: NextRequest, context: { params: Promise<{ bo
     return NextResponse.json({ error: "Invalid JSON payload." }, { status: 400 });
   }
 
-  if (!payload.applicationId) {
-    return NextResponse.json({ error: "Missing application id." }, { status: 400 });
-  }
-
   if (!payload.note || !payload.note.trim()) {
     return NextResponse.json({ error: "Note cannot be empty." }, { status: 400 });
   }
@@ -39,6 +36,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ bo
     const note = await addBorrowerApplicationNote({
       borrowerId,
       applicationId: payload.applicationId,
+      type: payload.type,
       note: payload.note,
       createdByName: payload.createdByName,
       createdByUserId: payload.createdByUserId

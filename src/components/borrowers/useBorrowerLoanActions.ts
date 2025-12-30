@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { ActionState } from "@/components/borrowers/borrowerApplicationTypes";
 import type { BorrowerLoanAction } from "@/components/borrowers/borrowerLoanTypes";
+import { auth } from "@/shared/singletons/firebase";
 
 interface UseBorrowerLoanActionsParams {
   borrowerId: string;
@@ -14,6 +15,11 @@ interface UseBorrowerLoanActionsParams {
 
 const NOTE_SUCCESS_MESSAGE = "Note saved.";
 const ACTION_SUCCESS_MESSAGE = "Request queued.";
+
+interface ActorProfile {
+  name: string;
+  userId?: string;
+}
 
 export function useBorrowerLoanActions({ borrowerId, loanId, applicationId }: UseBorrowerLoanActionsParams) {
   const [noteText, setNoteText] = useState("");
@@ -36,6 +42,14 @@ export function useBorrowerLoanActions({ borrowerId, loanId, applicationId }: Us
       }
     };
   }, []);
+
+  const getActorProfile = (): ActorProfile => {
+    const currentUser = auth.currentUser;
+    return {
+      name: currentUser?.displayName ?? "Unknown staff",
+      userId: currentUser?.uid
+    };
+  };
 
   const runWithFeedback = useCallback(
     (
@@ -69,26 +83,69 @@ export function useBorrowerLoanActions({ borrowerId, loanId, applicationId }: Us
     [noteActionState]
   );
 
-  const handleAddNote = useCallback(() => {
-    if (!borrowerId || !loanId) {
-      setNoteActionState("error");
-      setNoteActionMessage("Borrower or loan id is missing.");
-      return;
-    }
-    if (!noteText.trim()) {
-      setNoteActionState("error");
-      setNoteActionMessage("Add a note before sending.");
-      return;
-    }
+  const persistNote = useCallback(
+    async (
+      noteType: string,
+      setState: (value: ActionState) => void,
+      setMessage: (value: string) => void,
+      workingMessage: string,
+      successMessage: string
+    ) => {
+      if (!borrowerId || !loanId) {
+        setState("error");
+        setMessage("Borrower or loan id is missing.");
+        return;
+      }
+      const trimmedNote = noteText.trim();
+      if (!trimmedNote) {
+        setState("error");
+        setMessage("Add a note before sending.");
+        return;
+      }
 
-    runWithFeedback(
+      setState("working");
+      setMessage(workingMessage);
+
+      const actor = getActorProfile();
+      try {
+        const response = await fetch(`/api/borrowers/${borrowerId}/notes`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            applicationId,
+            type: noteType,
+            note: trimmedNote,
+            createdByName: actor.name,
+            createdByUserId: actor.userId
+          })
+        });
+
+        if (!response.ok) {
+          const errorPayload = (await response.json()) as { error?: string };
+          throw new Error(errorPayload.error ?? "Unable to save note.");
+        }
+
+        setNoteText("");
+        setState("success");
+        setMessage(successMessage);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unable to save note.";
+        setState("error");
+        setMessage(message);
+      }
+    },
+    [applicationId, borrowerId, loanId, noteText]
+  );
+
+  const handleAddNote = useCallback(() => {
+    void persistNote(
+      "loanNotes",
       setNoteActionState,
       setNoteActionMessage,
-      noteTimeoutRef,
       "Saving note...",
       NOTE_SUCCESS_MESSAGE
     );
-  }, [borrowerId, loanId, noteText, runWithFeedback]);
+  }, [persistNote]);
 
   const handleAction = useCallback(
     (action: BorrowerLoanAction) => {
@@ -116,9 +173,8 @@ export function useBorrowerLoanActions({ borrowerId, loanId, applicationId }: Us
         return;
       }
 
-      if (action === "Send notes" && !noteText.trim()) {
-        setActionState("error");
-        setActionMessage("Add a note before sending.");
+      if (action === "Send notes") {
+        void persistNote("borrower", setActionState, setActionMessage, "Sending note...", "Note sent.");
         return;
       }
 
@@ -130,7 +186,7 @@ export function useBorrowerLoanActions({ borrowerId, loanId, applicationId }: Us
         ACTION_SUCCESS_MESSAGE
       );
     },
-    [borrowerId, loanId, applicationId, noteText, runWithFeedback]
+    [borrowerId, loanId, applicationId, runWithFeedback, persistNote]
   );
 
   return {
