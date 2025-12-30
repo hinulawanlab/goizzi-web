@@ -1,7 +1,7 @@
 // src/components/borrowers/BorrowerApplicationTabs.tsx
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/navigation";
 
@@ -146,7 +146,7 @@ export default function BorrowerApplicationTabs({
     { key: "bankStatements", label: "Bank statements", checked: hasBankStatements },
     { key: "proofOfBilling", label: "Proof of billing", checked: hasProofOfBilling },
     { key: "references", label: "References", checked: hasReferences },
-    { key: "homePhoto", label: "Home photo", checked: hasHomePhoto }
+    { key: "residence", label: "Home photo", checked: hasHomePhoto }
   ];
 
   const manualChecklistItems = manualItems.map((item) => ({
@@ -180,7 +180,7 @@ export default function BorrowerApplicationTabs({
     return unsubscribe;
   }, [application.applicationId, borrower.borrowerId]);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     startRefreshing(() => {
       setRefreshTokensByTab((prev) => ({
         ...prev,
@@ -188,7 +188,22 @@ export default function BorrowerApplicationTabs({
       }));
       router.refresh();
     });
-  };
+  }, [activeTab, router, startRefreshing]);
+
+  const handleKycDecisionRefresh = useCallback(() => {
+    setRefreshTokensByTab((prev) => ({
+      ...prev,
+      [activeTab]: (prev[activeTab] ?? 0) + 1
+    }));
+    router.refresh();
+  }, [activeTab, router]);
+
+  useEffect(() => {
+    if (!isApprovalOpen) {
+      return;
+    }
+    handleRefresh();
+  }, [handleRefresh, isApprovalOpen]);
 
   const handleStatusAction = (status: LoanAction) => {
     if (status === "Approve") {
@@ -318,6 +333,7 @@ export default function BorrowerApplicationTabs({
             statusUpdatedByName={statusUpdatedByName}
             noteEntries={noteEntries}
             onDecisionNoteAdded={handleKycDecisionNote}
+            onKycDecisionRefresh={handleKycDecisionRefresh}
           />
         </div>
       </div>

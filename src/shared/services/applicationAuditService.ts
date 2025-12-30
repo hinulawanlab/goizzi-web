@@ -1,3 +1,5 @@
+import { Timestamp } from "firebase-admin/firestore";
+
 import { db } from "@/shared/singletons/firebaseAdmin";
 import type { BorrowerNote } from "@/shared/types/borrowerNote";
 import { buildBorrowerNoteData, sanitizeNote } from "@/shared/services/borrowerNoteUtils";
@@ -37,7 +39,8 @@ export async function addBorrowerApplicationNote(input: NoteInput): Promise<Borr
     throw new Error("Note cannot be empty.");
   }
 
-  const createdAt = new Date().toISOString();
+  const createdAt = Timestamp.now();
+  const createdAtIso = createdAt.toDate().toISOString();
   const actorName = await resolveActorName(input.createdByUserId, input.createdByName);
   const noteRef = db.collection("borrowers").doc(input.borrowerId).collection("notes").doc();
 
@@ -46,13 +49,13 @@ export async function addBorrowerApplicationNote(input: NoteInput): Promise<Borr
     applicationId: input.applicationId,
     type: input.type,
     note: trimmedNote,
-    createdAt,
+    createdAt: createdAtIso,
     createdByName: actorName,
     createdByUserId: input.createdByUserId
   });
 
   const batch = db.batch();
-  batch.set(noteRef, noteData);
+  batch.set(noteRef, { ...noteData, createdAt });
   if (input.applicationId) {
     const applicationRef = db
       .collection("borrowers")
@@ -85,7 +88,8 @@ export async function setBorrowerApplicationStatusWithNote(
     throw new Error("Status must be a valid value.");
   }
 
-  const createdAt = new Date().toISOString();
+  const createdAt = Timestamp.now();
+  const createdAtIso = createdAt.toDate().toISOString();
   const actorName = await resolveActorName(input.actorUserId, input.actorName);
   const noteText = `Status set to ${input.status}.`;
 
@@ -100,13 +104,13 @@ export async function setBorrowerApplicationStatusWithNote(
     noteId: noteRef.id,
     applicationId: input.applicationId,
     note: noteText,
-    createdAt,
+    createdAt: createdAtIso,
     createdByName: actorName,
     createdByUserId: input.actorUserId
   });
 
   const batch = db.batch();
-  batch.set(noteRef, noteData);
+  batch.set(noteRef, { ...noteData, createdAt });
   batch.set(
     applicationRef,
     {
@@ -120,7 +124,7 @@ export async function setBorrowerApplicationStatusWithNote(
   await batch.commit();
 
   return {
-    updatedAt: createdAt,
+    updatedAt: createdAtIso,
     status: input.status,
     statusUpdatedByName: actorName,
     note: noteData

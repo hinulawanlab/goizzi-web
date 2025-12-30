@@ -39,6 +39,7 @@ interface BorrowerApplicationTabSectionProps {
   statusUpdatedByName?: string;
   noteEntries: BorrowerNote[];
   onDecisionNoteAdded: (note: BorrowerNote) => void;
+  onKycDecisionRefresh?: () => void;
 }
 
 const contactStatusLabels: Record<ReferenceContactStatus, string> = {
@@ -86,6 +87,16 @@ function formatDateTime(value?: string) {
   });
 }
 
+function formatNoteTypeLabel(noteType?: string) {
+  if (noteType === "borrower") {
+    return "Borrower";
+  }
+  if (noteType === "loanNotes") {
+    return "Application";
+  }
+  return "Uncategorized";
+}
+
 function formatAmount(value?: string) {
   if (!value || value === "N/A") {
     return "N/A";
@@ -126,7 +137,8 @@ export default function BorrowerApplicationTabSection({
   auditUpdatedAt,
   statusUpdatedByName,
   noteEntries,
-  onDecisionNoteAdded
+  onDecisionNoteAdded,
+  onKycDecisionRefresh
 }: BorrowerApplicationTabSectionProps) {
   const [statusOverrides, setStatusOverrides] = useState<Record<string, ReferenceContactStatus>>({});
   const [actionStates, setActionStates] = useState<Record<string, ActionState>>({});
@@ -318,6 +330,7 @@ export default function BorrowerApplicationTabSection({
           applicationId={application.applicationId}
           kycs={bankStatementKycs}
           onDecisionNoteAdded={onDecisionNoteAdded}
+          onDecisionComplete={onKycDecisionRefresh}
         />
       )}
 
@@ -328,6 +341,7 @@ export default function BorrowerApplicationTabSection({
           applicationId={application.applicationId}
           kycs={payslipKycs}
           onDecisionNoteAdded={onDecisionNoteAdded}
+          onDecisionComplete={onKycDecisionRefresh}
         />
       )}
 
@@ -338,6 +352,7 @@ export default function BorrowerApplicationTabSection({
           applicationId={application.applicationId}
           kycs={propertyTitleKycs}
           onDecisionNoteAdded={onDecisionNoteAdded}
+          onDecisionComplete={onKycDecisionRefresh}
         />
       )}
 
@@ -348,6 +363,7 @@ export default function BorrowerApplicationTabSection({
           applicationId={application.applicationId}
           kycs={otherKycs}
           onDecisionNoteAdded={onDecisionNoteAdded}
+          onDecisionComplete={onKycDecisionRefresh}
         />
       )}
 
@@ -421,26 +437,28 @@ export default function BorrowerApplicationTabSection({
           applicationId={application.applicationId}
           kycs={proofOfBillingKycs}
           onDecisionNoteAdded={onDecisionNoteAdded}
+          onDecisionComplete={onKycDecisionRefresh}
         />
       )}
 
       {activeTab === "audit" && (
         <div className="rounded-3xl border border-slate-100 bg-slate-50 p-6">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Audit</p>
-          <div className="mt-4 grid gap-3">
+          {/* <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Audit</p> */}
+          {/* <div className="mt-4 grid gap-3">
             <DetailRow label="Loan status" value={auditStatus} />
             <DetailRow label="Status updated by" value={statusUpdatedByName} />
             <DetailRow label="Date of application" value={formatDate(application.submittedAt)} />
-          </div>
-          <div className="mt-6">
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Notes</p>
+          </div> */}
+          <div className="mt-0">
+            {/* <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Notes</p> */}
             <div className="mt-3 space-y-3">
               {noteEntries.length ? (
                 noteEntries.map((note) => (
                   <div key={note.noteId} className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
                     <p className="text-sm text-slate-700 whitespace-pre-wrap wrap-break-words">{note.note}</p>
                     <p className="mt-2 text-[11px] uppercase tracking-[0.2em] text-slate-400">
-                      {note.createdByName ?? "Unknown staff"} - {formatDateTime(note.createdAt)}
+                      {formatNoteTypeLabel(note.type)} - {note.createdByName ?? "Unknown staff"} -{" "}
+                      {formatDateTime(note.createdAt)}
                     </p>
                   </div>
                 ))

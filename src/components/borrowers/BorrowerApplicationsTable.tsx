@@ -55,10 +55,6 @@ export default function BorrowerApplicationsTable({
 
   return (
     <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white p-4 shadow-lg">
-      <div className="mb-4 flex items-center justify-between px-2 text-sm text-slate-500">
-        <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Pending applications</p>
-        <span className="text-xs text-slate-500">{applications.length} records</span>
-      </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-200px text-left text-sm text-slate-600">
           <thead>

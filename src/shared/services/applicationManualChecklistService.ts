@@ -1,3 +1,5 @@
+import { Timestamp } from "firebase-admin/firestore";
+
 import { db } from "@/shared/singletons/firebaseAdmin";
 
 interface ManualChecklistInput {
@@ -24,7 +26,8 @@ export async function setBorrowerApplicationManualChecks(input: ManualChecklistI
     .filter((item) => item.length > 0);
 
   const unique = Array.from(new Set(cleaned));
-  const updatedAt = new Date().toISOString();
+  const updatedAt = Timestamp.now();
+  const updatedAtIso = updatedAt.toDate().toISOString();
   const applicationRef = db
     .collection("borrowers")
     .doc(input.borrowerId)
@@ -43,6 +46,6 @@ export async function setBorrowerApplicationManualChecks(input: ManualChecklistI
   return {
     manualVerified: unique,
     manuallyVerifiedBy: input.actorUserId ?? null,
-    updatedAt
+    updatedAt: updatedAtIso
   };
 }

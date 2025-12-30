@@ -1,3 +1,5 @@
+import { Timestamp } from "firebase-admin/firestore";
+
 import { db } from "@/shared/singletons/firebaseAdmin";
 import type { BorrowerNote } from "@/shared/types/borrowerNote";
 import { buildBorrowerNoteData, sanitizeNote } from "@/shared/services/borrowerNoteUtils";
@@ -52,6 +54,7 @@ export async function approveBorrowerApplicationToLoan(input: LoanApprovalInput)
   }
 
   const approvedAt = parseApprovedAt(input.approvedAt);
+  const approvedAtTimestamp = Timestamp.fromDate(new Date(approvedAt));
 
   const existingLoan = await db.collection("loans").where("applicationId", "==", input.applicationId).limit(1).get();
   if (!existingLoan.empty) {
@@ -82,7 +85,8 @@ export async function approveBorrowerApplicationToLoan(input: LoanApprovalInput)
   }
 
   const actorName = await resolveActorName(input.actorUserId, input.actorName);
-  const createdAt = new Date().toISOString();
+  const createdAt = Timestamp.now();
+  const createdAtIso = createdAt.toDate().toISOString();
   const noteText = sanitizeNote("Status set to approved.");
 
   const noteRef = borrowerRef.collection("notes").doc();
@@ -92,7 +96,7 @@ export async function approveBorrowerApplicationToLoan(input: LoanApprovalInput)
     noteId: noteRef.id,
     applicationId: input.applicationId,
     note: noteText,
-    createdAt,
+    createdAt: createdAtIso,
     createdByName: actorName,
     createdByUserId: input.actorUserId
   });
@@ -108,7 +112,7 @@ export async function approveBorrowerApplicationToLoan(input: LoanApprovalInput)
     principalAmount: toAmountUnits(input.loanAmount),
     termMonths: Math.round(input.termMonths),
     loanInterest: input.loanInterest,
-    approvedAt,
+    approvedAt: approvedAtTimestamp,
     createdAt,
     createdByUserId: input.actorUserId ?? null,
     updatedAt: createdAt,
@@ -131,7 +135,7 @@ export async function approveBorrowerApplicationToLoan(input: LoanApprovalInput)
   };
 
   const batch = db.batch();
-  batch.set(noteRef, noteData);
+  batch.set(noteRef, { ...noteData, createdAt });
   batch.set(
     applicationRef,
     {
@@ -147,7 +151,7 @@ export async function approveBorrowerApplicationToLoan(input: LoanApprovalInput)
 
   return {
     loanId: loanRef.id,
-    updatedAt: createdAt,
+    updatedAt: createdAtIso,
     status: "approved",
     statusUpdatedByName: actorName,
     note: noteData

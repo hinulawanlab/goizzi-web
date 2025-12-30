@@ -9,13 +9,15 @@ interface BorrowerBankStatementPanelProps {
   applicationId: string;
   kycs: BorrowerBankStatementKyc[];
   onDecisionNoteAdded?: (note: BorrowerNote) => void;
+  onDecisionComplete?: () => void;
 }
 
 export default function BorrowerBankStatementPanel({
   borrowerId,
   applicationId,
   kycs,
-  onDecisionNoteAdded
+  onDecisionNoteAdded,
+  onDecisionComplete
 }: BorrowerBankStatementPanelProps) {
   return (
     <BorrowerKycDocumentPanel
@@ -34,6 +36,7 @@ export default function BorrowerBankStatementPanel({
         { label: "Account number", value: (entry) => entry.accountNumber }
       ]}
       onDecisionNoteAdded={onDecisionNoteAdded}
+      onDecisionComplete={onDecisionComplete}
     />
   );
 }

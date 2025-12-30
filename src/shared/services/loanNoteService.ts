@@ -1,4 +1,4 @@
-import type { DocumentSnapshot } from "firebase-admin/firestore";
+import { Timestamp, type DocumentSnapshot } from "firebase-admin/firestore";
 
 import { db, hasAdminCredentials } from "@/shared/singletons/firebaseAdmin";
 import type { LoanNote } from "@/shared/types/loanNote";
@@ -27,25 +27,25 @@ function formatTimestamp(value: unknown): string {
   }
 
   if (typeof value === "string") {
-    return value.split("T")[0];
+    return value;
   }
 
   if (value instanceof Date) {
-    return value.toISOString().split("T")[0];
+    return value.toISOString();
   }
 
   if (typeof (value as { toDate?: () => Date }).toDate === "function") {
-    return ((value as { toDate?: () => Date }).toDate as () => Date)().toISOString().split("T")[0];
+    return ((value as { toDate?: () => Date }).toDate as () => Date)().toISOString();
   }
 
   const toMillisFn = (value as { toMillis?: () => number }).toMillis;
   if (typeof toMillisFn === "function") {
-    return new Date(toMillisFn()).toISOString().split("T")[0];
+    return new Date(toMillisFn()).toISOString();
   }
 
   const seconds = (value as { _seconds?: number })._seconds;
   if (typeof seconds === "number") {
-    return new Date(seconds * 1000).toISOString().split("T")[0];
+    return new Date(seconds * 1000).toISOString();
   }
 
   return "N/A";
@@ -150,7 +150,8 @@ export async function addLoanNote(input: LoanNoteInput): Promise<LoanNote> {
     throw new Error("Note cannot be empty.");
   }
 
-  const createdAt = new Date().toISOString();
+  const createdAt = Timestamp.now();
+  const createdAtIso = createdAt.toDate().toISOString();
   const actorName = await resolveActorName(input.createdByUserId, input.createdByName);
   const noteRef = db.collection("loans").doc(input.loanId).collection("notes").doc();
 
@@ -161,12 +162,12 @@ export async function addLoanNote(input: LoanNoteInput): Promise<LoanNote> {
     applicationId: input.applicationId,
     type: input.type,
     note: trimmedNote,
-    createdAt,
+    createdAt: createdAtIso,
     createdByName: actorName,
     createdByUserId: input.createdByUserId
   });
 
-  await noteRef.set(noteData);
+  await noteRef.set({ ...noteData, createdAt });
   return noteData;
 }
 

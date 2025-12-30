@@ -9,13 +9,15 @@ interface BorrowerProofOfBillingPanelProps {
   applicationId: string;
   kycs: BorrowerProofOfBillingKyc[];
   onDecisionNoteAdded?: (note: BorrowerNote) => void;
+  onDecisionComplete?: () => void;
 }
 
 export default function BorrowerProofOfBillingPanel({
   borrowerId,
   applicationId,
   kycs,
-  onDecisionNoteAdded
+  onDecisionNoteAdded,
+  onDecisionComplete
 }: BorrowerProofOfBillingPanelProps) {
   return (
     <BorrowerKycDocumentPanel
@@ -29,6 +31,7 @@ export default function BorrowerProofOfBillingPanel({
       contextLabel="Proof of billing image"
       kycs={kycs}
       onDecisionNoteAdded={onDecisionNoteAdded}
+      onDecisionComplete={onDecisionComplete}
     />
   );
 }

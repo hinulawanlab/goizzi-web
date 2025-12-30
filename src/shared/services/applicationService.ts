@@ -20,25 +20,25 @@ function formatTimestamp(value: unknown): string {
   }
 
   if (typeof value === "string") {
-    return value.split("T")[0];
+    return value;
   }
 
   if (value instanceof Date) {
-    return value.toISOString().split("T")[0];
+    return value.toISOString();
   }
 
   if (typeof (value as { toDate?: () => Date }).toDate === "function") {
-    return ((value as { toDate?: () => Date }).toDate as () => Date)().toISOString().split("T")[0];
+    return ((value as { toDate?: () => Date }).toDate as () => Date)().toISOString();
   }
 
   const toMillisFn = (value as { toMillis?: () => number }).toMillis;
   if (typeof toMillisFn === "function") {
-    return new Date(toMillisFn()).toISOString().split("T")[0];
+    return new Date(toMillisFn()).toISOString();
   }
 
   const seconds = (value as { _seconds?: number })._seconds;
   if (typeof seconds === "number") {
-    return new Date(seconds * 1000).toISOString().split("T")[0];
+    return new Date(seconds * 1000).toISOString();
   }
 
   return "N/A";

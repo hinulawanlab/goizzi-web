@@ -1,3 +1,5 @@
+import { Timestamp } from "firebase-admin/firestore";
+
 import { db } from "@/shared/singletons/firebaseAdmin";
 import type { BorrowerNote } from "@/shared/types/borrowerNote";
 import { buildBorrowerNoteData } from "@/shared/services/borrowerNoteUtils";
@@ -56,7 +58,8 @@ export async function setBorrowerKycDecisionWithNote(input: KycDecisionInput): P
     throw new Error("Action must be a valid value.");
   }
 
-  const createdAt = new Date().toISOString();
+  const createdAt = Timestamp.now();
+  const createdAtIso = createdAt.toDate().toISOString();
   const actorName = await resolveActorName(input.actorUserId, input.actorName);
   const noteText = buildDecisionNote(input.action, input.documentType);
 
@@ -72,13 +75,13 @@ export async function setBorrowerKycDecisionWithNote(input: KycDecisionInput): P
     noteId: noteRef.id,
     applicationId: input.applicationId,
     note: noteText,
-    createdAt,
+    createdAt: createdAtIso,
     createdByName: actorName,
     createdByUserId: input.actorUserId
   });
 
   const batch = db.batch();
-  batch.set(noteRef, noteData);
+  batch.set(noteRef, { ...noteData, createdAt });
   batch.set(
     applicationRef,
     {

@@ -42,6 +42,7 @@ interface BorrowerKycDocumentPanelProps<T extends KycDocumentEntry> {
   kycs: T[];
   metadataFields?: KycMetadataField<T>[];
   onDecisionNoteAdded?: (note: BorrowerNote) => void;
+  onDecisionComplete?: () => void;
 }
 
 function formatDate(value?: string) {
@@ -94,7 +95,8 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
   contextLabel,
   kycs,
   metadataFields,
-  onDecisionNoteAdded
+  onDecisionNoteAdded,
+  onDecisionComplete
 }: BorrowerKycDocumentPanelProps<T>) {
   const [actionStates, setActionStates] = useState<Record<string, ActionState>>({});
   const [actionMessages, setActionMessages] = useState<Record<string, string>>({});
@@ -184,6 +186,7 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
         ...prev,
         [entry.kycId]: `${noteLabel} ${action === "approve" ? "approved" : action === "reject" ? "rejected" : action === "waive" ? "waived" : "unwaived"}.`
       }));
+      onDecisionComplete?.();
     } catch (error) {
       console.warn(`Unable to update ${contextLabel} decision:`, error);
       setActionStates((prev) => ({ ...prev, [entry.kycId]: "error" }));

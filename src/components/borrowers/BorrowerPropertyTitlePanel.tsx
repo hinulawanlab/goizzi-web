@@ -9,13 +9,15 @@ interface BorrowerPropertyTitlePanelProps {
   applicationId: string;
   kycs: BorrowerPropertyTitleKyc[];
   onDecisionNoteAdded?: (note: BorrowerNote) => void;
+  onDecisionComplete?: () => void;
 }
 
 export default function BorrowerPropertyTitlePanel({
   borrowerId,
   applicationId,
   kycs,
-  onDecisionNoteAdded
+  onDecisionNoteAdded,
+  onDecisionComplete
 }: BorrowerPropertyTitlePanelProps) {
   return (
     <BorrowerKycDocumentPanel
@@ -29,6 +31,7 @@ export default function BorrowerPropertyTitlePanel({
       contextLabel="Property title image"
       kycs={kycs}
       onDecisionNoteAdded={onDecisionNoteAdded}
+      onDecisionComplete={onDecisionComplete}
     />
   );
 }

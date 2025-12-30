@@ -9,13 +9,15 @@ interface BorrowerOtherDocumentPanelProps {
   applicationId: string;
   kycs: BorrowerOtherKyc[];
   onDecisionNoteAdded?: (note: BorrowerNote) => void;
+  onDecisionComplete?: () => void;
 }
 
 export default function BorrowerOtherDocumentPanel({
   borrowerId,
   applicationId,
   kycs,
-  onDecisionNoteAdded
+  onDecisionNoteAdded,
+  onDecisionComplete
 }: BorrowerOtherDocumentPanelProps) {
   return (
     <BorrowerKycDocumentPanel
@@ -32,6 +34,7 @@ export default function BorrowerOtherDocumentPanel({
         { label: "Description", value: (entry) => entry.documentDescription }
       ]}
       onDecisionNoteAdded={onDecisionNoteAdded}
+      onDecisionComplete={onDecisionComplete}
     />
   );
 }

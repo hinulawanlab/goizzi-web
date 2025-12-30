@@ -10,13 +10,15 @@ interface BorrowerPayslipPanelProps {
   applicationId: string;
   kycs: BorrowerPayslipKyc[];
   onDecisionNoteAdded?: (note: BorrowerNote) => void;
+  onDecisionComplete?: () => void;
 }
 
 export default function BorrowerPayslipPanel({
   borrowerId,
   applicationId,
   kycs,
-  onDecisionNoteAdded
+  onDecisionNoteAdded,
+  onDecisionComplete
 }: BorrowerPayslipPanelProps) {
   return (
     <BorrowerKycDocumentPanel
@@ -31,6 +33,7 @@ export default function BorrowerPayslipPanel({
       kycs={kycs}
       metadataFields={[{ label: "Employer", value: (entry) => entry.employer }]}
       onDecisionNoteAdded={onDecisionNoteAdded}
+      onDecisionComplete={onDecisionComplete}
     />
   );
 }

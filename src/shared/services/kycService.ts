@@ -543,7 +543,7 @@ async function fetchHomePhotoKycs(borrowerId: string, limit = 10): Promise<Borro
     .collection("borrowers")
     .doc(borrowerId)
     .collection("kyc")
-    .where("type", "==", "homePhoto")
+    .where("type", "==", "residence")
     .orderBy("createdAt", "desc")
     .limit(limit)
     .get();

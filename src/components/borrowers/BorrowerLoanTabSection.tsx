@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { MessageSquare, MessageSquareOff, Phone, PhoneOff, Check, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import type { BorrowerSummary } from "@/shared/types/dashboard";
@@ -56,6 +57,16 @@ function formatDateTime(value?: string) {
     hour: "numeric",
     minute: "2-digit"
   });
+}
+
+function formatNoteTypeLabel(noteType?: string) {
+  if (noteType === "borrower") {
+    return "Borrower";
+  }
+  if (noteType === "loanNotes") {
+    return "Loan";
+  }
+  return "Uncategorized";
 }
 
 function formatAmount(value?: number, currency?: string) {
@@ -508,7 +519,7 @@ export default function BorrowerLoanTabSection({
                   return (
                     <tr key={note.noteId} className="bg-white">
                       <td className="px-3 py-4 font-semibold text-slate-900">
-                        {note.type ? note.type : "Uncategorized"}
+                        {formatNoteTypeLabel(note.type)}
                       </td>
                       <td className="px-3 py-4">{note.createdByName || "Unknown staff"}</td>
                       <td className="px-3 py-4">{formatDateTime(note.createdAt)}</td>
@@ -525,18 +536,24 @@ export default function BorrowerLoanTabSection({
                                     note.noteId,
                                     { isActive: !note.isActive },
                                     "Updating active state...",
-                                    "Active state updated."
+                                    ""
                                   )
                                 }
-                                className={`cursor-pointer rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+                                aria-label={note.isActive ? "Set inactive" : "Set active"}
+                                title={note.isActive ? "Click to deactivate" : "Click to activate"}
+                                className={`rounded-full border p-2 transition ${
                                   isWorking
                                     ? "cursor-not-allowed border-slate-200 text-slate-300"
                                     : note.isActive
-                                      ? "border-emerald-200 text-emerald-700 hover:border-emerald-300"
-                                      : "border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                                      ? "cursor-pointer border-emerald-200 text-emerald-700 hover:border-emerald-300"
+                                      : "cursor-pointer border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
                                 }`}
                               >
-                                {note.isActive ? "Active" : "Inactive"}
+                                {note.isActive ? (
+                                  <Check className="h-4 w-4" aria-hidden />
+                                ) : (
+                                  <X className="h-4 w-4" aria-hidden />
+                                )}
                               </button>
                               <button
                                 type="button"
@@ -549,15 +566,21 @@ export default function BorrowerLoanTabSection({
                                     "Call state updated."
                                   )
                                 }
-                                className={`cursor-pointer rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+                                aria-label={note.callActive ? "Disable call" : "Enable call"}
+                                title={note.callActive ? "Click to disable call" : "Click to enable call"}
+                                className={`rounded-full border p-2 transition ${
                                   isWorking
                                     ? "cursor-not-allowed border-slate-200 text-slate-300"
                                     : note.callActive
-                                      ? "border-blue-200 text-blue-700 hover:border-blue-300"
-                                      : "border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                                      ? "cursor-pointer border-blue-200 text-blue-700 hover:border-blue-300"
+                                      : "cursor-pointer border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
                                 }`}
                               >
-                                {note.callActive ? "Call on" : "Call off"}
+                                {note.callActive ? (
+                                  <Phone className="h-4 w-4" aria-hidden />
+                                ) : (
+                                  <PhoneOff className="h-4 w-4" aria-hidden />
+                                )}
                               </button>
                               <button
                                 type="button"
@@ -570,15 +593,21 @@ export default function BorrowerLoanTabSection({
                                     "Message state updated."
                                   )
                                 }
-                                className={`cursor-pointer rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+                                aria-label={note.messageActive ? "Disable message" : "Enable message"}
+                                title={note.messageActive ? "Click to disable message" : "Click to enable message"}
+                                className={`rounded-full border p-2 transition ${
                                   isWorking
                                     ? "cursor-not-allowed border-slate-200 text-slate-300"
                                     : note.messageActive
-                                      ? "border-purple-200 text-purple-700 hover:border-purple-300"
-                                      : "border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                                      ? "cursor-pointer border-purple-200 text-purple-700 hover:border-purple-300"
+                                      : "cursor-pointer border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
                                 }`}
                               >
-                                {note.messageActive ? "Message on" : "Message off"}
+                                {note.messageActive ? (
+                                  <MessageSquare className="h-4 w-4" aria-hidden />
+                                ) : (
+                                  <MessageSquareOff className="h-4 w-4" aria-hidden />
+                                )}
                               </button>
                             </div>
                             {actionState === "working" && (
