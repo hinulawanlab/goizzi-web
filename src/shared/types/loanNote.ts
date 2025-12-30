@@ -7,6 +7,7 @@ export interface LoanNote {
   isActive?: boolean;
   callActive?: boolean;
   messageActive?: boolean;
+  isSeen?: boolean;
   note: string;
   createdAt: string;
   createdByName?: string;

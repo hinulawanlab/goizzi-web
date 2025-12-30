@@ -1,3 +1,4 @@
+// src/components/borrowers/LoanStatusBadge.tsx
 "use client";
 
 interface LoanStatusBadgeProps {

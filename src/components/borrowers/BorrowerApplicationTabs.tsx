@@ -114,6 +114,8 @@ export default function BorrowerApplicationTabs({
   const isCibiOptional = Number.isFinite(loanAmountNumber) && loanAmountNumber < 50000;
 
   const resolveApprovedOrWaived = (value?: boolean, waived?: boolean) => value === true || waived === true;
+  const isUnactedKyc = (value?: boolean, waived?: boolean) =>
+    (value === null || value === undefined) && (waived === null || waived === undefined);
 
   const hasSelfie = selfieKycs.some((entry) => resolveApprovedOrWaived(entry.isApproved));
   const hasGovernmentId = governmentIdKycs.some((entry) => resolveApprovedOrWaived(entry.isApproved));
@@ -121,6 +123,11 @@ export default function BorrowerApplicationTabs({
   const hasBankStatements = bankStatementKycs.some((entry) => resolveApprovedOrWaived(entry.isApproved, entry.isWaived));
   const hasProofOfBilling = proofOfBillingKycs.some((entry) => resolveApprovedOrWaived(entry.isApproved, entry.isWaived));
   const hasHomePhoto = homePhotoKycs.some((entry) => resolveApprovedOrWaived(entry.isApproved, entry.isWaived));
+  const hasUnactedReferences = references.some((reference) => !reference.contactStatus || reference.contactStatus === "pending");
+  const hasUnactedProofOfBilling = proofOfBillingKycs.some((entry) => isUnactedKyc(entry.isApproved, entry.isWaived));
+  const hasUnactedBankStatements = bankStatementKycs.some((entry) => isUnactedKyc(entry.isApproved, entry.isWaived));
+  const hasUnactedPayslips = payslipKycs.some((entry) => isUnactedKyc(entry.isApproved, entry.isWaived));
+  const hasUnactedOtherDocs = otherKycs.some((entry) => isUnactedKyc(entry.isApproved, entry.isWaived));
 
   const agreedReferences = references.filter(
     (reference) =>
@@ -313,6 +320,13 @@ export default function BorrowerApplicationTabs({
           activeTab={activeTab}
           loanStatus={auditStatus}
           onTabChange={setActiveTab}
+          actionRequiredByTab={{
+            references: hasUnactedReferences,
+            proof: hasUnactedProofOfBilling,
+            bankStatements: hasUnactedBankStatements,
+            payslips: hasUnactedPayslips,
+            otherDocuments: hasUnactedOtherDocs
+          }}
           onRefresh={handleRefresh}
           isRefreshing={isRefreshing}
         />

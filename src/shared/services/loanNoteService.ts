@@ -81,6 +81,7 @@ function mapLoanNoteDoc(doc: DocumentSnapshot, loanId: string): LoanNote {
     isActive: typeof data.isActive === "boolean" ? data.isActive : undefined,
     callActive: typeof data.callActive === "boolean" ? data.callActive : undefined,
     messageActive: typeof data.messageActive === "boolean" ? data.messageActive : undefined,
+    isSeen: typeof data.isSeen === "boolean" ? data.isSeen : undefined,
     note: normalizeString(data.note, ""),
     createdAt: formatTimestamp(data.createdAt),
     createdByName: normalizeOptionalString(data.createdByName),

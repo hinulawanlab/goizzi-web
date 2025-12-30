@@ -245,7 +245,7 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
                 </div>
               )}
 
-              <div className="mt-4 max-h-[420px] overflow-y-auto pr-2">
+              <div className="mt-4 max-h-105 overflow-y-auto pr-2">
                 {imageState?.status === "loading" && (
                   <div className="flex items-center gap-2 text-sm text-slate-500">
                     <span className="inline-flex h-4 w-4 animate-spin rounded-full border border-slate-300 border-t-transparent" />

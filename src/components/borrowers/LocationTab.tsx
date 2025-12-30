@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, MapPin, RefreshCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, MapPin, RefreshCw } from "lucide-react";
 
 import type { BorrowerSummary } from "@/shared/types/dashboard";
 import type { LocationObservation } from "@/shared/types/location";
@@ -101,9 +101,22 @@ function ObservationList({
   onRefresh,
   isRefreshing
 }: ObservationListProps) {
+  const [pageSize, setPageSize] = useState(10);
+  const [pageIndex, setPageIndex] = useState(0);
+  const totalPages = Math.max(1, Math.ceil(observations.length / pageSize));
+  const currentPage = Math.min(pageIndex, totalPages - 1);
+  const pageStart = currentPage * pageSize;
+  const pageEnd = pageStart + pageSize;
+  const pagedObservations = observations.slice(pageStart, pageEnd);
+
   const handleCopy = (observation: LocationObservation) => {
     const coords = `${observation.geo.lat.toFixed(6)}, ${observation.geo.lng.toFixed(6)}`;
     onCopyCoordinates(coords, observation.observationId);
+  };
+
+  const handlePageSizeChange = (nextSize: number) => {
+    setPageSize(nextSize);
+    setPageIndex(0);
   };
 
   const isStale = (capturedAt: string) => {
@@ -149,7 +162,7 @@ function ObservationList({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {observations.map((observation) => {
+            {pagedObservations.map((observation) => {
               const isActive = observation.observationId === activeObservationId;
               return (
                 <tr
@@ -205,6 +218,79 @@ function ObservationList({
             })}
           </tbody>
         </table>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-4 py-3 text-xs text-slate-500">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="uppercase tracking-[0.3em] text-slate-400">Rows</span>
+          <select
+            value={pageSize}
+            onChange={(event) => handlePageSizeChange(Number(event.target.value))}
+            className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#1877f2]"
+          >
+            {[1, 10, 50, 100].map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs uppercase tracking-[0.3em] text-slate-400">
+            Page {currentPage + 1} of {totalPages}
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setPageIndex(0)}
+            disabled={currentPage === 0}
+            className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] transition ${
+              currentPage === 0
+                ? "cursor-not-allowed border-slate-200 text-slate-300"
+                : "cursor-pointer border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-900"
+            }`}
+            aria-label="First page"
+          >
+            <ChevronsLeft className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setPageIndex((prev) => Math.max(prev - 1, 0))}
+            disabled={currentPage === 0}
+            className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] transition ${
+              currentPage === 0
+                ? "cursor-not-allowed border-slate-200 text-slate-300"
+                : "cursor-pointer border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-900"
+            }`}
+            aria-label="Previous page"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setPageIndex((prev) => Math.min(prev + 1, totalPages - 1))}
+            disabled={currentPage >= totalPages - 1}
+            className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] transition ${
+              currentPage >= totalPages - 1
+                ? "cursor-not-allowed border-slate-200 text-slate-300"
+                : "cursor-pointer border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-900"
+            }`}
+            aria-label="Next page"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setPageIndex(totalPages - 1)}
+            disabled={currentPage >= totalPages - 1}
+            className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] transition ${
+              currentPage >= totalPages - 1
+                ? "cursor-not-allowed border-slate-200 text-slate-300"
+                : "cursor-pointer border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-900"
+            }`}
+            aria-label="Last page"
+          >
+            <ChevronsRight className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -23,5 +23,6 @@ export const tabs: { key: TabKey; label: string }[] = [
   { key: "audit", label: "Audit" }
 ];
 
-export const loanActions = ["Reject", "Reviewed", "Approve", "Completed"] as const;
+export const loanActions = ["Reject", "Reviewed", "Approve"] as const;
 export type LoanAction = (typeof loanActions)[number];
+export type StoredLoanStatus = LoanAction | "rejected";

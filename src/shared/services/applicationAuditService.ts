@@ -5,7 +5,7 @@ import type { BorrowerNote } from "@/shared/types/borrowerNote";
 import { buildBorrowerNoteData, sanitizeNote } from "@/shared/services/borrowerNoteUtils";
 import { resolveActorName } from "@/shared/services/actorNameResolver";
 
-const validStatuses = ["Reject", "Reviewed", "Approve", "Completed"] as const;
+const validStatuses = ["Reject", "Reviewed", "Approve", "rejected"] as const;
 
 export type ApplicationStatusAction = (typeof validStatuses)[number];
 
@@ -91,7 +91,8 @@ export async function setBorrowerApplicationStatusWithNote(
   const createdAt = Timestamp.now();
   const createdAtIso = createdAt.toDate().toISOString();
   const actorName = await resolveActorName(input.actorUserId, input.actorName);
-  const noteText = `Status set to ${input.status}.`;
+  const normalizedStatus = input.status === "Reject" ? "rejected" : input.status;
+  const noteText = `Status set to ${normalizedStatus}.`;
 
   const noteRef = db.collection("borrowers").doc(input.borrowerId).collection("notes").doc();
   const applicationRef = db
@@ -114,7 +115,7 @@ export async function setBorrowerApplicationStatusWithNote(
   batch.set(
     applicationRef,
     {
-      status: input.status,
+      status: normalizedStatus,
       updatedAt: createdAt,
       statusUpdatedByName: actorName,
       statusUpdatedByUserId: input.actorUserId ?? null
@@ -125,7 +126,7 @@ export async function setBorrowerApplicationStatusWithNote(
 
   return {
     updatedAt: createdAtIso,
-    status: input.status,
+    status: normalizedStatus,
     statusUpdatedByName: actorName,
     note: noteData
   };

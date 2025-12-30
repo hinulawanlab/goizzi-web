@@ -506,6 +506,7 @@ export default function BorrowerLoanTabSection({
                   <th className="px-3 py-3">Type</th>
                   <th className="px-3 py-3">Author</th>
                   <th className="px-3 py-3">Created</th>
+                  <th className="px-3 py-3">Seen</th>
                   <th className="px-3 py-3">Note</th>
                   <th className="px-3 py-3">Actions</th>
                 </tr>
@@ -523,6 +524,7 @@ export default function BorrowerLoanTabSection({
                       </td>
                       <td className="px-3 py-4">{note.createdByName || "Unknown staff"}</td>
                       <td className="px-3 py-4">{formatDateTime(note.createdAt)}</td>
+                      <td className="px-3 py-4">{note.isSeen ? "Yes" : "Not yet"}</td>
                       <td className="px-3 py-4 text-slate-500">{note.note}</td>
                       <td className="px-3 py-4">
                         {isBorrowerNote ? (

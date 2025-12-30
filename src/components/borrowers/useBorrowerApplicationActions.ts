@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 
 import { auth } from "@/shared/singletons/firebase";
 import type { BorrowerNote } from "@/shared/types/borrowerNote";
-import type { ActionState, LoanAction } from "@/components/borrowers/borrowerApplicationTypes";
+import type { ActionState, LoanAction, StoredLoanStatus } from "@/components/borrowers/borrowerApplicationTypes";
 
 interface ApprovalPayload {
   loanAmount: number;
@@ -162,7 +162,7 @@ export function useBorrowerApplicationActions({
 
       const payload = (await response.json()) as {
         updatedAt?: string;
-        status?: LoanAction;
+        status?: StoredLoanStatus;
         statusUpdatedByName?: string;
         note?: BorrowerNote;
       };
@@ -226,7 +226,7 @@ export function useBorrowerApplicationActions({
 
       const result = (await response.json()) as {
         updatedAt?: string;
-        status?: LoanAction;
+        status?: StoredLoanStatus;
         statusUpdatedByName?: string;
         note?: BorrowerNote;
       };

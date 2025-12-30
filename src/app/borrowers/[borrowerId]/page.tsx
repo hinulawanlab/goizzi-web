@@ -48,6 +48,10 @@ export default async function BorrowerProfilePage({ params }: BorrowerProfilePag
     selfiePromise
   ]);
   const hasApprovedId = governmentIdKycs.some((kyc) => kyc.isApproved === true);
+  const hasApprovedSelfie = selfieKycs.some((kyc) => kyc.isApproved === true);
+  const isFullyVerified = hasApprovedId && hasApprovedSelfie;
+  const isPartiallyVerified = (hasApprovedId || hasApprovedSelfie) && !isFullyVerified;
+  const verificationLabel = isFullyVerified ? "Verified" : "Partially verified";
   const derivedSummary = await refreshBorrowerLocationSummary(borrowerId, observations, appConfig);
 
   const mergedBorrower = derivedSummary
@@ -82,9 +86,9 @@ export default async function BorrowerProfilePage({ params }: BorrowerProfilePag
                 <p className="text-xs uppercase tracking-[0.6em] text-slate-400">Borrower profile</p>
                 <div className="mt-3 flex flex-wrap items-center gap-3">
                   <h1 className="text-3xl font-semibold tracking-tight text-slate-900">{borrower.fullName}</h1>
-                  {hasApprovedId && (
+                  {(isFullyVerified || isPartiallyVerified) && (
                     <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-700">
-                      Verified
+                      {verificationLabel}
                     </span>
                   )}
                 </div>

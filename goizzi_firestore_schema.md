@@ -257,6 +257,7 @@ Top-level to support queries like “Branch X due today” without scanning borr
 - `isActive: boolean?`
 - `callActive: boolean?`
 - `messageActive: boolean?`
+- `isSeen: boolean?`
 - `createdAt: timestamp`
 - `createdByUserId: string`
 - `createdByName: string?` (displayName snapshot)

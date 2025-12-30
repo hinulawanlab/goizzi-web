@@ -1,7 +1,7 @@
 // src/components/borrowers/BorrowerApplicationHeaderSection.tsx
 "use client";
 
-import { RefreshCw } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
 
 import LoanStatusBadge from "@/components/borrowers/LoanStatusBadge";
 import type { TabKey } from "@/components/borrowers/borrowerApplicationTypes";
@@ -11,6 +11,7 @@ interface BorrowerApplicationHeaderSectionProps {
   activeTab: TabKey;
   loanStatus: string;
   onTabChange: (tab: TabKey) => void;
+  actionRequiredByTab?: Partial<Record<TabKey, boolean>>;
   onRefresh?: () => void;
   isRefreshing?: boolean;
 }
@@ -19,6 +20,7 @@ export default function BorrowerApplicationHeaderSection({
   activeTab,
   loanStatus,
   onTabChange,
+  actionRequiredByTab,
   onRefresh,
   isRefreshing = false
 }: BorrowerApplicationHeaderSectionProps) {
@@ -54,7 +56,9 @@ export default function BorrowerApplicationHeaderSection({
       </div>
 
       <div className="mt-6 flex flex-wrap gap-2">
-        {tabs.map((tab) => (
+        {tabs.map((tab) => {
+          const showAttention = actionRequiredByTab?.[tab.key] === true;
+          return (
           <button
             key={tab.key}
             type="button"
@@ -65,9 +69,20 @@ export default function BorrowerApplicationHeaderSection({
                 : "border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-900"
             }`}
           >
-            {tab.label}
+            <span className="inline-flex items-center gap-2">
+              {tab.label}
+              {showAttention && (
+                <span
+                  className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-rose-100 text-rose-600"
+                  aria-label="Action required"
+                >
+                  <AlertCircle className="h-3 w-3" aria-hidden />
+                </span>
+              )}
+            </span>
           </button>
-        ))}
+        );
+        })}
       </div>
     </section>
   );

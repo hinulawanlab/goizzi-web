@@ -1,3 +1,4 @@
+// src/components/borrowers/BorrowerKycDecisionSection.tsx
 "use client";
 
 import type { ActionState } from "@/components/borrowers/borrowerApplicationTypes";

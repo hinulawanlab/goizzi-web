@@ -202,7 +202,7 @@ export default function BorrowerSelfieModal({ kycs, borrowerName }: BorrowerSelf
         className={`inline-flex items-center justify-center gap-2 rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
           !hasAnySelfies || loadState === "loading"
             ? "cursor-not-allowed border-slate-200 text-slate-400"
-            : "cursor-pointer border-slate-900 text-slate-900 hover:bg-slate-900 hover:text-white"
+            : "cursor-pointer border-slate-200 text-slate-700 hover:border-slate-300 hover:text-slate-900"
         }`}
       >
         {loadState === "loading" && (
