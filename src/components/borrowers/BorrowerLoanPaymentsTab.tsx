@@ -110,6 +110,7 @@ export default function BorrowerLoanPaymentsTab({ loanId, scheduleEntries }: Bor
   });
   const [customState, setCustomState] = useState<ActionState>("idle");
   const [customMessage, setCustomMessage] = useState("");
+  const [isCustomOpen, setIsCustomOpen] = useState(false);
 
   useEffect(() => {
     setEntries(scheduleEntries);
@@ -326,6 +327,7 @@ export default function BorrowerLoanPaymentsTab({ loanId, scheduleEntries }: Bor
         ...EMPTY_DRAFT,
         dueDate: new Date().toISOString().split("T")[0]
       });
+      setIsCustomOpen(false);
       setCustomState("success");
       setCustomMessage("Custom payment posted.");
     } catch (error) {
@@ -334,6 +336,14 @@ export default function BorrowerLoanPaymentsTab({ loanId, scheduleEntries }: Bor
       setCustomMessage(message);
     }
   }, [addCustomEntry, customDraft, loanId]);
+
+  const customAmountPaidAmount = parseAmountInput(customDraft.amountPaid);
+  const customBreakdownSum = getBreakdownSum(customDraft);
+  const isCustomPaymentValid =
+    customDraft.dueDate.trim().length > 0 &&
+    customAmountPaidAmount !== null &&
+    customBreakdownSum !== null &&
+    customAmountPaidAmount === customBreakdownSum;
 
   if (!entries.length) {
     return (
@@ -346,10 +356,21 @@ export default function BorrowerLoanPaymentsTab({ loanId, scheduleEntries }: Bor
 
   return (
     <section className="space-y-6">
-      <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-6">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-semibold text-slate-900">Custom payment</p>
-        </div>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => setIsCustomOpen((prev) => !prev)}
+          className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 hover:border-slate-300 hover:text-slate-900 cursor-pointer"
+        >
+          {isCustomOpen ? "Close custom payment" : "Custom payment"}
+        </button>
+      </div>
+
+      {isCustomOpen && (
+        <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-6">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-slate-900">Custom payment</p>
+          </div>
 
         <div className="mt-4 grid gap-3 lg:grid-cols-7">
           <div className="lg:col-span-1">
@@ -424,11 +445,11 @@ export default function BorrowerLoanPaymentsTab({ loanId, scheduleEntries }: Bor
           <button
             type="button"
             onClick={handleCustomSubmit}
-            disabled={customState === "working"}
+            disabled={customState === "working" || !isCustomPaymentValid}
             className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] ${
-              customState === "working"
+              customState === "working" || !isCustomPaymentValid
                 ? "cursor-not-allowed border-slate-200 text-slate-300"
-                : "border-emerald-200 text-emerald-700 hover:border-emerald-300 hover:text-emerald-800"
+                : "cursor-pointer border-emerald-200 text-emerald-700 hover:border-emerald-300 hover:text-emerald-800"
             }`}
           >
             <Check className="h-4 w-4" aria-hidden />
@@ -452,13 +473,21 @@ export default function BorrowerLoanPaymentsTab({ loanId, scheduleEntries }: Bor
             {customMessage}
           </div>
         )}
-      </div>
+        </div>
+      )}
 
       {rows.map(({ entry, draft, rowState, isPaid, isEditing, disableInputs, disableAction }) => (
         <div key={entry.scheduleId} className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-semibold text-slate-900">
-              Installment {entry.installmentNumber ?? "N/A"} - Due {formatDate(draft.dueDate || entry.dueDate)}
+              {isPaid && (
+                <span className="mr-2 inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-700">
+                  Payment
+                </span>
+              )}
+              {entry.scheduleType === "custom"
+                ? "Custom"
+                : `Installment ${entry.installmentNumber ?? "N/A"}`}
             </p>
           </div>
 
@@ -560,10 +589,22 @@ export default function BorrowerLoanPaymentsTab({ loanId, scheduleEntries }: Bor
               <button
                 type="button"
                 onClick={() => setRowState(entry.scheduleId, { isEditing: true, state: "idle", message: "" })}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 hover:border-slate-300 hover:text-slate-900 cursor-pointer"
               >
                 <Pencil className="h-4 w-4" aria-hidden />
                 Edit
+              </button>
+            )}
+            {isEditing && (
+              <button
+                type="button"
+                onClick={() => {
+                  updateEntry(entry);
+                  setRowState(entry.scheduleId, { isEditing: false, state: "idle", message: "" });
+                }}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 hover:border-slate-300 hover:text-slate-900 cursor-pointer"
+              >
+                Cancel
               </button>
             )}
             {(isEditing || !isPaid) && (
@@ -574,7 +615,7 @@ export default function BorrowerLoanPaymentsTab({ loanId, scheduleEntries }: Bor
                 className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.3em] ${
                   disableAction
                     ? "cursor-not-allowed border-slate-200 text-slate-300"
-                    : "border-emerald-200 text-emerald-700 hover:border-emerald-300 hover:text-emerald-800"
+                    : "cursor-pointer border-emerald-200 text-emerald-700 hover:border-emerald-300 hover:text-emerald-800"
                 }`}
               >
                 <Check className="h-4 w-4" aria-hidden />
