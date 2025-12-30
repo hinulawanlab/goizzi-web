@@ -56,6 +56,10 @@ function addDays(value: Date, days: number) {
   return next;
 }
 
+function isLeapYear(year: number) {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+}
+
 function resolveMaturityDate(startDate: string, termMonths: number): string | null {
   if (termMonths <= 0) {
     return null;
@@ -65,9 +69,22 @@ function resolveMaturityDate(startDate: string, termMonths: number): string | nu
     return null;
   }
   const start = new Date(parsed);
-  const endMonth = new Date(start.getFullYear(), start.getMonth() + termMonths, 1);
-  const lastDay = new Date(endMonth.getFullYear(), endMonth.getMonth() + 1, 0);
-  return lastDay.toISOString().split("T")[0];
+  if (termMonths === 1) {
+    return addDays(start, 30).toISOString().split("T")[0];
+  }
+
+  const targetMonthStart = new Date(start.getFullYear(), start.getMonth() + termMonths, 1);
+  const targetMonth = targetMonthStart.getMonth();
+  const targetYear = targetMonthStart.getFullYear();
+  const startDay = start.getDate();
+  const daysInTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+
+  if (targetMonth === 1 && startDay > (isLeapYear(targetYear) ? 29 : 28)) {
+    return new Date(targetYear, targetMonth + 1, 1).toISOString().split("T")[0];
+  }
+
+  const day = Math.min(startDay, daysInTargetMonth);
+  return new Date(targetYear, targetMonth, day).toISOString().split("T")[0];
 }
 
 function buildRepaymentSchedule(startDate: string, termMonths: number, paymentFrequency: number): string[] {
@@ -78,10 +95,24 @@ function buildRepaymentSchedule(startDate: string, termMonths: number, paymentFr
   if (Number.isNaN(start.getTime())) {
     return [];
   }
-  const totalPayments = termMonths * paymentFrequency;
   const schedule: string[] = [];
-  let current = new Date(start);
 
+  if (termMonths === 1) {
+    const intervalDays = Math.ceil(30 / paymentFrequency);
+    let current = new Date(start);
+    for (let index = 0; index < paymentFrequency; index += 1) {
+      current = addDays(current, intervalDays);
+      schedule.push(current.toISOString().split("T")[0]);
+    }
+    const maturityDate = resolveMaturityDate(startDate, termMonths);
+    if (maturityDate && schedule.length) {
+      schedule[schedule.length - 1] = maturityDate;
+    }
+    return schedule;
+  }
+
+  const totalPayments = termMonths * paymentFrequency;
+  let current = new Date(start);
   for (let index = 0; index < totalPayments; index += 1) {
     const daysInMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
     const intervalDays = Math.ceil(daysInMonth / paymentFrequency);
