@@ -4,6 +4,9 @@ export interface LoanNote {
   borrowerId?: string;
   applicationId?: string;
   type?: string;
+  isActive?: boolean;
+  callActive?: boolean;
+  messageActive?: boolean;
   note: string;
   createdAt: string;
   createdByName?: string;

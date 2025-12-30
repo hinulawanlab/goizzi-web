@@ -41,6 +41,23 @@ function formatDate(value?: string) {
   });
 }
 
+function formatDateTime(value?: string) {
+  if (!value || value === "N/A") {
+    return "N/A";
+  }
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) {
+    return value;
+  }
+  return new Date(parsed).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
+}
+
 function formatAmount(value?: number, currency?: string) {
   if (typeof value !== "number") {
     return "N/A";
@@ -108,6 +125,7 @@ function formatMaturityDate(value: string | null) {
 }
 
 const EDITABLE_STATUSES = new Set(["approved", "draft"]);
+type AuditActionState = "idle" | "working" | "success" | "error";
 
 function isLoanEditable(status: string) {
   return EDITABLE_STATUSES.has(status);
@@ -139,6 +157,10 @@ export default function BorrowerLoanTabSection({
   const [auditTypeFilter, setAuditTypeFilter] = useState<"all" | "borrower" | "loanNotes" | "uncategorized">(
     "all"
   );
+  const [auditNotes, setAuditNotes] = useState<LoanNote[]>(() => loanNotes ?? []);
+  const [auditActionStates, setAuditActionStates] = useState<Record<string, { state: AuditActionState; message: string }>>(
+    {}
+  );
 
   useEffect(() => {
     const nextLocked = !isLoanEditable(loan.status);
@@ -168,6 +190,44 @@ export default function BorrowerLoanTabSection({
   useEffect(() => {
     setAuditState("ready");
   }, [loanNotes, loanNotesError]);
+
+  useEffect(() => {
+    setAuditNotes(loanNotes ?? []);
+  }, [loanNotes]);
+
+  const setAuditActionState = (noteId: string, state: AuditActionState, message = "") => {
+    setAuditActionStates((prev) => ({
+      ...prev,
+      [noteId]: { state, message }
+    }));
+  };
+
+  const updateNoteFlags = async (
+    noteId: string,
+    updates: { isActive?: boolean; callActive?: boolean; messageActive?: boolean },
+    workingMessage: string,
+    successMessage: string
+  ) => {
+    setAuditActionState(noteId, "working", workingMessage);
+    try {
+      const response = await fetch(`/api/loans/${loan.loanId}/notes/${noteId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates)
+      });
+
+      const payload = (await response.json()) as { note?: LoanNote; error?: string };
+      if (!response.ok || !payload.note) {
+        throw new Error(payload.error ?? "Unable to update note.");
+      }
+
+      setAuditNotes((prev) => prev.map((note) => (note.noteId === noteId ? payload.note! : note)));
+      setAuditActionState(noteId, "success", successMessage);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to update note.";
+      setAuditActionState(noteId, "error", message);
+    }
+  };
 
   const maturityDate = useMemo(() => {
     const termValue = Number(termMonthsInput);
@@ -366,7 +426,7 @@ export default function BorrowerLoanTabSection({
   }
 
   if (activeTab === "audit") {
-    const notes = loanNotes ?? [];
+    const notes = auditNotes ?? [];
     const filteredNotes = notes.filter((note) => {
       if (auditTypeFilter === "all") {
         return true;
@@ -429,26 +489,115 @@ export default function BorrowerLoanTabSection({
           </div>
         ) : (
           <div className="mt-6 overflow-x-auto">
-            <table className="w-full min-w-700px text-left text-sm text-slate-600">
+            <table className="w-full min-w-900px text-left text-sm text-slate-600">
               <thead>
                 <tr className="text-xs uppercase tracking-[0.3em] text-slate-400">
                   <th className="px-3 py-3">Type</th>
                   <th className="px-3 py-3">Author</th>
                   <th className="px-3 py-3">Created</th>
                   <th className="px-3 py-3">Note</th>
+                  <th className="px-3 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredNotes.map((note) => (
-                  <tr key={note.noteId} className="bg-white">
-                    <td className="px-3 py-4 font-semibold text-slate-900">
-                      {note.type ? note.type : "Uncategorized"}
-                    </td>
-                    <td className="px-3 py-4">{note.createdByName || "Unknown staff"}</td>
-                    <td className="px-3 py-4">{formatDate(note.createdAt)}</td>
-                    <td className="px-3 py-4 text-slate-500">{note.note}</td>
-                  </tr>
-                ))}
+                {filteredNotes.map((note) => {
+                  const actionState = auditActionStates[note.noteId]?.state ?? "idle";
+                  const actionMessage = auditActionStates[note.noteId]?.message ?? "";
+                  const isBorrowerNote = note.type === "borrower";
+                  const isWorking = actionState === "working";
+                  return (
+                    <tr key={note.noteId} className="bg-white">
+                      <td className="px-3 py-4 font-semibold text-slate-900">
+                        {note.type ? note.type : "Uncategorized"}
+                      </td>
+                      <td className="px-3 py-4">{note.createdByName || "Unknown staff"}</td>
+                      <td className="px-3 py-4">{formatDateTime(note.createdAt)}</td>
+                      <td className="px-3 py-4 text-slate-500">{note.note}</td>
+                      <td className="px-3 py-4">
+                        {isBorrowerNote ? (
+                          <div className="flex flex-col gap-2">
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                disabled={isWorking}
+                                onClick={() =>
+                                  void updateNoteFlags(
+                                    note.noteId,
+                                    { isActive: !note.isActive },
+                                    "Updating active state...",
+                                    "Active state updated."
+                                  )
+                                }
+                                className={`cursor-pointer rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+                                  isWorking
+                                    ? "cursor-not-allowed border-slate-200 text-slate-300"
+                                    : note.isActive
+                                      ? "border-emerald-200 text-emerald-700 hover:border-emerald-300"
+                                      : "border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                                }`}
+                              >
+                                {note.isActive ? "Active" : "Inactive"}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={isWorking}
+                                onClick={() =>
+                                  void updateNoteFlags(
+                                    note.noteId,
+                                    { callActive: !note.callActive },
+                                    "Updating call state...",
+                                    "Call state updated."
+                                  )
+                                }
+                                className={`cursor-pointer rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+                                  isWorking
+                                    ? "cursor-not-allowed border-slate-200 text-slate-300"
+                                    : note.callActive
+                                      ? "border-blue-200 text-blue-700 hover:border-blue-300"
+                                      : "border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                                }`}
+                              >
+                                {note.callActive ? "Call on" : "Call off"}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={isWorking}
+                                onClick={() =>
+                                  void updateNoteFlags(
+                                    note.noteId,
+                                    { messageActive: !note.messageActive },
+                                    "Updating message state...",
+                                    "Message state updated."
+                                  )
+                                }
+                                className={`cursor-pointer rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+                                  isWorking
+                                    ? "cursor-not-allowed border-slate-200 text-slate-300"
+                                    : note.messageActive
+                                      ? "border-purple-200 text-purple-700 hover:border-purple-300"
+                                      : "border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                                }`}
+                              >
+                                {note.messageActive ? "Message on" : "Message off"}
+                              </button>
+                            </div>
+                            {actionState === "working" && (
+                              <div className="text-xs text-slate-500">{actionMessage}</div>
+                            )}
+                            {actionState === "success" && actionMessage && (
+                              <div className="text-xs text-emerald-700">{actionMessage}</div>
+                            )}
+                            {actionState === "error" && actionMessage && (
+                              <div className="text-xs text-rose-700">{actionMessage}</div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-400">No actions</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

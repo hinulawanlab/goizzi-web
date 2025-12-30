@@ -254,6 +254,9 @@ Top-level to support queries like “Branch X due today” without scanning borr
 - `type: string?` (`borrower|loanNotes`)
 - `borrowerId: string?`
 - `applicationId: string?`
+- `isActive: boolean?`
+- `callActive: boolean?`
+- `messageActive: boolean?`
 - `createdAt: timestamp`
 - `createdByUserId: string`
 - `createdByName: string?` (displayName snapshot)

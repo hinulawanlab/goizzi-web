@@ -1,3 +1,4 @@
+// src/components/borrowers/useBorrowerApplicationActions.ts
 import { useEffect, useState } from "react";
 
 import { auth } from "@/shared/singletons/firebase";
@@ -107,11 +108,11 @@ export function useBorrowerApplicationActions({
         })
       });
 
+      const payload = (await response.json()) as { note?: BorrowerNote; error?: string };
       if (!response.ok) {
-        throw new Error("Note update failed.");
+        throw new Error(payload.error || "Note update failed.");
       }
 
-      const payload = (await response.json()) as { note?: BorrowerNote };
       if (!payload.note) {
         throw new Error("Missing note payload.");
       }
@@ -124,7 +125,8 @@ export function useBorrowerApplicationActions({
     } catch (error) {
       console.warn("Unable to add note:", error);
       setNoteActionState("error");
-      setNoteActionMessage("Unable to add note. Please retry.");
+      const message = error instanceof Error ? error.message : "Unable to add note. Please retry.";
+      setNoteActionMessage(message);
     }
   };
 

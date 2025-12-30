@@ -7,6 +7,9 @@ interface LoanNoteInput {
   borrowerId?: string;
   applicationId?: string;
   type?: string;
+  isActive?: boolean;
+  callActive?: boolean;
+  messageActive?: boolean;
   note: string;
   createdAt: string;
   createdByName?: string;
@@ -14,15 +17,35 @@ interface LoanNoteInput {
 }
 
 export function buildLoanNoteData(input: LoanNoteInput): LoanNote & { createdByName: string } {
-  return {
+  const noteData: LoanNote & { createdByName: string } = {
     noteId: input.noteId,
     loanId: input.loanId,
-    borrowerId: input.borrowerId,
-    applicationId: input.applicationId,
-    type: input.type,
     note: sanitizeNote(input.note),
     createdAt: input.createdAt,
-    createdByName: sanitizeName(input.createdByName),
-    createdByUserId: input.createdByUserId
+    createdByName: sanitizeName(input.createdByName)
   };
+
+  if (input.borrowerId) {
+    noteData.borrowerId = input.borrowerId;
+  }
+  if (input.applicationId) {
+    noteData.applicationId = input.applicationId;
+  }
+  if (input.type) {
+    noteData.type = input.type;
+  }
+  if (typeof input.isActive === "boolean") {
+    noteData.isActive = input.isActive;
+  }
+  if (typeof input.callActive === "boolean") {
+    noteData.callActive = input.callActive;
+  }
+  if (typeof input.messageActive === "boolean") {
+    noteData.messageActive = input.messageActive;
+  }
+  if (input.createdByUserId) {
+    noteData.createdByUserId = input.createdByUserId;
+  }
+
+  return noteData;
 }

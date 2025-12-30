@@ -1,3 +1,4 @@
+// src/components/borrowers/BorrowerApplicationTabSection.tsx
 "use client";
 
 import { useMemo, useState } from "react";
@@ -68,6 +69,23 @@ function formatDate(value?: string) {
   });
 }
 
+function formatDateTime(value?: string) {
+  if (!value || value === "N/A") {
+    return "N/A";
+  }
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) {
+    return value;
+  }
+  return new Date(parsed).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
+}
+
 function formatAmount(value?: string) {
   if (!value || value === "N/A") {
     return "N/A";
@@ -76,7 +94,11 @@ function formatAmount(value?: string) {
   if (Number.isNaN(parsed)) {
     return value;
   }
-  return parsed.toLocaleString("en-US");
+  const formatted = parsed.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+  return `Php ${formatted}`;
 }
 
 function DetailRow({ label, value }: { label: string; value?: string | boolean }) {
@@ -167,16 +189,28 @@ export default function BorrowerApplicationTabSection({
       {activeTab === "maker" && (
         <div className="space-y-6">
           <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Borrower snapshot</p>
             <p className="mt-2 text-lg font-semibold text-slate-900">
-              {application.borrower.fullName ?? borrower.fullName}
+              {(application.borrower.fullName ?? borrower.fullName)?.toUpperCase()}
             </p>
             <div className="mt-4 grid gap-3">
+              <DetailRow label="Nickname" value={application.borrower.nickname} />
+              <DetailRow label="Age" value={application.borrower.age} />
+              <DetailRow label="Gender" value={application.borrower.gender} />
+              <DetailRow label="Birthplace" value={application.borrower.birthplace} />
               <DetailRow label="Mobile" value={application.borrower.mobileNumber} />
               <DetailRow label="Email" value={application.borrower.email} />
+              <DetailRow label="Citizenship" value={application.borrower.citizenship} />
               <DetailRow label="Date of birth" value={application.borrower.dateOfBirth} />
               <DetailRow label="Civil status" value={application.borrower.civilStatus} />
+              <DetailRow label="Dependents" value={application.borrower.dependents} />
+              <DetailRow label="Education attainment" value={application.borrower.educationAttainment} />
+              <DetailRow label="Course" value={application.borrower.course} />
+              <DetailRow label="Father's name" value={application.borrower.fatherName} />
+              <DetailRow label="Mother's maiden name" value={application.borrower.motherMaidenName} />
+              <DetailRow label="Home ownership" value={application.borrower.homeOwnership} />
               <DetailRow label="Current address" value={application.borrower.currentAddress} />
+              <DetailRow label="Years at address" value={application.borrower.yearsAtAddress} />
+              <DetailRow label="Provincial address" value={application.borrower.provincialAddress} />
               <DetailRow label="Provincial same as current" value={application.borrower.provincialSameAsCurrent} />
               <DetailRow label="Facebook account" value={application.borrower.facebookAccountName} />
               <DetailRow label="Marketing source" value={application.marketing?.source} />
@@ -184,11 +218,14 @@ export default function BorrowerApplicationTabSection({
           </div>
 
           <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Loan details</p>
+            <p className="text-md font-medium uppercase tracking-[0.3em] text-slate-600">Loan details</p>
             <div className="mt-4 grid gap-3">
               <DetailRow label="Loan type" value={application.loanDetails?.productName} />
               <DetailRow label="Loan category" value={application.loanDetails?.productId} />
-              <DetailRow label="Amount applied (in Pesos)" value={formatAmount(application.loanDetails?.amountApplied)} />
+              <DetailRow
+                label="Amount applied (in Pesos)"
+                value={formatAmount(application.loanDetails?.amountApplied)}
+              />
               <DetailRow label="Term (in months)" value={application.loanDetails?.term} />
               <DetailRow label="Purpose" value={application.loanDetails?.purpose} />
               <DetailRow label="Submitted" value={formatDate(application.submittedAt ?? application.createdAt)} />
@@ -197,30 +234,41 @@ export default function BorrowerApplicationTabSection({
           </div>
 
           <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Source of income details</p>
+            <p className="text-md font-medium uppercase tracking-[0.3em] text-slate-600">Source of income details</p>
             <div className="mt-4 grid gap-3">
               <DetailRow label="Employer / Business Name" value={application.borrowerIncome?.employerName} />
+              <DetailRow label="Employer address" value={application.borrowerIncome?.employerAddress} />
+              <DetailRow label="Employer contact" value={application.borrowerIncome?.employerContact} />
               <DetailRow label="Source" value={application.borrowerIncome?.occupation} />
-              <DetailRow label="Net income (in Pesos)" value={application.borrowerIncome?.netIncome} />
+              <DetailRow label="Net income (in Pesos)" value={formatAmount(application.borrowerIncome?.netIncome)} />
               <DetailRow label="Number of years employed or in business" value={application.borrowerIncome?.yearsInRole} />
             </div>
           </div>
 
           <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Spouse</p>
+            <p className="text-md font-medium uppercase tracking-[0.3em] text-slate-600">Spouse details</p>
             <div className="mt-4 grid gap-3">
               <DetailRow label="Full name" value={application.spouse?.fullName} />
+              <DetailRow label="Nickname" value={application.spouse?.nickname} />
+              <DetailRow label="Address" value={application.spouse?.address} />
+              <DetailRow label="Employer / Business Name" value={application.spouse?.employerName} />
+              <DetailRow label="Employer contact" value={application.spouse?.employerContact} />
               <DetailRow label="Source of income" value={application.spouse?.occupation} />
-              <DetailRow label="Net income (in Pesos)" value={application.spouse?.netIncome} />
+              <DetailRow label="Net income (in Pesos)" value={formatAmount(application.spouse?.netIncome)} />
+              <DetailRow label="Number of years employed or in business" value={application.spouse?.yearsInRole} />
               <DetailRow label="Mobile" value={application.spouse?.contactNumber} />
             </div>
           </div>
 
           <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Assets & estimated value</p>
+            <p className="text-md font-medium uppercase tracking-[0.3em] text-slate-600">Assets & estimated value</p>
             <div className="mt-4 grid gap-3">
               <DetailRow label="Assets" value={application.borrowerAssets?.selections?.join(", ")} />
-              <DetailRow label="Estimated value (in Pesos)" value={application.borrowerAssets?.estimatedValue} />
+              <DetailRow label="Asset details" value={application.borrowerAssets?.details} />
+              <DetailRow
+                label="Estimated value (in Pesos)"
+                value={formatAmount(application.borrowerAssets?.estimatedValue)}
+              />
             </div>
           </div>
         </div>
@@ -229,21 +277,33 @@ export default function BorrowerApplicationTabSection({
       {activeTab === "comakers" && (
         <div className="space-y-6">
           <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Co-maker</p>
+            <p className="mt-2 text-lg font-semibold text-slate-900">
+              {application.coMaker?.fullName?.toUpperCase()}
+            </p>
             <div className="mt-4 grid gap-3">
-              <DetailRow label="Full name" value={application.coMaker?.fullName} />
+              <DetailRow label="Nickname" value={application.coMaker?.nickname} />
+              <DetailRow label="Age" value={application.coMaker?.age} />
+              <DetailRow label="Citizenship" value={application.coMaker?.citizenship} />
+              <DetailRow label="Civil status" value={application.coMaker?.civilStatus} />
               <DetailRow label="Relationship" value={application.coMaker?.relationshipToBorrower} />
               <DetailRow label="Mobile" value={application.coMaker?.mobileNumber} />
+              <DetailRow label="Email" value={application.coMaker?.email} />
               <DetailRow label="Address" value={application.coMaker?.currentAddress} />
+              <DetailRow label="Provincial address" value={application.coMaker?.provincialAddress} />
+              <DetailRow label="Years at address" value={application.coMaker?.yearsAtAddress} />
+              <DetailRow label="Dependents" value={application.coMaker?.dependents} />
+              <DetailRow label="Home ownership" value={application.coMaker?.homeOwnership} />
               <DetailRow label="Facebook account" value={application.coMaker?.facebookAccountName} />
             </div>
           </div>
 
           <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Co-maker income</p>
+            <p className="text-md font-medium uppercase tracking-[0.3em] text-slate-600">Co-maker source of income</p>
             <div className="mt-4 grid gap-3">
               <DetailRow label="Employer / Business Name" value={application.coMakerIncome?.employerName} />
-              <DetailRow label="Net income (in Pesos)" value={application.coMakerIncome?.netIncome} />
+              <DetailRow label="Employer address" value={application.coMakerIncome?.employerAddress} />
+              <DetailRow label="Employer contact" value={application.coMakerIncome?.employerContact} />
+              <DetailRow label="Net income (in Pesos)" value={formatAmount(application.coMakerIncome?.netIncome)} />
               <DetailRow label="Source" value={application.coMakerIncome?.occupation} />
               <DetailRow label="Number of years employed or in business" value={application.coMakerIncome?.yearsInRole} />
             </div>
@@ -295,8 +355,7 @@ export default function BorrowerApplicationTabSection({
         <div className="space-y-4">
           {references.length ? (
             references.map((reference) => (
-              <div key={reference.referenceId} className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Reference</p>
+              <div key={reference.referenceId} className="rounded-3xl border border-slate-100 bg-white px-6 pb-6 pt-3 shadow-sm">
                 <p className="mt-2 text-lg font-semibold text-slate-900">{reference.name}</p>
                 <div className="mt-4 grid gap-3">
                   <DetailRow label="Mobile" value={reference.mobileNumber} />
@@ -316,11 +375,10 @@ export default function BorrowerApplicationTabSection({
                           type="button"
                           onClick={() => updateReferenceStatus(reference.referenceId, action.value)}
                           disabled={isWorking}
-                          className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-                            isWorking
-                              ? "cursor-not-allowed border-slate-200 text-slate-300"
-                              : "cursor-pointer border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
-                          }`}
+                          className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${isWorking
+                            ? "cursor-not-allowed border-slate-200 text-slate-300"
+                            : "cursor-pointer border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                            }`}
                         >
                           {action.label}
                         </button>
@@ -382,7 +440,7 @@ export default function BorrowerApplicationTabSection({
                   <div key={note.noteId} className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
                     <p className="text-sm text-slate-700 whitespace-pre-wrap wrap-break-words">{note.note}</p>
                     <p className="mt-2 text-[11px] uppercase tracking-[0.2em] text-slate-400">
-                      {note.createdByName ?? "Unknown staff"} - {formatDate(note.createdAt)}
+                      {note.createdByName ?? "Unknown staff"} - {formatDateTime(note.createdAt)}
                     </p>
                   </div>
                 ))

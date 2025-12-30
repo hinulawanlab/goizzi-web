@@ -25,13 +25,22 @@ export function sanitizeNote(value: string): string {
 }
 
 export function buildBorrowerNoteData(input: BorrowerNoteInput): BorrowerNote & { createdByName: string } {
-  return {
+  const noteData: BorrowerNote & { createdByName: string } = {
     noteId: input.noteId,
-    applicationId: input.applicationId,
-    type: input.type,
     note: input.note,
     createdAt: input.createdAt,
-    createdByName: sanitizeName(input.createdByName),
-    createdByUserId: input.createdByUserId
+    createdByName: sanitizeName(input.createdByName)
   };
+
+  if (input.applicationId) {
+    noteData.applicationId = input.applicationId;
+  }
+  if (input.type) {
+    noteData.type = input.type;
+  }
+  if (input.createdByUserId) {
+    noteData.createdByUserId = input.createdByUserId;
+  }
+
+  return noteData;
 }

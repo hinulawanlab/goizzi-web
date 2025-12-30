@@ -78,6 +78,9 @@ function mapLoanNoteDoc(doc: DocumentSnapshot, loanId: string): LoanNote {
     borrowerId: normalizeOptionalString(data.borrowerId),
     applicationId: normalizeOptionalString(data.applicationId),
     type: normalizeOptionalString(data.type),
+    isActive: typeof data.isActive === "boolean" ? data.isActive : undefined,
+    callActive: typeof data.callActive === "boolean" ? data.callActive : undefined,
+    messageActive: typeof data.messageActive === "boolean" ? data.messageActive : undefined,
     note: normalizeString(data.note, ""),
     createdAt: formatTimestamp(data.createdAt),
     createdByName: normalizeOptionalString(data.createdByName),
@@ -165,6 +168,42 @@ export async function addLoanNote(input: LoanNoteInput): Promise<LoanNote> {
 
   await noteRef.set(noteData);
   return noteData;
+}
+
+export async function updateLoanNoteFlags(
+  loanId: string,
+  noteId: string,
+  updates: { isActive?: boolean; callActive?: boolean; messageActive?: boolean }
+): Promise<LoanNote> {
+  if (!db) {
+    throw new Error("Firestore Admin client is not initialized.");
+  }
+  if (!loanId || !noteId) {
+    throw new Error("Loan or note id is missing.");
+  }
+
+  const payload: Record<string, boolean> = {};
+  if (typeof updates.isActive === "boolean") {
+    payload.isActive = updates.isActive;
+  }
+  if (typeof updates.callActive === "boolean") {
+    payload.callActive = updates.callActive;
+  }
+  if (typeof updates.messageActive === "boolean") {
+    payload.messageActive = updates.messageActive;
+  }
+
+  if (!Object.keys(payload).length) {
+    throw new Error("No valid updates provided.");
+  }
+
+  const noteRef = db.collection("loans").doc(loanId).collection("notes").doc(noteId);
+  await noteRef.set(payload, { merge: true });
+  const updated = await noteRef.get();
+  if (!updated.exists) {
+    throw new Error("Loan note not found.");
+  }
+  return mapLoanNoteDoc(updated, loanId);
 }
 
 export async function getLoanNotesByLoanId(loanId: string): Promise<LoanNotesResult> {

@@ -6,7 +6,7 @@ export type TabKey =
   | "proof"
   | "bankStatements"
   | "payslips"
-  // | "propertyTitles"
+  | "propertyTitles"
   | "otherDocuments"
   | "audit";
 export type ActionState = "idle" | "working" | "success" | "error";
