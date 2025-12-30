@@ -139,6 +139,23 @@ export default function BorrowerLoanTabSection({
     }
   }, [loan.status]);
 
+  useEffect(() => {
+    if (!isEditable) {
+      setPrincipalInput(formatEditableAmount(loan.principalAmount));
+      setTermMonthsInput(loan.termMonths ? loan.termMonths.toString() : "");
+      setPaymentFrequencyInput(loan.paymentFrequency ? loan.paymentFrequency.toString() : "");
+      setInterestRateInput(formatEditableRate(loan.interestRate));
+      setStartDateInput(formatInputDate(loan.startDate));
+    }
+  }, [
+    isEditable,
+    loan.principalAmount,
+    loan.termMonths,
+    loan.paymentFrequency,
+    loan.interestRate,
+    loan.startDate
+  ]);
+
   const maturityDate = useMemo(() => {
     const termValue = Number(termMonthsInput);
     const paymentFrequencyValue = Number(paymentFrequencyInput);

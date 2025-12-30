@@ -1,5 +1,7 @@
 "use client";
 
+import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
 
 import LoanStatusBadge from "@/components/borrowers/LoanStatusBadge";
@@ -23,6 +25,20 @@ export default function BorrowerLoanHeaderSection({
   onRefresh,
   isRefreshing = false
 }: BorrowerLoanHeaderSectionProps) {
+  const router = useRouter();
+  const [isSelfRefreshing, startRefreshing] = useTransition();
+  const isBusy = isRefreshing || isSelfRefreshing;
+
+  const handleRefresh = () => {
+    if (onRefresh) {
+      onRefresh();
+      return;
+    }
+    startRefreshing(() => {
+      router.refresh();
+    });
+  };
+
   return (
     <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
@@ -40,15 +56,15 @@ export default function BorrowerLoanHeaderSection({
           </div>
           <button
             type="button"
-            onClick={onRefresh}
-            disabled={isRefreshing || !onRefresh}
+            onClick={handleRefresh}
+            disabled={isBusy}
             className={`inline-flex items-center justify-center rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-              isRefreshing || !onRefresh
+              isBusy
                 ? "cursor-not-allowed border-slate-200 text-slate-300"
                 : "cursor-pointer border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-900"
             }`}
           >
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} aria-hidden />
+            <RefreshCw className={`h-4 w-4 ${isBusy ? "animate-spin" : ""}`} aria-hidden />
             <span className="sr-only">Refresh tab data</span>
           </button>
         </div>
