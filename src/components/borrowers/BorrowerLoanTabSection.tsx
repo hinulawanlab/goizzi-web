@@ -50,6 +50,16 @@ function formatAmount(value?: number, currency?: string) {
   return currency ? `${currency} ${formatted}` : formatted;
 }
 
+function formatPaymentAmount(value?: number) {
+  if (typeof value !== "number") {
+    return "N/A";
+  }
+  return `PHP ${value.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })}`;
+}
+
 function formatRate(value?: number) {
   if (typeof value !== "number") {
     return "N/A";
@@ -161,6 +171,30 @@ export default function BorrowerLoanTabSection({
     return resolveNextDueDate(schedule) ?? "N/A";
   }, [loan.nextDueDate, paymentFrequencyInput, startDateInput, termMonthsInput, loan.startDate]);
 
+  const paymentsTimeline = useMemo(() => {
+    return repaymentSchedule
+      .filter((entry) => typeof entry.amountPaidAmount === "number")
+      .map((entry) => ({
+        scheduleId: entry.scheduleId,
+        paidAt: entry.paidAt ?? entry.dueDate,
+        amountPaidAmount: entry.amountPaidAmount,
+        remarks: entry.remarks,
+        breakdown: entry.breakdown ?? {}
+      }))
+      .sort((a, b) => {
+        if (!a.paidAt && !b.paidAt) {
+          return 0;
+        }
+        if (!a.paidAt) {
+          return 1;
+        }
+        if (!b.paidAt) {
+          return -1;
+        }
+        return a.paidAt.localeCompare(b.paidAt);
+      });
+  }, [repaymentSchedule]);
+
   const handleCancelEdit = () => {
     setPrincipalInput(formatEditableAmount(loan.principalAmount));
     setTermMonthsInput(loan.termMonths ? loan.termMonths.toString() : "");
@@ -245,9 +279,58 @@ export default function BorrowerLoanTabSection({
 
   if (activeTab === "statement") {
     return (
-      <section className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
-        <p className="text-sm font-semibold text-slate-900">Statement of account is coming soon.</p>
-        <p className="mt-2 text-xs text-slate-500">We will surface an audit-ready statement for each loan.</p>
+      <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
+        <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Statement of account</p>
+        <h3 className="mt-2 text-xl font-semibold text-slate-900">Payments timeline</h3>
+        <p className="mt-1 text-sm text-slate-500">Chronological list of all payments made.</p>
+
+        {!paymentsTimeline.length ? (
+          <div className="mt-6 rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
+            <p className="text-sm font-semibold text-slate-900">No payments yet.</p>
+            <p className="mt-2 text-xs text-slate-500">Payments will appear here once posted.</p>
+          </div>
+        ) : (
+          <div className="mt-6 overflow-x-auto">
+            <table className="w-full min-w-600px text-left text-sm text-slate-600">
+              <thead>
+                <tr className="text-xs uppercase tracking-[0.3em] text-slate-400">
+                  <th className="px-3 py-3">Date</th>
+                  <th className="px-3 py-3">Amount paid</th>
+                  <th className="px-3 py-3">Principal</th>
+                  <th className="px-3 py-3">Interest</th>
+                  <th className="px-3 py-3">Finance charge</th>
+                  <th className="px-3 py-3">Late charge</th>
+                  <th className="px-3 py-3">Others</th>
+                  <th className="px-3 py-3">Remarks</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {paymentsTimeline.map((payment) => (
+                  <tr key={payment.scheduleId} className="bg-white">
+                    <td className="px-3 py-4 font-semibold text-slate-900">{formatDate(payment.paidAt)}</td>
+                    <td className="px-3 py-4">{formatPaymentAmount(payment.amountPaidAmount)}</td>
+                    <td className="px-3 py-4">
+                      {formatPaymentAmount(payment.breakdown.principalAmount)}
+                    </td>
+                    <td className="px-3 py-4">
+                      {formatPaymentAmount(payment.breakdown.interestAmount)}
+                    </td>
+                    <td className="px-3 py-4">
+                      {formatPaymentAmount(payment.breakdown.financeChargeAmount)}
+                    </td>
+                    <td className="px-3 py-4">
+                      {formatPaymentAmount(payment.breakdown.lateChargeAmount)}
+                    </td>
+                    <td className="px-3 py-4">
+                      {formatPaymentAmount(payment.breakdown.otherAmount)}
+                    </td>
+                    <td className="px-3 py-4 text-slate-500">{payment.remarks || ""}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
     );
   }
