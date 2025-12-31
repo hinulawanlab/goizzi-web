@@ -39,14 +39,6 @@ const queueDefinitions: QueueViewDefinition[] = [
     filter: (row) => row.tag.toLowerCase().includes("missing")
   },
   {
-    id: "kyc-expiry",
-    title: "KYC: ID Expiring Soon",
-    description: "IDs expiring within 30/60 days require follow-up reminders.",
-    badgeLabel: "KYC queue",
-    emptyMessage: "No urgent ID renewals in this window.",
-    filter: (row) => row.tag.toLowerCase().includes("expiring") || row.reason.toLowerCase().includes("expire")
-  },
-  {
     id: "location-update",
     title: "Location: Needs Update",
     description: "Borrowers without fresh location observations in the last 10+ days.",
@@ -68,14 +60,19 @@ export default async function QueuesPage() {
   const dashboardData = await getDashboardData();
   const heroStats = [
     {
-      label: "KYC Pending Review",
-      value: dashboardData.metrics.kycPendingReview,
-      subtitle: "Submitted → verification"
+      label: "KYC Verified",
+      value: dashboardData.metrics.kycVerified,
+      subtitle: "Approved ID + selfie"
     },
     {
-      label: "KYC Pending Approval",
-      value: dashboardData.metrics.kycPendingApproval,
-      subtitle: "Awaiting managerial sign-off"
+      label: "KYC Not Verified",
+      value: dashboardData.metrics.kycNotVerified,
+      subtitle: "Rejected or incomplete verification"
+    },
+    {
+      label: "KYC Needs Update",
+      value: dashboardData.metrics.kycNeedsUpdate,
+      subtitle: "Missing or outdated verification"
     },
     {
       label: "Location Needs Update",

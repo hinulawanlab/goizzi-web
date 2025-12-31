@@ -726,6 +726,45 @@ export async function getBorrowerHomePhotoKycs(
   return [];
 }
 
+async function hasApprovedKycType(borrowerId: string, type: string): Promise<boolean> {
+  if (!db) {
+    throw new Error("Firestore Admin client is not initialized.");
+  }
+
+  const baseQuery = db.collection("borrowers").doc(borrowerId).collection("kyc").where("type", "==", type);
+  const approvedSnapshot = await baseQuery.where("isApproved", "==", true).limit(1).get();
+  if (!approvedSnapshot.empty) {
+    return true;
+  }
+
+  const legacySnapshot = await baseQuery.where("isApprove", "==", true).limit(1).get();
+  return !legacySnapshot.empty;
+}
+
+async function updateBorrowerKycVerifiedStatus(borrowerId: string): Promise<void> {
+  if (!db) {
+    throw new Error("Firestore Admin client is not initialized.");
+  }
+  if (!borrowerId) {
+    throw new Error("Borrower id is missing.");
+  }
+
+  const [hasApprovedId, hasApprovedSelfie] = await Promise.all([
+    hasApprovedKycType(borrowerId, "governmentId"),
+    hasApprovedKycType(borrowerId, "selfie")
+  ]);
+
+  await db
+    .collection("borrowers")
+    .doc(borrowerId)
+    .set(
+      {
+        isKYCverified: hasApprovedId && hasApprovedSelfie
+      },
+      { merge: true }
+    );
+}
+
 export async function setBorrowerGovernmentIdApproval(
   borrowerId: string,
   kycId: string,
@@ -749,4 +788,6 @@ export async function setBorrowerGovernmentIdApproval(
       },
       { merge: true }
     );
+
+  await updateBorrowerKycVerifiedStatus(borrowerId);
 }

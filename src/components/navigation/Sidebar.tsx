@@ -2,17 +2,22 @@
 
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { signOut } from "firebase/auth";
 
 import {
   Building,
   ChartBar,
   LayoutGrid,
+  LogOut,
   ShieldCheck,
   Settings,
   Users
 } from "lucide-react";
+
+import { auth } from "@/shared/singletons/firebase";
 
 const navItems = [
   // { label: "Dashboard", href: "/dashboard", icon: ChartBar },
@@ -25,6 +30,26 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleLogout = async () => {
+    if (isSigningOut) {
+      return;
+    }
+
+    setError(null);
+    setIsSigningOut(true);
+
+    try {
+      await signOut(auth);
+      router.push("/login");
+    } catch (err) {
+      setError("Unable to sign out right now. Please try again.");
+      setIsSigningOut(false);
+    }
+  };
 
   return (
     <nav className="fixed left-4 top-8 bottom-8 z-20 flex w-64 flex-col gap-6 rounded-3xl bg-linear-to-b from-slate-950/90 to-slate-900/60 px-4 py-6 shadow-glow ring-1 ring-white/20 backdrop-blur-lg">
@@ -76,9 +101,23 @@ export default function Sidebar() {
         })}
       </div>
 
-      <div className="mt-auto rounded-2xl border border-white/5 bg-white/5 px-4 py-3 text-[12px] text-white/60">
-        <p className="text-sm text-white">Realtime insights</p>
-        <p className="text-[11px] text-white/40">Updated 2 minutes ago</p>
+      <div className="mt-auto flex flex-col gap-3 px-1">
+        <button
+          type="button"
+          onClick={handleLogout}
+          disabled={isSigningOut}
+          className="cursor-pointer flex items-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white transition hover:border-white/30 hover:bg-white/20 hover:shadow-[0_15px_50px_-25px_rgba(248,113,113,0.4)] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-white/10 text-white/80">
+            <LogOut className="h-4 w-4" aria-hidden />
+          </span>
+          <span>{isSigningOut ? "Signing out..." : "Log out"}</span>
+        </button>
+        {error && (
+          <div role="status" aria-live="polite" className="text-sm text-rose-300">
+            {error}
+          </div>
+        )}
       </div>
     </nav>
   );

@@ -3,30 +3,69 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import type { BorrowerSummary, KycStatus, LocationQuality } from "@/shared/types/dashboard";
+import type { BorrowerSummary, KycVerificationStatus, LocationQuality } from "@/shared/types/dashboard";
 
 interface BorrowerTableProps {
   borrowers: BorrowerSummary[];
   showViewAll?: boolean;
 }
 
-const statusPillClass: Record<KycStatus, string> = {
-  submitted: "bg-amber-100 text-amber-700",
-  verified: "bg-sky-100 text-sky-700",
-  approved: "bg-emerald-100 text-emerald-700",
-  draft: "bg-slate-100 text-slate-700"
+const statusPillClass: Record<KycVerificationStatus, string> = {
+  verified: "bg-emerald-100 text-emerald-700",
+  not_verified: "bg-rose-100 text-rose-700",
+  needs_update: "bg-amber-100 text-amber-700"
 };
 
 const locationClass: Record<LocationQuality, string> = {
-  Good: "text-emerald-600",
-  "Needs Update": "text-amber-600",
-  "Low Confidence": "text-rose-600"
+  Good: "bg-emerald-100 text-emerald-700",
+  "Needs Update": "bg-amber-100 text-amber-700",
+  "Low Confidence": "bg-rose-100 text-rose-700"
 };
+
+function getKycStatusKey(value: boolean | null): KycVerificationStatus {
+  if (value === true) {
+    return "verified";
+  }
+  if (value === false) {
+    return "not_verified";
+  }
+  return "needs_update";
+}
+
+function getKycStatusLabel(value: boolean | null): string {
+  if (value === true) {
+    return "Verified";
+  }
+  if (value === false) {
+    return "Not verified";
+  }
+  return "Needs update";
+}
+
+function renderMissingCount(value: number | null) {
+  if (value === null) {
+    return (
+      <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+        Needs update
+      </span>
+    );
+  }
+  const badgeClass =
+    value === 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700";
+  return (
+    <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${badgeClass}`}>
+      {value}
+    </span>
+  );
+}
 
 function renderBorrowerRow(borrower: BorrowerSummary, index: number, router: ReturnType<typeof useRouter>) {
   const handleClick = () => {
     router.push(`/borrowers/${borrower.borrowerId}`);
   };
+
+  const kycStatusKey = getKycStatusKey(borrower.isKYCverified);
+  const kycStatusLabel = getKycStatusLabel(borrower.isKYCverified);
 
   return (
     <tr
@@ -41,20 +80,14 @@ function renderBorrowerRow(borrower: BorrowerSummary, index: number, router: Ret
       <td className="px-3 py-4 text-slate-700">{borrower.branch}</td>
       <td className="px-3 py-4">
         <span
-          className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${statusPillClass[borrower.kycStatus]}`}
+          className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${statusPillClass[kycStatusKey]}`}
         >
-          {borrower.kycStatus}
+          {kycStatusLabel}
         </span>
       </td>
-      <td className="px-3 py-4">{borrower.kycMissingCount}</td>
+      <td className="px-3 py-4">{renderMissingCount(borrower.kycMissingCount)}</td>
       <td className="px-3 py-4">
-        <span className="text-sm text-slate-700">{borrower.idExpiryDate}</span>
-        {borrower.idExpiringSoon && (
-          <span className="ml-2 rounded-full bg-rose-100 px-2 py-1 text-xs text-rose-600">Expiring</span>
-        )}
-      </td>
-      <td className="px-3 py-4">
-        <span className={`${locationClass[borrower.locationStatus]} text-sm font-semibold`}>
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${locationClass[borrower.locationStatus]}`}>
           {borrower.locationStatus}
         </span>
       </td>
@@ -84,7 +117,6 @@ export default function BorrowerTable({ borrowers, showViewAll = true }: Borrowe
               <th className="px-3 py-3">Branch</th>
               <th className="px-3 py-3">KYC Status</th>
               <th className="px-3 py-3">Missing</th>
-              <th className="px-3 py-3">ID Expiry</th>
               <th className="px-3 py-3">Location</th>
               <th className="px-3 py-3">Top Area</th>
               <th className="px-3 py-3">Last Location</th>

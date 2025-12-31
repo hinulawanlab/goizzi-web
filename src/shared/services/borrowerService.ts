@@ -5,11 +5,13 @@ import { db, hasAdminCredentials } from "@/shared/singletons/firebaseAdmin";
 import { demoDashboardData } from "@/shared/data/demoDashboard";
 import { demoBorrowerFollowUps } from "@/shared/data/demoBorrowerFollowUps";
 import type { BorrowerFollowUpSummary } from "@/shared/types/borrowerFollowUp";
-import type { BorrowerSummary, FrequentArea, KycStatus, LocationQuality } from "@/shared/types/dashboard";
+import type { BorrowerSummary, FrequentArea, LocationQuality } from "@/shared/types/dashboard";
 
-function normalizeStatus(status: unknown): KycStatus {
-  const valid: KycStatus[] = ["draft", "submitted", "verified", "approved"];
-  return typeof status === "string" && valid.includes(status as KycStatus) ? (status as KycStatus) : "draft";
+function normalizeKycVerified(value: unknown): boolean | null {
+  if (typeof value === "boolean") {
+    return value;
+  }
+  return null;
 }
 
 function normalizeLocationQuality(quality: unknown): LocationQuality {
@@ -95,11 +97,7 @@ function mapBorrowerDoc(doc: DocumentSnapshot): BorrowerSummary {
 
   const lastLocationAt = formatTimestamp(locationSummary?.updatedAt);
 
-  const idExpiry = formatTimestamp(data.idExpiryDate);
-
   const lastUpdated = formatTimestamp(data.updatedAt);
-
-  const idExpiringSoon = data.idExpiresSoon ?? false;
 
   return {
     borrowerId: doc.id,
@@ -108,11 +106,9 @@ function mapBorrowerDoc(doc: DocumentSnapshot): BorrowerSummary {
     branch: branchDocumentId || "Unassigned",
     branchDocumentId,
     primaryBranchId,
-    kycStatus: normalizeStatus(data.kycStatus),
-    kycMissingCount: typeof data.kycMissingCount === "number" ? data.kycMissingCount : 0,
+    isKYCverified: normalizeKycVerified(data.isKYCverified),
+    kycMissingCount: typeof data.kycMissingCount === "number" ? data.kycMissingCount : null,
     kycMissingTypes: Array.isArray(data.kycMissingTypes) ? data.kycMissingTypes.slice(0, 3) : [],
-    idExpiryDate: idExpiry,
-    idExpiringSoon,
     locationStatus: normalizeLocationQuality(data.locationStatus),
     locationConfidence: Math.min(Math.max(locationConfidence, 0), 1),
     topAreaLabel,

@@ -1,7 +1,7 @@
 // src/components/borrowers/BorrowerApplicationTabs.tsx
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/navigation";
 
@@ -136,37 +136,69 @@ export default function BorrowerApplicationTabs({
   );
   const hasReferences = agreedReferences.length >= 2;
 
-  const manualItems = [
-    { key: "homeAddress", label: "Home address", required: true },
-    { key: "officeAddress", label: "Office address", required: true },
-    { key: "loanApplication", label: "Loan application", required: true },
-    { key: "makerFacebook", label: "Maker's facebook", required: true },
-    { key: "makerMobile", label: "Maker's mobile number", required: true },
-    { key: "comakerFacebook", label: "Co-maker's facebook", required: true },
-    { key: "comakerMobile", label: "Co-maker's mobile number", required: true },
-    { key: "cibi", label: "CIBI", required: !isCibiOptional }
-  ];
+  const manualItems = useMemo(
+    () => [
+      { key: "homeAddress", label: "Home address", required: true },
+      { key: "officeAddress", label: "Office address", required: true },
+      { key: "loanApplication", label: "Loan application", required: true },
+      { key: "makerFacebook", label: "Maker's facebook", required: true },
+      { key: "makerMobile", label: "Maker's mobile number", required: true },
+      { key: "comakerFacebook", label: "Co-maker's facebook", required: true },
+      { key: "comakerMobile", label: "Co-maker's mobile number", required: true },
+      { key: "cibi", label: "CIBI", required: !isCibiOptional }
+    ],
+    [isCibiOptional]
+  );
 
-  const autoChecklistItems = [
-    { key: "selfie", label: "Selfie", checked: hasSelfie },
-    { key: "governmentId", label: "Government ID", checked: hasGovernmentId },
-    { key: "proofOfIncome", label: "Proof of income", checked: hasProofOfIncome },
-    { key: "bankStatements", label: "Bank statements", checked: hasBankStatements },
-    { key: "proofOfBilling", label: "Proof of billing", checked: hasProofOfBilling },
-    { key: "references", label: "References", checked: hasReferences },
-    { key: "residence", label: "Home photo", checked: hasHomePhoto }
-  ];
+  const autoChecklistItems = useMemo(
+    () => [
+      { key: "selfie", label: "Selfie", checked: hasSelfie },
+      { key: "governmentId", label: "Government ID", checked: hasGovernmentId },
+      { key: "proofOfIncome", label: "Proof of income", checked: hasProofOfIncome },
+      { key: "bankStatements", label: "Bank statements", checked: hasBankStatements },
+      { key: "proofOfBilling", label: "Proof of billing", checked: hasProofOfBilling },
+      { key: "references", label: "References", checked: hasReferences },
+      { key: "residence", label: "Home photo", checked: hasHomePhoto }
+    ],
+    [hasSelfie, hasGovernmentId, hasProofOfIncome, hasBankStatements, hasProofOfBilling, hasReferences, hasHomePhoto]
+  );
 
-  const manualChecklistItems = manualItems.map((item) => ({
-    ...item,
-    checked: manualVerified.includes(item.key)
-  }));
+  const manualChecklistItems = useMemo(
+    () =>
+      manualItems.map((item) => ({
+        ...item,
+        checked: manualVerified.includes(item.key)
+      })),
+    [manualItems, manualVerified]
+  );
 
   const allAutoComplete = autoChecklistItems.every((item) => item.checked);
   const allManualRequiredComplete = manualChecklistItems.every(
     (item) => item.checked || item.required === false
   );
   const isChecklistComplete = allAutoComplete && allManualRequiredComplete;
+
+  const getMissingChecklistCount = useCallback(() => {
+    const autoMissing = autoChecklistItems.filter((item) => !item.checked).length;
+    const manualMissing = manualChecklistItems.filter((item) => item.required !== false && !item.checked).length;
+    return autoMissing + manualMissing;
+  }, [autoChecklistItems, manualChecklistItems]);
+
+  const syncMissingChecklistCount = useCallback(async () => {
+    if (!borrower.borrowerId) {
+      return;
+    }
+
+    try {
+      await fetch(`/api/borrowers/${borrower.borrowerId}/kyc-missing`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kycMissingCount: getMissingChecklistCount() })
+      });
+    } catch (error) {
+      console.warn("Unable to sync KYC missing count:", error);
+    }
+  }, [borrower.borrowerId, getMissingChecklistCount]);
 
   useEffect(() => {
     console.info("Borrower application auth check.", {
@@ -210,8 +242,9 @@ export default function BorrowerApplicationTabs({
     if (!isApprovalOpen) {
       return;
     }
+    void syncMissingChecklistCount();
     handleRefresh();
-  }, [handleRefresh, isApprovalOpen]);
+  }, [handleRefresh, isApprovalOpen, syncMissingChecklistCount]);
 
   const handleStatusAction = (status: LoanAction) => {
     if (status === "Approve") {

@@ -60,6 +60,7 @@ Small, fast “profile header” document. Keep PII-heavy KYC in a subcollection
 - `phone: string` (E.164 recommended, e.g. `+63...`)
 - `email: string?`
 - `status: string` (`active|blocked|archived`)
+- `isKYCverified: boolean` (true when government ID + selfie are approved)
 - `createdAt: timestamp`
 - `createdByUserId: string?`
 - `primaryBranchId: string?` (where they usually transact)

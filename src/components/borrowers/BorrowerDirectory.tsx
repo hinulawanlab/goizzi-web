@@ -6,30 +6,23 @@ import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 
 import BorrowerTable from "@/components/dashboard/BorrowerTable";
-import type { BorrowerSummary, KycStatus, LocationQuality } from "@/shared/types/dashboard";
+import type { BorrowerSummary, KycVerificationStatus, LocationQuality } from "@/shared/types/dashboard";
 
-const kycOptions: KycStatus[] = ["draft", "submitted", "verified", "approved"];
-const locationOptions: LocationQuality[] = ["Good", "Needs Update", "Low Confidence"];
-const expiryOptions = [
-  { value: "any", label: "Any" },
-  { value: "7", label: "Expiring in 7 days" },
-  { value: "30", label: "Expiring in 30 days" },
-  { value: "60", label: "Expiring in 60 days" },
-  { value: "90", label: "Expiring in 90 days" }
+const kycOptions: { value: KycVerificationStatus; label: string }[] = [
+  { value: "verified", label: "Verified" },
+  { value: "not_verified", label: "Not verified" },
+  { value: "needs_update", label: "Needs update" }
 ];
+const locationOptions: LocationQuality[] = ["Good", "Needs Update", "Low Confidence"];
 
-function isExpiringWithin(value: string, days: number) {
-  if (!value || value === "N/A" || days <= 0) {
-    return false;
+function getKycStatusKey(value: boolean | null): KycVerificationStatus {
+  if (value === true) {
+    return "verified";
   }
-
-  const parsed = Date.parse(value);
-  if (Number.isNaN(parsed)) {
-    return false;
+  if (value === false) {
+    return "not_verified";
   }
-
-  const diffMs = parsed - Date.now();
-  return diffMs >= 0 && diffMs <= days * 24 * 60 * 60 * 1000;
+  return "needs_update";
 }
 
 interface BorrowerDirectoryProps {
@@ -41,7 +34,6 @@ export default function BorrowerDirectory({ borrowers }: BorrowerDirectoryProps)
   const [branchFilter, setBranchFilter] = useState("any");
   const [kycFilter, setKycFilter] = useState("any");
   const [missingFilter, setMissingFilter] = useState("any");
-  const [expiryFilter, setExpiryFilter] = useState("any");
   const [locationFilter, setLocationFilter] = useState("any");
 
   const branchOptions = useMemo(() => {
@@ -59,27 +51,25 @@ export default function BorrowerDirectory({ borrowers }: BorrowerDirectoryProps)
           .some((value) => value.toLowerCase().includes(search));
 
       const matchesBranch = branchFilter === "any" || borrower.branch === branchFilter;
-      const matchesKyc = kycFilter === "any" || borrower.kycStatus === kycFilter;
+      const matchesKyc = kycFilter === "any" || getKycStatusKey(borrower.isKYCverified) === kycFilter;
+      const missingCount = borrower.kycMissingCount;
       const matchesMissing =
         missingFilter === "any"
           ? true
           : missingFilter === "with"
-            ? borrower.kycMissingCount > 0
-            : borrower.kycMissingCount === 0;
+            ? missingCount !== null && missingCount > 0
+            : missingCount === 0;
       const matchesLocation = locationFilter === "any" || borrower.locationStatus === locationFilter;
-      const matchesExpiry =
-        expiryFilter === "any" ? true : isExpiringWithin(borrower.idExpiryDate, Number(expiryFilter));
 
-      return matchesSearch && matchesBranch && matchesKyc && matchesMissing && matchesLocation && matchesExpiry;
+      return matchesSearch && matchesBranch && matchesKyc && matchesMissing && matchesLocation;
     });
-  }, [borrowers, searchTerm, branchFilter, kycFilter, missingFilter, expiryFilter, locationFilter]);
+  }, [borrowers, searchTerm, branchFilter, kycFilter, missingFilter, locationFilter]);
 
   const activeFiltersCount = [
     searchTerm.trim().length > 0,
     branchFilter !== "any",
     kycFilter !== "any",
     missingFilter !== "any",
-    expiryFilter !== "any",
     locationFilter !== "any"
   ].filter(Boolean).length;
 
@@ -88,7 +78,6 @@ export default function BorrowerDirectory({ borrowers }: BorrowerDirectoryProps)
     setBranchFilter("any");
     setKycFilter("any");
     setMissingFilter("any");
-    setExpiryFilter("any");
     setLocationFilter("any");
   };
 
@@ -150,8 +139,8 @@ export default function BorrowerDirectory({ borrowers }: BorrowerDirectoryProps)
             >
               <option value="any">All statuses</option>
               {kycOptions.map((status) => (
-                <option key={status} value={status}>
-                  {status}
+                <option key={status.value} value={status.value}>
+                  {status.label}
                 </option>
               ))}
             </select>
@@ -167,21 +156,6 @@ export default function BorrowerDirectory({ borrowers }: BorrowerDirectoryProps)
               <option value="any">Any</option>
               <option value="with">With missing docs</option>
               <option value="without">Complete KYC</option>
-            </select>
-          </label>
-
-          <label>
-            <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">ID expiry</span>
-            <select
-              value={expiryFilter}
-              onChange={(event) => setExpiryFilter(event.target.value)}
-              className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-slate-400 focus:outline-none"
-            >
-              {expiryOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
             </select>
           </label>
 

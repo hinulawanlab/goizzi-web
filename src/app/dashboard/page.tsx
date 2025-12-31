@@ -19,16 +19,16 @@ export default async function DashboardPage() {
               Dashboard, queues, and borrower insights for KYC &amp; location quality.
             </p>
             <div className="mt-4 rounded-2xl bg-slate-900/5 px-4 py-3 text-sm text-slate-700">
-              You have <strong className="text-[#1877f2]">{dashboardData.metrics.kycPendingReview}</strong> borrowers awaiting KYC
-              verification and <strong className="text-[#1877f2]">{dashboardData.metrics.locationNeedsUpdate}</strong> borrowers with
+              You have <strong className="text-[#1877f2]">{dashboardData.metrics.kycNeedsUpdate}</strong> borrowers with KYC that needs
+              to be updated and <strong className="text-[#1877f2]">{dashboardData.metrics.locationNeedsUpdate}</strong> borrowers with
               stale locations.
             </div>
           </section>
 
           <section className="grid gap-4 md:grid-cols-3">
-            <KpiCard title="KYC Pending Review" value={dashboardData.metrics.kycPendingReview} subtitle="Submitted but not verified" />
-            <KpiCard title="KYC Pending Approval" value={dashboardData.metrics.kycPendingApproval} subtitle="Verified awaiting approval" />
-            <KpiCard title="ID Expiring Soon" value={dashboardData.metrics.idsExpiring} subtitle="Due within 60 days" />
+            <KpiCard title="KYC Verified" value={dashboardData.metrics.kycVerified} subtitle="Approved ID + selfie" />
+            <KpiCard title="KYC Not Verified" value={dashboardData.metrics.kycNotVerified} subtitle="Rejected or incomplete verification" />
+            <KpiCard title="KYC Needs Update" value={dashboardData.metrics.kycNeedsUpdate} subtitle="Missing or outdated verification" />
             <KpiCard title="Missing Docs" value={dashboardData.metrics.kycMissingDocs} subtitle="Required docs absent" />
             <KpiCard title="Location Needs Update" value={dashboardData.metrics.locationNeedsUpdate} subtitle="No observation in 10+ days" />
             <KpiCard title="Low Confidence" value={dashboardData.metrics.lowConfidenceLocations} subtitle="Confidence < 0.6" />

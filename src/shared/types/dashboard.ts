@@ -1,4 +1,4 @@
-export type KycStatus = "draft" | "submitted" | "verified" | "approved";
+export type KycVerificationStatus = "verified" | "not_verified" | "needs_update";
 
 export type LocationQuality = "Good" | "Needs Update" | "Low Confidence";
 
@@ -29,11 +29,9 @@ export interface BorrowerSummary {
   branch: string;
   branchDocumentId?: string;
   primaryBranchId?: string;
-  kycStatus: KycStatus;
-  kycMissingCount: number;
+  isKYCverified: boolean | null;
+  kycMissingCount: number | null;
   kycMissingTypes?: string[];
-  idExpiryDate: string;
-  idExpiringSoon: boolean;
   locationStatus: LocationQuality;
   locationConfidence: number;
   topAreaLabel: string;
@@ -52,10 +50,10 @@ export interface QueueRow {
 }
 
 export interface DashboardMetrics {
-  kycPendingReview: number;
-  kycPendingApproval: number;
+  kycVerified: number;
+  kycNotVerified: number;
+  kycNeedsUpdate: number;
   kycMissingDocs: number;
-  idsExpiring: number;
   locationNeedsUpdate: number;
   lowConfidenceLocations: number;
 }

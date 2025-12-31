@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { Activity, Globe, LogOut, ShieldCheck } from "lucide-react";
@@ -46,6 +46,8 @@ export default function SettingsPage() {
   const router = useRouter();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeStaffCount, setActiveStaffCount] = useState<number | null>(null);
+  const [activeBranchCount, setActiveBranchCount] = useState<number | null>(null);
 
   const refreshTimestamp = useMemo(
     () =>
@@ -58,11 +60,62 @@ export default function SettingsPage() {
     []
   );
 
-  const quickStats = [
-    { label: "Active staff", value: "38", caption: "Realtime identities via Firebase" },
-    { label: "Branches monitored", value: "12", caption: "Shared borrower lines" },
-    { label: "Config snapshot", value: refreshTimestamp, caption: "Synced from appConfig constants" }
-  ];
+  useEffect(() => {
+    let isMounted = true;
+    const controller = new AbortController();
+
+    const loadStats = async () => {
+      try {
+        const response = await fetch("/api/settings/stats", {
+          cache: "no-store",
+          signal: controller.signal
+        });
+        if (!response.ok) {
+          throw new Error("Settings stats request failed.");
+        }
+        const data = (await response.json()) as {
+          activeStaffCount?: number;
+          activeBranchCount?: number;
+        };
+
+        if (!isMounted) {
+          return;
+        }
+
+        setActiveStaffCount(typeof data.activeStaffCount === "number" ? data.activeStaffCount : null);
+        setActiveBranchCount(typeof data.activeBranchCount === "number" ? data.activeBranchCount : null);
+      } catch (err) {
+        if ((err as Error).name === "AbortError") {
+          return;
+        }
+        console.warn("Unable to load settings stats:", err);
+      }
+    };
+
+    loadStats();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, []);
+
+  const quickStats = useMemo(
+    () => [
+      {
+        label: "Active staff",
+        value: activeStaffCount === null ? "—" : activeStaffCount.toString(),
+        caption: "Realtime identities via Firebase"
+      },
+      {
+        label: "Branches monitored",
+        value: activeBranchCount === null ? "—" : activeBranchCount.toString(),
+        caption: "Shared borrower lines"
+      },
+      { label: "Config snapshot", value: refreshTimestamp, caption: "Synced from appConfig constants" }
+    ],
+    [activeBranchCount, activeStaffCount, refreshTimestamp]
+  );
 
   const handleLogout = async () => {
     if (isSigningOut) {
