@@ -88,8 +88,12 @@ export async function approveBorrowerApplicationToLoan(input: LoanApprovalInput)
   const createdAt = Timestamp.now();
   const createdAtIso = createdAt.toDate().toISOString();
   const noteText = sanitizeNote("Status set to approved.");
+  const borrowerNoteText = sanitizeNote(
+    "Congratulations, your loan has been approved. Visit Goizzi for releasing anytime between 9:00AM to 4:00PM"
+  );
 
   const noteRef = borrowerRef.collection("notes").doc();
+  const borrowerNoteRef = borrowerRef.collection("notes").doc();
   const loanRef = db.collection("loans").doc();
 
   const noteData = buildBorrowerNoteData({
@@ -99,6 +103,16 @@ export async function approveBorrowerApplicationToLoan(input: LoanApprovalInput)
     createdAt: createdAtIso,
     createdByName: actorName,
     createdByUserId: input.actorUserId
+  });
+  const borrowerNoteData = buildBorrowerNoteData({
+    noteId: borrowerNoteRef.id,
+    applicationId: input.applicationId,
+    type: "borrower",
+    note: borrowerNoteText,
+    createdAt: createdAtIso,
+    createdByName: actorName,
+    createdByUserId: input.actorUserId,
+    isActive: true
   });
 
   const loanData = {
@@ -136,6 +150,7 @@ export async function approveBorrowerApplicationToLoan(input: LoanApprovalInput)
 
   const batch = db.batch();
   batch.set(noteRef, { ...noteData, createdAt });
+  batch.set(borrowerNoteRef, { ...borrowerNoteData, createdAt });
   batch.set(
     applicationRef,
     {

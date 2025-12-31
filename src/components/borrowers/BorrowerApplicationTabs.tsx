@@ -118,17 +118,40 @@ export default function BorrowerApplicationTabs({
   const isUnactedKyc = (value?: boolean, waived?: boolean) =>
     (value === null || value === undefined) && (waived === null || waived === undefined);
 
-  const hasSelfie = selfieKycs.some((entry) => resolveApprovedOrWaived(entry.isApproved));
-  const hasGovernmentId = governmentIdKycs.some((entry) => resolveApprovedOrWaived(entry.isApproved));
-  const hasProofOfIncome = payslipKycs.some((entry) => resolveApprovedOrWaived(entry.isApproved, entry.isWaived));
-  const hasBankStatements = bankStatementKycs.some((entry) => resolveApprovedOrWaived(entry.isApproved, entry.isWaived));
-  const hasProofOfBilling = proofOfBillingKycs.some((entry) => resolveApprovedOrWaived(entry.isApproved, entry.isWaived));
-  const hasHomePhoto = homePhotoKycs.some((entry) => resolveApprovedOrWaived(entry.isApproved, entry.isWaived));
+  const getLatestByCreatedAt = <T extends { createdAt?: string }>(entries: T[]): T | undefined => {
+    let latest: T | undefined;
+    let latestTime = Number.NEGATIVE_INFINITY;
+
+    entries.forEach((entry) => {
+      const time = entry.createdAt ? Date.parse(entry.createdAt) : Number.NEGATIVE_INFINITY;
+      if (Number.isFinite(time) && time >= latestTime) {
+        latestTime = time;
+        latest = entry;
+      }
+    });
+
+    return latest;
+  };
+
+  const latestSelfie = getLatestByCreatedAt(selfieKycs);
+  const latestGovernmentId = getLatestByCreatedAt(governmentIdKycs);
+  const latestPayslip = getLatestByCreatedAt(payslipKycs);
+  const latestBankStatement = getLatestByCreatedAt(bankStatementKycs);
+  const latestProofOfBilling = getLatestByCreatedAt(proofOfBillingKycs);
+  const latestHomePhoto = getLatestByCreatedAt(homePhotoKycs);
+  const latestOtherDoc = getLatestByCreatedAt(otherKycs);
+
+  const hasSelfie = resolveApprovedOrWaived(latestSelfie?.isApproved);
+  const hasGovernmentId = resolveApprovedOrWaived(latestGovernmentId?.isApproved);
+  const hasProofOfIncome = resolveApprovedOrWaived(latestPayslip?.isApproved, latestPayslip?.isWaived);
+  const hasBankStatements = resolveApprovedOrWaived(latestBankStatement?.isApproved, latestBankStatement?.isWaived);
+  const hasProofOfBilling = resolveApprovedOrWaived(latestProofOfBilling?.isApproved, latestProofOfBilling?.isWaived);
+  const hasHomePhoto = resolveApprovedOrWaived(latestHomePhoto?.isApproved, latestHomePhoto?.isWaived);
   const hasUnactedReferences = references.some((reference) => !reference.contactStatus || reference.contactStatus === "pending");
-  const hasUnactedProofOfBilling = proofOfBillingKycs.some((entry) => isUnactedKyc(entry.isApproved, entry.isWaived));
-  const hasUnactedBankStatements = bankStatementKycs.some((entry) => isUnactedKyc(entry.isApproved, entry.isWaived));
-  const hasUnactedPayslips = payslipKycs.some((entry) => isUnactedKyc(entry.isApproved, entry.isWaived));
-  const hasUnactedOtherDocs = otherKycs.some((entry) => isUnactedKyc(entry.isApproved, entry.isWaived));
+  const hasUnactedProofOfBilling = isUnactedKyc(latestProofOfBilling?.isApproved, latestProofOfBilling?.isWaived);
+  const hasUnactedBankStatements = isUnactedKyc(latestBankStatement?.isApproved, latestBankStatement?.isWaived);
+  const hasUnactedPayslips = isUnactedKyc(latestPayslip?.isApproved, latestPayslip?.isWaived);
+  const hasUnactedOtherDocs = isUnactedKyc(latestOtherDoc?.isApproved, latestOtherDoc?.isWaived);
 
   const agreedReferences = references.filter(
     (reference) =>
