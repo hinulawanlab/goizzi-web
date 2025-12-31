@@ -1,7 +1,7 @@
 // src/components/borrowers/BorrowerApplicationsTable.tsx
 "use client";
 
-import { FileText } from "lucide-react";
+import { ClipboardEdit } from "lucide-react";
 import LoanStatusBadge from "@/components/borrowers/LoanStatusBadge";
 import type { LoanApplication } from "@/shared/types/loanApplication";
 
@@ -99,7 +99,7 @@ export default function BorrowerApplicationsTable({
                       aria-label="Open application"
                       className="cursor-pointer rounded-full border border-slate-200 bg-white p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1877f2]"
                     >
-                      <FileText className="h-4 w-4" aria-hidden />
+                      <ClipboardEdit className="h-4 w-4" aria-hidden />
                     </button>
                   </div>
                 </td>

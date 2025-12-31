@@ -1,6 +1,7 @@
+// src/components/borrowers/BorrowerLoansTable.tsx
 "use client";
 
-import { FileText, ReceiptText } from "lucide-react";
+import { ClipboardEdit, NotepadTextIcon } from "lucide-react";
 import type { LoanSummary } from "@/shared/types/loan";
 
 interface BorrowerLoansTableProps {
@@ -112,7 +113,7 @@ export default function BorrowerLoansTable({ borrowerId, loans, emptyTitle, empt
                         aria-label="Open loan"
                         className="cursor-pointer rounded-full border border-slate-200 bg-white p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1877f2]"
                       >
-                        <ReceiptText className="h-4 w-4" aria-hidden />
+                        <NotepadTextIcon className="h-4 w-4" aria-hidden />
                       </button>
                       {applicationId ? (
                         <button
@@ -122,7 +123,7 @@ export default function BorrowerLoansTable({ borrowerId, loans, emptyTitle, empt
                           aria-label="Open application"
                           className="cursor-pointer rounded-full border border-slate-200 bg-white p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1877f2]"
                         >
-                          <FileText className="h-4 w-4" aria-hidden />
+                          <ClipboardEdit className="h-4 w-4" aria-hidden />
                         </button>
                       ) : (
                         <span
@@ -130,7 +131,7 @@ export default function BorrowerLoansTable({ borrowerId, loans, emptyTitle, empt
                           title="No application linked"
                           aria-hidden
                         >
-                          <FileText className="h-4 w-4" aria-hidden />
+                          <ClipboardEdit className="h-4 w-4" aria-hidden />
                         </span>
                       )}
                     </div>

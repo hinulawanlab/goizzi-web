@@ -66,13 +66,6 @@ export default function BranchDirectory({ branches }: BranchDirectoryProps) {
         </div>
       ) : (
         <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Branch list</p>
-              <h3 className="text-lg font-semibold text-slate-900">Operational health</h3>
-            </div>
-            <span className="text-xs text-slate-500">Tap a branch to view queues</span>
-          </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-175px text-left text-sm text-slate-600">
               <thead>
