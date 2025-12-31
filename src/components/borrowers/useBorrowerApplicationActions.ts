@@ -77,7 +77,7 @@ export function useBorrowerApplicationActions({
     }
   };
 
-  const handleAddNote = async () => {
+  const submitNote = async (payloadOverrides?: Partial<BorrowerNote>) => {
     const trimmedNote = noteText.trim();
     if (!trimmedNote) {
       setNoteActionState("error");
@@ -102,9 +102,11 @@ export function useBorrowerApplicationActions({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           applicationId,
+          borrowerId,
           note: trimmedNote,
           createdByName: actor.name,
-          createdByUserId: actor.userId
+          createdByUserId: actor.userId,
+          ...payloadOverrides
         })
       });
 
@@ -128,6 +130,20 @@ export function useBorrowerApplicationActions({
       const message = error instanceof Error ? error.message : "Unable to add note. Please retry.";
       setNoteActionMessage(message);
     }
+  };
+
+  const handleAddNote = async () => {
+    await submitNote({ type: "applicationNotes" });
+  };
+
+  const handleSendNote = async () => {
+    await submitNote({
+      type: "borrower",
+      borrowerId,
+      callActive: false,
+      isActive: false,
+      messageActive: false
+    });
   };
 
   const handleStatusChange = async (status: LoanAction) => {
@@ -262,6 +278,7 @@ export function useBorrowerApplicationActions({
     statusActionState,
     statusActionMessage,
     handleAddNote,
+    handleSendNote,
     handleNoteTextChange,
     handleKycDecisionNote,
     handleStatusChange,

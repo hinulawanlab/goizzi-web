@@ -16,6 +16,9 @@ interface NoteInput {
   note: string;
   createdByName?: string;
   createdByUserId?: string;
+  callActive?: boolean;
+  isActive?: boolean;
+  messageActive?: boolean;
 }
 
 interface StatusActionInput {
@@ -46,12 +49,16 @@ export async function addBorrowerApplicationNote(input: NoteInput): Promise<Borr
 
   const noteData = buildBorrowerNoteData({
     noteId: noteRef.id,
+    borrowerId: input.borrowerId,
     applicationId: input.applicationId,
     type: input.type,
     note: trimmedNote,
     createdAt: createdAtIso,
     createdByName: actorName,
-    createdByUserId: input.createdByUserId
+    createdByUserId: input.createdByUserId,
+    callActive: input.callActive,
+    isActive: input.isActive,
+    messageActive: input.messageActive
   });
 
   const batch = db.batch();
@@ -107,7 +114,8 @@ export async function setBorrowerApplicationStatusWithNote(
     note: noteText,
     createdAt: createdAtIso,
     createdByName: actorName,
-    createdByUserId: input.actorUserId
+    createdByUserId: input.actorUserId,
+    borrowerId: input.borrowerId
   });
 
   const batch = db.batch();

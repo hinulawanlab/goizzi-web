@@ -9,6 +9,10 @@ interface NotePayload {
   note?: string;
   createdByName?: string;
   createdByUserId?: string;
+  borrowerId?: string;
+  callActive?: boolean;
+  isActive?: boolean;
+  messageActive?: boolean;
 }
 
 export async function POST(request: NextRequest, context: { params: Promise<{ borrowerId: string }> }) {
@@ -39,7 +43,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ bo
       type: payload.type,
       note: payload.note,
       createdByName: payload.createdByName,
-      createdByUserId: payload.createdByUserId
+      createdByUserId: payload.createdByUserId,
+      callActive: payload.callActive,
+      isActive: payload.isActive,
+      messageActive: payload.messageActive
     });
     return NextResponse.json({ note });
   } catch (error) {

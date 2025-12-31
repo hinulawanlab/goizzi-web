@@ -1,7 +1,8 @@
 // src/components/borrowers/BorrowerApplicationTabSection.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Check, MessageSquare, MessageSquareOff, Phone, PhoneOff, X } from "lucide-react";
 
 import BorrowerBankStatementPanel from "@/components/borrowers/BorrowerBankStatementPanel";
 import BorrowerOtherDocumentPanel from "@/components/borrowers/BorrowerOtherDocumentPanel";
@@ -22,6 +23,7 @@ import type { LoanApplication } from "@/shared/types/loanApplication";
 import type { BorrowerNote } from "@/shared/types/borrowerNote";
 
 type ActionState = "idle" | "working" | "success" | "error";
+type AuditActionState = "idle" | "working" | "success" | "error";
 
 interface BorrowerApplicationTabSectionProps {
   activeTab: TabKey;
@@ -91,7 +93,7 @@ function formatNoteTypeLabel(noteType?: string) {
   if (noteType === "borrower") {
     return "Borrower";
   }
-  if (noteType === "loanNotes") {
+  if (noteType === "applicationNotes") {
     return "Application";
   }
   return "Uncategorized";
@@ -143,6 +145,13 @@ export default function BorrowerApplicationTabSection({
   const [statusOverrides, setStatusOverrides] = useState<Record<string, ReferenceContactStatus>>({});
   const [actionStates, setActionStates] = useState<Record<string, ActionState>>({});
   const [actionMessages, setActionMessages] = useState<Record<string, string>>({});
+  const [auditTypeFilter, setAuditTypeFilter] = useState<
+    "all" | "borrower" | "applicationNotes" | "uncategorized"
+  >("all");
+  const [auditNotes, setAuditNotes] = useState<BorrowerNote[]>(() => noteEntries ?? []);
+  const [auditActionStates, setAuditActionStates] = useState<Record<string, { state: AuditActionState; message: string }>>(
+    {}
+  );
 
   const referencesById = useMemo(() => {
     const mapping: Record<string, BorrowerReference> = {};
@@ -193,6 +202,44 @@ export default function BorrowerApplicationTabSection({
       console.warn("Unable to update reference status:", error);
       setActionStates((prev) => ({ ...prev, [referenceId]: "error" }));
       setActionMessages((prev) => ({ ...prev, [referenceId]: "Unable to update status. Please retry." }));
+    }
+  };
+
+  useEffect(() => {
+    setAuditNotes(noteEntries ?? []);
+  }, [noteEntries]);
+
+  const setAuditActionState = (noteId: string, state: AuditActionState, message = "") => {
+    setAuditActionStates((prev) => ({
+      ...prev,
+      [noteId]: { state, message }
+    }));
+  };
+
+  const updateNoteFlags = async (
+    noteId: string,
+    updates: { isActive?: boolean; callActive?: boolean; messageActive?: boolean },
+    workingMessage: string,
+    successMessage: string
+  ) => {
+    setAuditActionState(noteId, "working", workingMessage);
+    try {
+      const response = await fetch(`/api/borrowers/${borrower.borrowerId}/notes/${noteId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates)
+      });
+
+      const payload = (await response.json()) as { note?: BorrowerNote; error?: string };
+      if (!response.ok || !payload.note) {
+        throw new Error(payload.error ?? "Unable to update note.");
+      }
+
+      setAuditNotes((prev) => prev.map((note) => (note.noteId === noteId ? payload.note! : note)));
+      setAuditActionState(noteId, "success", successMessage);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to update note.";
+      setAuditActionState(noteId, "error", message);
     }
   };
 
@@ -442,32 +489,186 @@ export default function BorrowerApplicationTabSection({
       )}
 
       {activeTab === "audit" && (
-        <div className="rounded-3xl border border-slate-100 bg-slate-50 p-6">
-          {/* <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Audit</p> */}
-          {/* <div className="mt-4 grid gap-3">
-            <DetailRow label="Loan status" value={auditStatus} />
-            <DetailRow label="Status updated by" value={statusUpdatedByName} />
-            <DetailRow label="Date of application" value={formatDate(application.submittedAt)} />
-          </div> */}
-          <div className="mt-0">
-            {/* <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Notes</p> */}
-            <div className="mt-3 space-y-3">
-              {noteEntries.length ? (
-                noteEntries.map((note) => (
-                  <div key={note.noteId} className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                    <p className="text-sm text-slate-700 whitespace-pre-wrap wrap-break-words">{note.note}</p>
-                    <p className="mt-2 text-[11px] uppercase tracking-[0.2em] text-slate-400">
-                      {formatNoteTypeLabel(note.type)} - {note.createdByName ?? "Unknown staff"} -{" "}
-                      {formatDateTime(note.createdAt)}
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-slate-500">No notes yet.</p>
-              )}
+        <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Audit notes</p>
+              <h3 className="mt-2 text-xl font-semibold text-slate-900">Application note history</h3>
+              <p className="mt-1 text-sm text-slate-500">
+                Review notes saved for this application, including author and type.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-slate-400">
+              <label htmlFor="application-note-filter">Filter</label>
+              <select
+                id="application-note-filter"
+                value={auditTypeFilter}
+                onChange={(event) =>
+                  setAuditTypeFilter(
+                    event.target.value as "all" | "borrower" | "applicationNotes" | "uncategorized"
+                  )
+                }
+                className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 shadow-sm focus:border-slate-400 focus:outline-none"
+              >
+                <option value="all">All</option>
+                <option value="borrower">Borrower</option>
+                <option value="applicationNotes">Application notes</option>
+                <option value="uncategorized">Uncategorized</option>
+              </select>
             </div>
           </div>
-        </div>
+
+          {auditNotes.length === 0 ? (
+            <div className="mt-6 rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
+              <p className="text-sm font-semibold text-slate-900">No notes yet.</p>
+              <p className="mt-2 text-xs text-slate-500">Notes created from the sidebar will appear here.</p>
+            </div>
+          ) : (
+            <div className="mt-6 overflow-x-auto">
+              <table className="w-full min-w-900px text-left text-sm text-slate-600">
+                <thead>
+                  <tr className="text-xs uppercase tracking-[0.3em] text-slate-400">
+                    <th className="px-3 py-3">Type</th>
+                    <th className="px-3 py-3">Author</th>
+                    <th className="px-3 py-3">Created</th>
+                    <th className="px-3 py-3">Seen</th>
+                    <th className="px-3 py-3">Note</th>
+                    <th className="px-3 py-3">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {auditNotes
+                    .filter((note) => {
+                      if (auditTypeFilter === "all") {
+                        return true;
+                      }
+                      if (auditTypeFilter === "uncategorized") {
+                        return !note.type;
+                      }
+                      return note.type === auditTypeFilter;
+                    })
+                    .map((note) => {
+                      const actionState = auditActionStates[note.noteId]?.state ?? "idle";
+                      const actionMessage = auditActionStates[note.noteId]?.message ?? "";
+                      const isBorrowerNote = note.type === "borrower";
+                      const isWorking = actionState === "working";
+                      return (
+                        <tr key={note.noteId} className="bg-white">
+                          <td className="px-3 py-4 font-semibold text-slate-900">
+                            {formatNoteTypeLabel(note.type)}
+                          </td>
+                          <td className="px-3 py-4">{note.createdByName || "Unknown staff"}</td>
+                          <td className="px-3 py-4">{formatDateTime(note.createdAt)}</td>
+                          <td className="px-3 py-4">{note.isSeen ? "Yes" : "Not yet"}</td>
+                          <td className="px-3 py-4 text-slate-500">{note.note}</td>
+                          <td className="px-3 py-4">
+                            {isBorrowerNote ? (
+                              <div className="flex flex-col gap-2">
+                                <div className="flex flex-wrap gap-2">
+                                  <button
+                                    type="button"
+                                    disabled={isWorking}
+                                    onClick={() =>
+                                      void updateNoteFlags(
+                                        note.noteId,
+                                        { isActive: !note.isActive },
+                                        "Updating active state...",
+                                        "Active state updated."
+                                      )
+                                    }
+                                    aria-label={note.isActive ? "Set inactive" : "Set active"}
+                                    title={note.isActive ? "Click to deactivate" : "Click to activate"}
+                                    className={`rounded-full border p-2 transition ${
+                                      isWorking
+                                        ? "cursor-not-allowed border-slate-200 text-slate-300"
+                                        : note.isActive
+                                          ? "cursor-pointer border-emerald-200 text-emerald-700 hover:border-emerald-300"
+                                          : "cursor-pointer border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                                    }`}
+                                  >
+                                    {note.isActive ? (
+                                      <Check className="h-4 w-4" aria-hidden />
+                                    ) : (
+                                      <X className="h-4 w-4" aria-hidden />
+                                    )}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={isWorking}
+                                    onClick={() =>
+                                      void updateNoteFlags(
+                                        note.noteId,
+                                        { callActive: !note.callActive },
+                                        "Updating call state...",
+                                        "Call state updated."
+                                      )
+                                    }
+                                    aria-label={note.callActive ? "Disable call" : "Enable call"}
+                                    title={note.callActive ? "Click to disable call" : "Click to enable call"}
+                                    className={`rounded-full border p-2 transition ${
+                                      isWorking
+                                        ? "cursor-not-allowed border-slate-200 text-slate-300"
+                                        : note.callActive
+                                          ? "cursor-pointer border-blue-200 text-blue-700 hover:border-blue-300"
+                                          : "cursor-pointer border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                                    }`}
+                                  >
+                                    {note.callActive ? (
+                                      <Phone className="h-4 w-4" aria-hidden />
+                                    ) : (
+                                      <PhoneOff className="h-4 w-4" aria-hidden />
+                                    )}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={isWorking}
+                                    onClick={() =>
+                                      void updateNoteFlags(
+                                        note.noteId,
+                                        { messageActive: !note.messageActive },
+                                        "Updating message state...",
+                                        "Message state updated."
+                                      )
+                                    }
+                                    aria-label={note.messageActive ? "Disable message" : "Enable message"}
+                                    title={note.messageActive ? "Click to disable message" : "Click to enable message"}
+                                    className={`rounded-full border p-2 transition ${
+                                      isWorking
+                                        ? "cursor-not-allowed border-slate-200 text-slate-300"
+                                        : note.messageActive
+                                          ? "cursor-pointer border-purple-200 text-purple-700 hover:border-purple-300"
+                                          : "cursor-pointer border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                                    }`}
+                                  >
+                                    {note.messageActive ? (
+                                      <MessageSquare className="h-4 w-4" aria-hidden />
+                                    ) : (
+                                      <MessageSquareOff className="h-4 w-4" aria-hidden />
+                                    )}
+                                  </button>
+                                </div>
+                                {actionState === "working" && (
+                                  <div className="text-xs text-slate-500">{actionMessage}</div>
+                                )}
+                                {actionState === "success" && actionMessage && (
+                                  <div className="text-xs text-emerald-700">{actionMessage}</div>
+                                )}
+                                {actionState === "error" && actionMessage && (
+                                  <div className="text-xs text-rose-700">{actionMessage}</div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-slate-400">No actions</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
       )}
     </>
   );

@@ -58,8 +58,13 @@ function mapNoteDoc(doc: DocumentSnapshot): BorrowerNote {
   const data = doc.data() || {};
   return {
     noteId: doc.id,
+    borrowerId: normalizeOptionalString(data.borrowerId),
     applicationId: normalizeOptionalString(data.applicationId),
     type: normalizeOptionalString(data.type),
+    isActive: typeof data.isActive === "boolean" ? data.isActive : undefined,
+    callActive: typeof data.callActive === "boolean" ? data.callActive : undefined,
+    messageActive: typeof data.messageActive === "boolean" ? data.messageActive : undefined,
+    isSeen: typeof data.isSeen === "boolean" ? data.isSeen : undefined,
     note: normalizeString(data.note, ""),
     createdAt: formatTimestamp(data.createdAt),
     createdByName: normalizeOptionalString(data.createdByName),
@@ -136,4 +141,40 @@ export async function getBorrowerNotesByApplication(
 
   const demoNotes = demoBorrowerNotes[borrowerId] ?? [];
   return demoNotes.filter((note) => note.applicationId === applicationId);
+}
+
+export async function updateBorrowerNoteFlags(
+  borrowerId: string,
+  noteId: string,
+  updates: { isActive?: boolean; callActive?: boolean; messageActive?: boolean }
+): Promise<BorrowerNote> {
+  if (!db) {
+    throw new Error("Firestore Admin client is not initialized.");
+  }
+  if (!borrowerId || !noteId) {
+    throw new Error("Borrower or note id is missing.");
+  }
+
+  const payload: Record<string, boolean> = {};
+  if (typeof updates.isActive === "boolean") {
+    payload.isActive = updates.isActive;
+  }
+  if (typeof updates.callActive === "boolean") {
+    payload.callActive = updates.callActive;
+  }
+  if (typeof updates.messageActive === "boolean") {
+    payload.messageActive = updates.messageActive;
+  }
+
+  if (!Object.keys(payload).length) {
+    throw new Error("No valid updates provided.");
+  }
+
+  const noteRef = db.collection("borrowers").doc(borrowerId).collection("notes").doc(noteId);
+  await noteRef.set(payload, { merge: true });
+  const updated = await noteRef.get();
+  if (!updated.exists) {
+    throw new Error("Borrower note not found.");
+  }
+  return mapNoteDoc(updated);
 }

@@ -85,6 +85,7 @@ export default function BorrowerApplicationTabs({
     statusActionState,
     statusActionMessage,
     handleAddNote,
+    handleSendNote,
     handleNoteTextChange,
     handleKycDecisionNote,
     handleStatusChange,
@@ -311,6 +312,7 @@ export default function BorrowerApplicationTabs({
           statusActionMessage={statusActionMessage}
           onNoteTextChange={handleNoteTextChange}
           onAddNote={handleAddNote}
+          onSendNote={handleSendNote}
           onStatusChange={handleStatusAction}
         />
       </div>

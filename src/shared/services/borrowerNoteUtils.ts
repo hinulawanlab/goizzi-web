@@ -2,12 +2,17 @@ import type { BorrowerNote } from "@/shared/types/borrowerNote";
 
 interface BorrowerNoteInput {
   noteId: string;
+  borrowerId?: string;
   applicationId?: string;
   type?: string;
   note: string;
   createdAt: string;
   createdByName?: string;
   createdByUserId?: string;
+  callActive?: boolean;
+  isActive?: boolean;
+  messageActive?: boolean;
+  isSeen?: boolean;
 }
 
 export function sanitizeName(value?: string): string {
@@ -32,6 +37,9 @@ export function buildBorrowerNoteData(input: BorrowerNoteInput): BorrowerNote & 
     createdByName: sanitizeName(input.createdByName)
   };
 
+  if (input.borrowerId) {
+    noteData.borrowerId = input.borrowerId;
+  }
   if (input.applicationId) {
     noteData.applicationId = input.applicationId;
   }
@@ -40,6 +48,18 @@ export function buildBorrowerNoteData(input: BorrowerNoteInput): BorrowerNote & 
   }
   if (input.createdByUserId) {
     noteData.createdByUserId = input.createdByUserId;
+  }
+  if (typeof input.callActive === "boolean") {
+    noteData.callActive = input.callActive;
+  }
+  if (typeof input.isActive === "boolean") {
+    noteData.isActive = input.isActive;
+  }
+  if (typeof input.messageActive === "boolean") {
+    noteData.messageActive = input.messageActive;
+  }
+  if (typeof input.isSeen === "boolean") {
+    noteData.isSeen = input.isSeen;
   }
 
   return noteData;
