@@ -15,7 +15,12 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
-function ensureClientApp(): FirebaseApp {
+const isBrowser = typeof window !== "undefined";
+
+function ensureClientApp(): FirebaseApp | null {
+  if (!isBrowser) {
+    return null;
+  }
   if (!firebaseConfig.apiKey) {
     throw new Error("Missing Firebase client configuration.");
   }
@@ -24,13 +29,13 @@ function ensureClientApp(): FirebaseApp {
 }
 
 const firebaseApp = ensureClientApp();
-const auth: Auth = getAuth(firebaseApp);
-const db: Firestore = getFirestore(firebaseApp);
-const storage: FirebaseStorage = getStorage(firebaseApp);
+const auth: Auth = firebaseApp ? getAuth(firebaseApp) : (null as unknown as Auth);
+const db: Firestore = firebaseApp ? getFirestore(firebaseApp) : (null as unknown as Firestore);
+const storage: FirebaseStorage = firebaseApp ? getStorage(firebaseApp) : (null as unknown as FirebaseStorage);
 
 let analytics: Analytics | null = null;
 
-if (typeof window !== "undefined") {
+if (isBrowser && firebaseApp) {
   void isSupported().then((supported) => {
     if (supported) {
       analytics = getAnalytics(firebaseApp);
