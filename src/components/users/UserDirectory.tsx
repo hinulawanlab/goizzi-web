@@ -1,43 +1,80 @@
 // src/components/users/UserDirectory.tsx
+"use client";
+
+import { useMemo, useState } from "react";
+
+import UserModal from "@/components/users/UserModal";
+import type { BranchSummary } from "@/shared/types/branch";
 import type { UserRole, UserStatus, UserSummary } from "@/shared/types/user";
 
 const roleBadgeClass: Record<UserRole, string> = {
   admin: "bg-amber-100 text-amber-700",
-  manager: "bg-sky-100 text-sky-700",
-  team: "bg-emerald-100 text-emerald-700",
+  "team lead": "bg-sky-100 text-sky-700",
+  "team member": "bg-emerald-100 text-emerald-700",
   auditor: "bg-slate-100 text-slate-600"
 };
 
 const statusBadgeClass: Record<UserStatus, string> = {
   active: "bg-emerald-100 text-emerald-700",
-  inactive: "bg-slate-100 text-slate-600"
+  inactive: "bg-slate-100 text-slate-600",
+  suspend: "bg-rose-100 text-rose-700"
 };
 
 const roleDisplayName: Record<UserRole, string> = {
   admin: "Administrator",
-  manager: "Manager",
-  team: "Team Member",
+  "team lead": "Team Lead",
+  "team member": "Team Member",
   auditor: "Auditor"
 };
 
 interface UserDirectoryProps {
   users: UserSummary[];
+  branches: BranchSummary[];
 }
 
-export default function UserDirectory({ users }: UserDirectoryProps) {
+export default function UserDirectory({ users: initialUsers, branches }: UserDirectoryProps) {
+  const [users, setUsers] = useState<UserSummary[]>(initialUsers);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<"create" | "edit">("create");
+  const [activeUser, setActiveUser] = useState<UserSummary | null>(null);
+
   const totalUsers = users.length;
   const activeUsers = users.filter((user) => user.status === "active").length;
   const inactiveUsers = totalUsers - activeUsers;
-  const roleCounts: Record<UserRole, number> = {
-    admin: 0,
-    manager: 0,
-    team: 0,
-    auditor: 0
+  const roleCounts = useMemo(() => {
+    const counts: Record<UserRole, number> = {
+      admin: 0,
+      "team lead": 0,
+      "team member": 0,
+      auditor: 0
+    };
+    users.forEach((user) => {
+      counts[user.role] += 1;
+    });
+    return counts;
+  }, [users]);
+
+  const openCreateModal = () => {
+    setActiveUser(null);
+    setModalMode("create");
+    setIsModalOpen(true);
   };
 
-  users.forEach((user) => {
-    roleCounts[user.role] += 1;
-  });
+  const openEditModal = (user: UserSummary) => {
+    setActiveUser(user);
+    setModalMode("edit");
+    setIsModalOpen(true);
+  };
+
+  const handleSave = (updatedUser: UserSummary) => {
+    setUsers((prev) => {
+      const exists = prev.some((item) => item.userId === updatedUser.userId);
+      if (exists) {
+        return prev.map((item) => (item.userId === updatedUser.userId ? updatedUser : item));
+      }
+      return [updatedUser, ...prev];
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -83,7 +120,7 @@ export default function UserDirectory({ users }: UserDirectoryProps) {
         </div>
 
         <div className="mt-6 flex flex-wrap gap-3">
-          {(["admin", "manager", "team", "auditor"] as UserRole[]).map((role) => (
+          {(["admin", "team lead", "team member", "auditor"] as UserRole[]).map((role) => (
             <div key={role} className="flex items-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
               <span className="text-xs uppercase tracking-[0.3em] text-slate-400">{roleDisplayName[role]}</span>
               <span className="text-sm font-semibold text-slate-900">{roleCounts[role]}</span>
@@ -95,16 +132,29 @@ export default function UserDirectory({ users }: UserDirectoryProps) {
       {totalUsers === 0 ? (
         <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
           <p className="text-sm font-semibold text-slate-900">No staff accounts yet.</p>
-          <p className="mt-2 text-xs text-slate-500">Grant access through Firebase Auth or the Admin Console.</p>
+          <p className="mt-2 text-xs text-slate-500">Create a staff profile to grant access through Firebase Auth.</p>
+          <button
+            type="button"
+            onClick={openCreateModal}
+            className="mt-4 cursor-pointer rounded-full border border-slate-900 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-900 hover:bg-slate-900 hover:text-white"
+          >
+            Add user
+          </button>
         </div>
       ) : (
         <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-slate-400">User directory</p>
               <h3 className="text-lg font-semibold text-slate-900">Roles and access</h3>
             </div>
-            {/* <span className="text-xs text-slate-500">Click a row to inspect permissions</span> */}
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="cursor-pointer rounded-full border border-slate-900 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-900 hover:bg-slate-900 hover:text-white"
+            >
+              Add user
+            </button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-225px text-left text-sm text-slate-600">
@@ -116,6 +166,7 @@ export default function UserDirectory({ users }: UserDirectoryProps) {
                   <th className="px-3 py-3">Status</th>
                   <th className="px-3 py-3">Last active</th>
                   <th className="px-3 py-3">Permissions</th>
+                  <th className="px-3 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -157,6 +208,15 @@ export default function UserDirectory({ users }: UserDirectoryProps) {
                       </div>
                       <p className="mt-1 text-[11px] text-slate-400">Created {user.createdAt}</p>
                     </td>
+                    <td className="px-3 py-4">
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(user)}
+                        className="cursor-pointer rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                      >
+                        Edit
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -164,6 +224,15 @@ export default function UserDirectory({ users }: UserDirectoryProps) {
           </div>
         </div>
       )}
+
+      <UserModal
+        isOpen={isModalOpen}
+        mode={modalMode}
+        user={activeUser}
+        branches={branches}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSave}
+      />
     </div>
   );
 }

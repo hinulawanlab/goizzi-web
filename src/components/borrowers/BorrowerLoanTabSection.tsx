@@ -10,8 +10,10 @@ import type { LoanSummary } from "@/shared/types/loan";
 import type { BorrowerLoanTabKey } from "@/components/borrowers/borrowerLoanTypes";
 import type { ActionState } from "@/components/borrowers/borrowerApplicationTypes";
 import BorrowerLoanPaymentsTab from "@/components/borrowers/BorrowerLoanPaymentsTab";
+import LoanStatusActionModal from "@/components/borrowers/LoanStatusActionModal";
 import type { RepaymentScheduleEntry } from "@/shared/types/repaymentSchedule";
 import type { LoanNote } from "@/shared/types/loanNote";
+import { auth } from "@/shared/singletons/firebase";
 import {
   buildRepaymentSchedule,
   resolveMaturityDate,
@@ -137,6 +139,7 @@ function formatMaturityDate(value: string | null) {
 
 const EDITABLE_STATUSES = new Set(["approved", "draft"]);
 type AuditActionState = "idle" | "working" | "success" | "error";
+type StatusActionType = "close" | "cancel" | null;
 
 function isLoanEditable(status: string) {
   return EDITABLE_STATUSES.has(status);
@@ -172,6 +175,7 @@ export default function BorrowerLoanTabSection({
   const [auditActionStates, setAuditActionStates] = useState<Record<string, { state: AuditActionState; message: string }>>(
     {}
   );
+  const [statusActionType, setStatusActionType] = useState<StatusActionType>(null);
 
   useEffect(() => {
     const nextLocked = !isLoanEditable(loan.status);
@@ -316,9 +320,14 @@ export default function BorrowerLoanTabSection({
     setActionState("working");
     setActionMessage(workingMessage);
     try {
+      const token = await auth.currentUser?.getIdToken();
+      const headers = new Headers({ "Content-Type": "application/json" });
+      if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
       const response = await fetch(`/api/loans/${loan.loanId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(payload)
       });
 
@@ -373,6 +382,54 @@ export default function BorrowerLoanTabSection({
   const resolveStartDate = () => (startDateInput ? startDateInput : null);
 
   const isWorking = actionState === "working";
+  const resolvedPrincipal = resolvePrincipalAmount();
+  const resolvedTermMonths = resolveTermMonths();
+  const resolvedInterestRate = resolveInterestRate();
+  const resolvedPaymentFrequency = resolvePaymentFrequency();
+  const resolvedStartDate = resolveStartDate();
+  const hasMaturityDate = maturityDate !== "N/A" && maturityDate !== "";
+  const isProceedReady =
+    Boolean(resolvedPrincipal) &&
+    Boolean(resolvedTermMonths) &&
+    resolvedInterestRate !== null &&
+    Boolean(resolvedPaymentFrequency) &&
+    Boolean(resolvedStartDate) &&
+    hasMaturityDate;
+
+  const handleStatusAction = (type: StatusActionType, reason: string) => {
+    if (!type) {
+      return;
+    }
+    if (type === "close") {
+      void patchLoan(
+        {
+          action: "close",
+          reason,
+          borrowerId: borrower.borrowerId,
+          applicationId: loan.applicationId
+        },
+        "Closing loan early...",
+        "Loan marked as closed.",
+        () => setStatusActionType(null)
+      );
+      return;
+    }
+    void patchLoan(
+      {
+        action: "cancel",
+        reason,
+        borrowerId: borrower.borrowerId,
+        applicationId: loan.applicationId
+      },
+      "Canceling loan...",
+      "Loan cancelled.",
+      () => {
+        setStatusActionType(null);
+        setIsEditable(false);
+        setIsLocked(true);
+      }
+    );
+  };
 
   if (activeTab === "payments") {
     return <BorrowerLoanPaymentsTab loanId={loan.loanId} scheduleEntries={repaymentSchedule} />;
@@ -788,19 +845,7 @@ export default function BorrowerLoanTabSection({
           <button
             type="button"
             onClick={() => {
-              void patchLoan(
-                {
-                  action: "cancel",
-                  borrowerId: borrower.borrowerId,
-                  applicationId: loan.applicationId
-                },
-                "Canceling loan...",
-                "Loan cancelled.",
-                () => {
-                  setIsEditable(false);
-                  setIsLocked(true);
-                }
-              );
+              setStatusActionType("cancel");
             }}
             disabled={isWorking}
             className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
@@ -834,12 +879,6 @@ export default function BorrowerLoanTabSection({
               <button
                 type="button"
                 onClick={() => {
-                  const resolvedPrincipal = resolvePrincipalAmount();
-                  const resolvedTermMonths = resolveTermMonths();
-                  const resolvedInterestRate = resolveInterestRate();
-                  const resolvedPaymentFrequency = resolvePaymentFrequency();
-                  const resolvedStartDate = resolveStartDate();
-
                   if (
                     !resolvedPrincipal ||
                     !resolvedTermMonths ||
@@ -869,9 +908,9 @@ export default function BorrowerLoanTabSection({
                     }
                   );
                 }}
-                disabled={isLocked || isWorking}
+                disabled={isLocked || isWorking || !isProceedReady}
                 className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-                  isLocked || isWorking
+                  isLocked || isWorking || !isProceedReady
                     ? "cursor-not-allowed border-slate-200 text-slate-300"
                     : "border-slate-900 bg-slate-900 text-white hover:border-slate-700 hover:bg-slate-800"
                 }`}
@@ -942,6 +981,40 @@ export default function BorrowerLoanTabSection({
           )}
         </div>
       )}
+
+      {isLocked && loan.status === "active" && (
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setStatusActionType("close")}
+            disabled={isWorking}
+            className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+              isWorking
+                ? "cursor-not-allowed border-slate-200 text-slate-300"
+                : "border-slate-900 bg-slate-900 text-white hover:border-slate-700 hover:bg-slate-800"
+            }`}
+          >
+            Mark as completed
+          </button>
+        </div>
+      )}
+
+      <LoanStatusActionModal
+        key={statusActionType ?? "status-action-idle"}
+        isOpen={statusActionType !== null}
+        title={statusActionType === "close" ? "Complete loan" : "Cancel loan"}
+        description={
+          statusActionType === "close"
+            ? "Confirm early loan completion"
+            : "Confirm loan cancellation"
+        }
+        confirmLabel={statusActionType === "close" ? "Mark as completed" : "Cancel loan"}
+        reasonLabel="Reason for this change"
+        actionState={actionState}
+        actionMessage={actionMessage}
+        onClose={() => setStatusActionType(null)}
+        onConfirm={(reason) => handleStatusAction(statusActionType, reason)}
+      />
 
       {actionState === "working" && (
         <div className="mt-4 flex items-center gap-2 text-sm text-slate-500">

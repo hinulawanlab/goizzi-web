@@ -414,10 +414,11 @@ Versioned rules so older loans keep their original terms.
 
 ### `/users/{userId}`
 **Fields**
+- `userId: string`
 - `displayName: string`
-- `role: string` (`admin|team|manager|auditor`)
+- `role: string` (`admin|team lead|team member|auditor`)
 - `branchId: string?`
-- `status: string` (`active|inactive`)
+- `status: string` (`active|inactive|suspend`)
 - `createdAt: timestamp`
 
 ---

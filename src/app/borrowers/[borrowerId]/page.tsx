@@ -1,3 +1,5 @@
+// src/app/borrowers/[borrowerId]/page.tsx
+
 import { notFound } from "next/navigation";
 
 import Sidebar from "@/components/navigation/Sidebar";
@@ -104,10 +106,10 @@ export default async function BorrowerProfilePage({ params }: BorrowerProfilePag
             </div>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-700">
-                Location tab shows every observation tied to precise lat/lng, accuracy, and source so teams can verify the actual point before approving KYC.
+                Application tabs capture borrower-submitted requests and when they move into review, keeping a clear submission trail.
               </div>
               <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-700">
-                Map uses OpenStreetMap for an inline, read-only view that links out to the full map when needed.
+                Goizzi follow-up actions show up in Approved, Active, and Completed so teams can track decisions and outcomes.
               </div>
             </div>
           </section>

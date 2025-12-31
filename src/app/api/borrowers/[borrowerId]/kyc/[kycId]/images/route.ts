@@ -57,7 +57,7 @@ async function isStaffUid(uid: string): Promise<boolean> {
     return false;
   }
   const data = doc.data() as { status?: string; role?: string } | undefined;
-  return data?.status === "active" && ["admin", "manager", "team", "auditor"].includes(data?.role ?? "");
+  return data?.status === "active" && ["admin", "team lead", "team member", "auditor"].includes(data?.role ?? "");
 }
 
 export async function GET(request: Request, context: { params: Promise<{ borrowerId: string; kycId: string }> }) {

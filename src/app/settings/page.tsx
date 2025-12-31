@@ -106,49 +106,6 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          <section className="grid gap-6 lg:grid-cols-2">
-            <article className="rounded-3xl border border-slate-100 bg-white p-8 shadow-sm">
-              <div className="flex items-center gap-2 text-slate-900">
-                <ShieldCheck className="h-5 w-5 text-slate-500" aria-hidden />
-                <h2 className="text-lg font-semibold">Access &amp; security</h2>
-              </div>
-              <p className="mt-2 text-sm text-slate-600">
-                Guard the admin surface with polite defaults: role-based views, offline safeties, and clear error mapping.
-              </p>
-              <div className="mt-6 space-y-4">
-                {policyItems.map(({ icon: Icon, title, description }) => (
-                  <div key={title} className="flex gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-slate-500">
-                      <Icon className="h-5 w-5" aria-hidden />
-                    </span>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">{title}</p>
-                      <p className="text-sm text-slate-600">{description}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </article>
-
-            <article className="space-y-6 rounded-3xl border border-slate-100 bg-white p-8 shadow-sm">
-              <div className="flex items-center gap-2 text-slate-900">
-                <Activity className="h-5 w-5 text-slate-500" aria-hidden />
-                <h2 className="text-lg font-semibold">Operational guardrails</h2>
-              </div>
-              <p className="text-sm text-slate-600">
-                The Goizzi contract shines here: actions never skip the Idle/Working/Success/Failure flow and offline
-                detection keeps finance writes paused until connectivity returns.
-              </p>
-              <ul className="space-y-3">
-                {complianceNotes.map((note) => (
-                  <li key={note} className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4 text-sm text-slate-700">
-                    {note}
-                  </li>
-                ))}
-              </ul>
-            </article>
-          </section>
-
           <section className="flex flex-col gap-5 rounded-3xl border border-slate-100 bg-white p-8 shadow-lg lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.6em] text-slate-400">Session controls</p>

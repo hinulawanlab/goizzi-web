@@ -1,4 +1,8 @@
+import { Timestamp } from "firebase-admin/firestore";
+
 import { db } from "@/shared/singletons/firebaseAdmin";
+import { buildLoanNoteData } from "@/shared/services/loanNoteUtils";
+import { resolveActorName } from "@/shared/services/actorNameResolver";
 import {
   buildRepaymentSchedule,
   resolveMaturityDate,
@@ -13,12 +17,25 @@ interface LoanUpdateInput {
   paymentFrequency?: number;
   startDate?: string;
   status?: string;
+  action?: "update" | "proceed";
 }
 
 interface LoanCancelInput {
   loanId: string;
   borrowerId?: string;
   applicationId?: string;
+  reason?: string;
+  actorUserId?: string;
+  actorName?: string;
+}
+
+interface LoanCloseInput {
+  loanId: string;
+  reason: string;
+  borrowerId?: string;
+  applicationId?: string;
+  actorUserId?: string;
+  actorName?: string;
 }
 
 function formatDateValue(value: unknown): string | null {
@@ -56,6 +73,44 @@ function toNumber(value: unknown): number | undefined {
   return undefined;
 }
 
+function toTimestamp(value: unknown): Timestamp | null {
+  if (!value) {
+    return null;
+  }
+  if (value instanceof Timestamp) {
+    return value;
+  }
+  if (value instanceof Date) {
+    return Timestamp.fromDate(value);
+  }
+  if (typeof value === "string") {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : Timestamp.fromDate(parsed);
+  }
+  if (typeof (value as { toDate?: () => Date }).toDate === "function") {
+    const date = (value as { toDate?: () => Date }).toDate?.();
+    return date ? Timestamp.fromDate(date) : null;
+  }
+  const toMillisFn = (value as { toMillis?: () => number }).toMillis;
+  if (typeof toMillisFn === "function") {
+    return Timestamp.fromMillis(toMillisFn());
+  }
+  const seconds = (value as { _seconds?: number })._seconds;
+  const nanos = (value as { _nanoseconds?: number })._nanoseconds;
+  if (typeof seconds === "number") {
+    return new Timestamp(seconds, typeof nanos === "number" ? nanos : 0);
+  }
+  return null;
+}
+
+function dateStringToTimestamp(value?: string | null): Timestamp | null {
+  if (!value) {
+    return null;
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : Timestamp.fromDate(parsed);
+}
+
 function resolveExpectedPaymentAmount(
   principalAmount: number,
   termMonths: number,
@@ -78,7 +133,7 @@ export async function updateLoanDetails(input: LoanUpdateInput) {
     throw new Error("Loan id is missing.");
   }
 
-  const updatedAt = new Date().toISOString();
+  const updatedAt = Timestamp.now();
   const payload: Record<string, unknown> = { updatedAt };
   const loanRef = db.collection("loans").doc(input.loanId);
   let existingLoanData: Record<string, unknown> | null = null;
@@ -100,7 +155,7 @@ export async function updateLoanDetails(input: LoanUpdateInput) {
   }
 
   if (typeof input.startDate === "string") {
-    payload.startDate = input.startDate;
+    payload.startDate = dateStringToTimestamp(input.startDate);
   }
 
   if (typeof input.status === "string") {
@@ -138,11 +193,26 @@ export async function updateLoanDetails(input: LoanUpdateInput) {
     const maturityDate = resolveMaturityDate(resolvedStartDate, resolvedTermMonths);
     const nextDueDate = resolveNextDueDate(schedule);
 
-    if (maturityDate) {
-      payload.maturityDate = maturityDate;
+    const maturityTimestamp = dateStringToTimestamp(maturityDate);
+    const nextDueTimestamp = dateStringToTimestamp(nextDueDate);
+    if (maturityTimestamp) {
+      payload.maturityDate = maturityTimestamp;
     }
-    if (nextDueDate) {
-      payload.nextDueDate = nextDueDate;
+    if (nextDueTimestamp) {
+      payload.nextDueDate = nextDueTimestamp;
+    }
+  }
+
+  if (input.action === "proceed") {
+    const createdAt = toTimestamp(existingLoanData?.createdAt) ?? updatedAt;
+    const approvedAt = toTimestamp(existingLoanData?.approvedAt) ?? updatedAt;
+    const startTimestamp = dateStringToTimestamp(resolvedStartDate) ?? toTimestamp(existingLoanData?.startDate);
+
+    payload.isActive = true;
+    payload.createdAt = createdAt;
+    payload.approvedAt = approvedAt;
+    if (startTimestamp) {
+      payload.startDate = startTimestamp;
     }
   }
 
@@ -175,7 +245,7 @@ export async function updateLoanDetails(input: LoanUpdateInput) {
 
   await batch.commit();
 
-  return { updatedAt };
+  return { updatedAt: updatedAt.toDate().toISOString() };
 }
 
 export async function cancelLoanAndApplication(input: LoanCancelInput) {
@@ -185,12 +255,16 @@ export async function cancelLoanAndApplication(input: LoanCancelInput) {
   if (!input.loanId) {
     throw new Error("Loan id is missing.");
   }
+  if (!input.reason?.trim()) {
+    throw new Error("Reason is required.");
+  }
 
-  const updatedAt = new Date().toISOString();
+  const updatedAt = Timestamp.now();
   const batch = db.batch();
   const loanRef = db.collection("loans").doc(input.loanId);
   let borrowerId = input.borrowerId;
   let applicationId = input.applicationId;
+  let actorName = input.actorName;
 
   if (!borrowerId || !applicationId) {
     const loanDoc = await loanRef.get();
@@ -230,7 +304,94 @@ export async function cancelLoanAndApplication(input: LoanCancelInput) {
     );
   }
 
+  actorName = await resolveActorName(input.actorUserId, actorName);
+  const noteRef = loanRef.collection("notes").doc();
+  const noteData = buildLoanNoteData({
+    noteId: noteRef.id,
+    loanId: input.loanId,
+    borrowerId,
+    applicationId,
+    type: "loanNotes",
+    note: `Loan cancelled: ${input.reason.trim()}`,
+    createdAt: updatedAt.toDate().toISOString(),
+    createdByName: actorName,
+    createdByUserId: input.actorUserId
+  });
+  batch.set(noteRef, { ...noteData, createdAt: updatedAt });
+
   await batch.commit();
 
-  return { updatedAt };
+  return { updatedAt: updatedAt.toDate().toISOString() };
+}
+
+export async function closeLoanEarly(input: LoanCloseInput) {
+  if (!db) {
+    throw new Error("Firestore Admin client is not initialized.");
+  }
+  if (!input.loanId) {
+    throw new Error("Loan id is missing.");
+  }
+  if (!input.reason?.trim()) {
+    throw new Error("Reason is required.");
+  }
+
+  const updatedAt = Timestamp.now();
+  const loanRef = db.collection("loans").doc(input.loanId);
+  const loanDoc = await loanRef.get();
+  if (!loanDoc.exists) {
+    throw new Error("Loan record not found.");
+  }
+
+  const loanData = loanDoc.data() || {};
+  if (loanData.status !== "active") {
+    throw new Error("Only active loans can be closed early.");
+  }
+  const borrowerId =
+    input.borrowerId ?? (typeof loanData.borrowerId === "string" ? loanData.borrowerId : undefined);
+  const applicationId =
+    input.applicationId ?? (typeof loanData.applicationId === "string" ? loanData.applicationId : undefined);
+  const actorName = await resolveActorName(input.actorUserId, input.actorName);
+
+  const noteRef = loanRef.collection("notes").doc();
+  const noteData = buildLoanNoteData({
+    noteId: noteRef.id,
+    loanId: input.loanId,
+    borrowerId,
+    applicationId,
+    type: "loanNotes",
+    note: `Loan closed early: ${input.reason.trim()}`,
+    createdAt: updatedAt.toDate().toISOString(),
+    createdByName: actorName,
+    createdByUserId: input.actorUserId
+  });
+
+  const batch = db.batch();
+  batch.set(
+    loanRef,
+    {
+      status: "closed",
+      isActive: false,
+      updatedAt
+    },
+    { merge: true }
+  );
+  batch.set(noteRef, { ...noteData, createdAt: updatedAt });
+  if (borrowerId && applicationId) {
+    const applicationRef = db
+      .collection("borrowers")
+      .doc(borrowerId)
+      .collection("application")
+      .doc(applicationId);
+    batch.set(
+      applicationRef,
+      {
+        status: "closed",
+        updatedAt
+      },
+      { merge: true }
+    );
+  }
+  await batch.commit();
+
+  return { updatedAt: updatedAt.toDate().toISOString() };
 }

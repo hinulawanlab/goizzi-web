@@ -1,5 +1,6 @@
 "use client";
 
+import { FileText, ReceiptText } from "lucide-react";
 import type { LoanSummary } from "@/shared/types/loan";
 
 interface BorrowerLoansTableProps {
@@ -7,21 +8,6 @@ interface BorrowerLoansTableProps {
   loans: LoanSummary[];
   emptyTitle: string;
   emptySubtitle: string;
-}
-
-function formatDate(value?: string) {
-  if (!value || value === "N/A") {
-    return "N/A";
-  }
-  const parsed = Date.parse(value);
-  if (Number.isNaN(parsed)) {
-    return value;
-  }
-  return new Date(parsed).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric"
-  });
 }
 
 function formatAmount(value?: number, currency?: string) {
@@ -64,6 +50,11 @@ export default function BorrowerLoansTable({ borrowerId, loans, emptyTitle, empt
     window.open(href, "_blank", "noopener,noreferrer");
   };
 
+  const handleOpenApplication = (applicationId: string) => {
+    const href = `/borrowers/${borrowerId}/application/${applicationId}`;
+    window.open(href, "_blank", "noopener,noreferrer");
+  };
+
   if (!loans.length) {
     return (
       <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
@@ -84,38 +75,69 @@ export default function BorrowerLoansTable({ borrowerId, loans, emptyTitle, empt
               <th className="px-3 py-3">Status</th>
               <th className="px-3 py-3">Principal</th>
               <th className="px-3 py-3">Outstanding</th>
-              <th className="px-3 py-3">Next due</th>
-              <th className="px-3 py-3">Last payment</th>
+              <th className="px-3 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {loans.map((loan, index) => (
-              <tr
-                key={loan.loanId}
-                onClick={() => handleOpen(loan.loanId)}
-                className={`cursor-pointer transition ${index % 2 === 0 ? "bg-white" : "bg-slate-50"} hover:bg-slate-100`}
-              >
-                <td className="px-3 py-4">
-                  <strong className="block text-sm text-slate-900">{loan.loanId}</strong>
-                </td>
-                <td className="px-3 py-4 text-slate-700">{loan.productName ?? loan.productId ?? "Loan product"}</td>
-                <td className="px-3 py-4">
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${getStatusClass(
-                      loan.status
-                    )}`}
-                  >
-                    {loan.status}
-                  </span>
-                </td>
-                <td className="px-3 py-4 text-slate-700">{formatAmount(loan.principalAmount, loan.currency)}</td>
-                <td className="px-3 py-4 text-slate-700">
-                  {formatAmount(loan.totalOutstandingAmount, loan.currency)}
-                </td>
-                <td className="px-3 py-4 text-slate-700">{formatDate(loan.nextDueDate)}</td>
-                <td className="px-3 py-4 text-slate-700">{formatDate(loan.lastPaymentAt)}</td>
-              </tr>
-            ))}
+            {loans.map((loan, index) => {
+              const applicationId = loan.applicationId;
+              return (
+                <tr
+                  key={loan.loanId}
+                  className={`transition ${index % 2 === 0 ? "bg-white" : "bg-slate-50"}`}
+                >
+                  <td className="px-3 py-4">
+                    <strong className="block text-sm text-slate-900">{loan.loanId}</strong>
+                  </td>
+                  <td className="px-3 py-4 text-slate-700">{loan.productName ?? loan.productId ?? "Loan product"}</td>
+                  <td className="px-3 py-4">
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${getStatusClass(
+                        loan.status
+                      )}`}
+                    >
+                      {loan.status}
+                    </span>
+                  </td>
+                  <td className="px-3 py-4 text-slate-700">{formatAmount(loan.principalAmount, loan.currency)}</td>
+                  <td className="px-3 py-4 text-slate-700">
+                    {formatAmount(loan.totalOutstandingAmount, loan.currency)}
+                  </td>
+                  <td className="px-3 py-4">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleOpen(loan.loanId)}
+                        title="Open loan"
+                        aria-label="Open loan"
+                        className="cursor-pointer rounded-full border border-slate-200 bg-white p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1877f2]"
+                      >
+                        <ReceiptText className="h-4 w-4" aria-hidden />
+                      </button>
+                      {applicationId ? (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenApplication(applicationId)}
+                          title="Open application"
+                          aria-label="Open application"
+                          className="cursor-pointer rounded-full border border-slate-200 bg-white p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1877f2]"
+                        >
+                          <FileText className="h-4 w-4" aria-hidden />
+                        </button>
+                      ) : (
+                        <span
+                          className="cursor-not-allowed rounded-full border border-dashed border-slate-200 bg-white p-2 text-slate-300"
+                          title="No application linked"
+                          aria-hidden
+                        >
+                          <FileText className="h-4 w-4" aria-hidden />
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

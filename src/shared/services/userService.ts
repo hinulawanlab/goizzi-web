@@ -13,12 +13,22 @@ function normalizeDisplayName(value: unknown): string | undefined {
 }
 
 function normalizeRole(role: unknown): UserRole {
-  const validRoles: UserRole[] = ["admin", "team", "manager", "auditor"];
-  return typeof role === "string" && validRoles.includes(role as UserRole) ? (role as UserRole) : "team";
+  if (role === "manager") {
+    return "team lead";
+  }
+  if (role === "team") {
+    return "team member";
+  }
+
+  const validRoles: UserRole[] = ["admin", "team lead", "team member", "auditor"];
+  return typeof role === "string" && validRoles.includes(role as UserRole) ? (role as UserRole) : "team member";
 }
 
 function normalizeStatus(status: unknown): UserStatus {
-  return status === "inactive" ? "inactive" : "active";
+  if (status === "inactive" || status === "suspend") {
+    return status;
+  }
+  return "active";
 }
 
 function formatDate(value: unknown): string {

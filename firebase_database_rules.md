@@ -27,7 +27,7 @@ service cloud.firestore {
         || (request.auth != null
           && exists(/databases/$(database)/documents/users/$(request.auth.uid))
           && userDoc().data.status == "active"
-          && userDoc().data.role in ["admin", "manager", "team", "auditor"]);
+          && userDoc().data.role in ["admin", "team lead", "team member", "auditor"]);
     }
 
     function borrowerAccountDoc() {
@@ -190,5 +190,5 @@ service cloud.firestore {
 
 <!-- firebase_database_rules.md -->
 <!-- Versioning -->
-version: v1.6
+version: v2.1
 lastUpdate: 2025-12-31

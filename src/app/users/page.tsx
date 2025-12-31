@@ -3,10 +3,12 @@ import Sidebar from "@/components/navigation/Sidebar";
 import QueueSection from "@/components/dashboard/QueueSection";
 import UserDirectory from "@/components/users/UserDirectory";
 import { demoDashboardData } from "@/shared/data/demoDashboard";
+import { getBranchSummaries } from "@/shared/services/branchService";
 import { getUserSummaries } from "@/shared/services/userService";
 
 export default async function UsersPage() {
   const users = await getUserSummaries(40);
+  const branches = await getBranchSummaries(60);
   const kycQueue = demoDashboardData.queue.filter((item) => item.tag.startsWith("KYC"));
   const locationQueue = demoDashboardData.queue.filter((item) => item.tag.includes("Location"));
 
@@ -32,7 +34,7 @@ export default async function UsersPage() {
             </div>
           </section> */}
 
-          <UserDirectory users={users} />
+          <UserDirectory users={users} branches={branches} />
 
           {/* <section className="grid gap-5 lg:grid-cols-2">
             <QueueSection title="Governance queues" items={kycQueue} />

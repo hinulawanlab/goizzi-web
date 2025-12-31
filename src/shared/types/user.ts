@@ -1,5 +1,5 @@
-export type UserRole = "admin" | "team" | "manager" | "auditor";
-export type UserStatus = "active" | "inactive";
+export type UserRole = "admin" | "team lead" | "team member" | "auditor";
+export type UserStatus = "active" | "inactive" | "suspend";
 
 export interface UserSummary {
   userId: string;

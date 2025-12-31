@@ -1,6 +1,7 @@
 // src/components/borrowers/BorrowerApplicationsTable.tsx
 "use client";
 
+import { FileText } from "lucide-react";
 import LoanStatusBadge from "@/components/borrowers/LoanStatusBadge";
 import type { LoanApplication } from "@/shared/types/loanApplication";
 
@@ -64,14 +65,14 @@ export default function BorrowerApplicationsTable({
               <th className="px-3 py-3">Amount</th>
               <th className="px-3 py-3">Status</th>
               <th className="px-3 py-3">Date</th>
+              <th className="px-3 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {applications.map((application, index) => (
               <tr
                 key={application.applicationId}
-                onClick={() => handleOpen(application.applicationId)}
-                className={`cursor-pointer transition ${index % 2 === 0 ? "bg-white" : "bg-slate-50"} hover:bg-slate-100`}
+                className={`transition ${index % 2 === 0 ? "bg-white" : "bg-slate-50"}`}
               >
                 <td className="px-3 py-4">
                   <strong className="block text-sm text-slate-900">{application.applicationId}</strong>
@@ -88,6 +89,19 @@ export default function BorrowerApplicationsTable({
                 </td>
                 <td className="px-3 py-4 text-slate-700">
                   {formatDate(application.submittedAt ?? application.createdAt)}
+                </td>
+                <td className="px-3 py-4">
+                  <div className="flex items-center justify-end">
+                    <button
+                      type="button"
+                      onClick={() => handleOpen(application.applicationId)}
+                      title="Open application"
+                      aria-label="Open application"
+                      className="cursor-pointer rounded-full border border-slate-200 bg-white p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1877f2]"
+                    >
+                      <FileText className="h-4 w-4" aria-hidden />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
