@@ -1,13 +1,13 @@
 "use client";
 
-import { useTransition, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useTransition, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import BorrowerLoanHeaderSection from "@/components/borrowers/BorrowerLoanHeaderSection";
 import BorrowerLoanNotesActions from "@/components/borrowers/BorrowerLoanNotesActions";
 import BorrowerLoanTabSection from "@/components/borrowers/BorrowerLoanTabSection";
 import { useBorrowerLoanActions } from "@/components/borrowers/useBorrowerLoanActions";
-import type { BorrowerLoanTabKey } from "@/components/borrowers/borrowerLoanTypes";
+import { isBorrowerLoanTabKey, type BorrowerLoanTabKey } from "@/components/borrowers/borrowerLoanTypes";
 import type { BorrowerSummary } from "@/shared/types/dashboard";
 import type { LoanSummary } from "@/shared/types/loan";
 import type { RepaymentScheduleEntry } from "@/shared/types/repaymentSchedule";
@@ -28,7 +28,12 @@ export default function BorrowerLoanTabs({
   loanNotes,
   loanNotesError
 }: BorrowerLoanTabsProps) {
-  const [activeTab, setActiveTab] = useState<BorrowerLoanTabKey>("details");
+  const searchParams = useSearchParams();
+  const resolvedTab = useMemo(() => {
+    const paramTab = searchParams.get("tab");
+    return isBorrowerLoanTabKey(paramTab) ? paramTab : "details";
+  }, [searchParams]);
+  const [activeTab, setActiveTab] = useState<BorrowerLoanTabKey>(resolvedTab);
   const [isRefreshing, startRefreshing] = useTransition();
   const router = useRouter();
   const {
@@ -52,6 +57,10 @@ export default function BorrowerLoanTabs({
       router.refresh();
     });
   };
+
+  useEffect(() => {
+    setActiveTab(resolvedTab);
+  }, [resolvedTab]);
 
   return (
     <div className="relative flex flex-col gap-6 lg:min-h-[calc(100vh-4rem)] lg:pl-72 lg:pr-6">

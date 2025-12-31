@@ -45,8 +45,6 @@ export default function BorrowerProfileTabs({
   applications,
   loans
 }: BorrowerProfileTabsProps) {
-  const [activeTab, setActiveTab] = useState<TabKey>("location");
-
   const submittedApplications = useMemo(
     () =>
       applications.filter((application) => {
@@ -105,6 +103,29 @@ export default function BorrowerProfileTabs({
       submittedApplications.length
     ]
   );
+
+  const defaultTab = useMemo<TabKey>(() => {
+    if (activeLoans.length > 0) {
+      return "active";
+    }
+    if (approvedLoans.length > 0) {
+      return "approved";
+    }
+    if (reviewedApplications.length > 0) {
+      return "reviewed";
+    }
+    if (submittedApplications.length > 0) {
+      return "submitted";
+    }
+    return "location";
+  }, [
+    activeLoans.length,
+    approvedLoans.length,
+    reviewedApplications.length,
+    submittedApplications.length
+  ]);
+
+  const [activeTab, setActiveTab] = useState<TabKey>(() => defaultTab);
 
   return (
     <section className="rounded-3xl border border-slate-100 bg-white p-8 shadow-lg">

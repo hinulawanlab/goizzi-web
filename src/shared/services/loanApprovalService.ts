@@ -89,7 +89,7 @@ export async function approveBorrowerApplicationToLoan(input: LoanApprovalInput)
   const createdAtIso = createdAt.toDate().toISOString();
   const noteText = sanitizeNote("Status set to approved.");
   const borrowerNoteText = sanitizeNote(
-    "Congratulations, your loan has been approved. Visit Goizzi for releasing anytime between 9:00AM to 4:00PM"
+    "Congratulations, your loan has been approved! Pa abot lang sa tawag sa Goizzi para sa schedule sa imung release. Salamat!"
   );
 
   const noteRef = borrowerRef.collection("notes").doc();

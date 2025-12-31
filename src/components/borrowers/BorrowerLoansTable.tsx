@@ -47,7 +47,7 @@ function getStatusClass(status: string) {
 
 export default function BorrowerLoansTable({ borrowerId, loans, emptyTitle, emptySubtitle }: BorrowerLoansTableProps) {
   const handleOpen = (loanId: string) => {
-    const href = `/borrowers/${borrowerId}/loan/${loanId}`;
+    const href = `/borrowers/${borrowerId}/loan/${loanId}?tab=payments`;
     window.open(href, "_blank", "noopener,noreferrer");
   };
 

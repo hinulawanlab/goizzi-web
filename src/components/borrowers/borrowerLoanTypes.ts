@@ -1,5 +1,6 @@
 // src/components/borrowers/borrowerLoanTypes.ts
-export type BorrowerLoanTabKey = "details" | "payments" | "statement" | "audit";
+export const borrowerLoanTabKeys = ["details", "payments", "statement", "audit"] as const;
+export type BorrowerLoanTabKey = (typeof borrowerLoanTabKeys)[number];
 
 export const borrowerLoanTabs: { key: BorrowerLoanTabKey; label: string }[] = [
   { key: "details", label: "Loan details" },
@@ -10,3 +11,10 @@ export const borrowerLoanTabs: { key: BorrowerLoanTabKey; label: string }[] = [
 
 export const borrowerLoanActions = ["Print loan form"] as const;
 export type BorrowerLoanAction = (typeof borrowerLoanActions)[number];
+
+export function isBorrowerLoanTabKey(value?: string | null): value is BorrowerLoanTabKey {
+  if (!value) {
+    return false;
+  }
+  return borrowerLoanTabKeys.includes(value as BorrowerLoanTabKey);
+}
