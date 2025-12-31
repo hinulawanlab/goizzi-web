@@ -2,6 +2,7 @@ import Sidebar from "@/components/navigation/Sidebar";
 import QueueSection from "@/components/dashboard/QueueSection";
 import { getDashboardData } from "@/shared/services/dashboardService";
 import type { QueueRow } from "@/shared/types/dashboard";
+import { requireStaffSession } from "@/shared/services/sessionService";
 
 type QueueViewDefinition = {
   id: string;
@@ -57,6 +58,7 @@ const queueDefinitions: QueueViewDefinition[] = [
 ];
 
 export default async function QueuesPage() {
+  await requireStaffSession();
   const dashboardData = await getDashboardData();
   const heroStats = [
     {

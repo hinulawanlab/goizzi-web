@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 import { db } from "@/shared/singletons/firebaseAdmin";
+import { resolveStaffSessionFromRequest } from "@/shared/services/sessionService";
 
 interface PaymentPayload {
   action?: "apply" | "edit";
@@ -67,9 +68,14 @@ function formatTimestamp(value: unknown): string {
 }
 
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   context: { params: Promise<{ loanId: string; scheduleId: string }> }
 ) {
+  const session = await resolveStaffSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
   const { loanId, scheduleId } = await context.params;
   if (!loanId || !scheduleId) {
     return NextResponse.json({ error: "Missing loan or schedule id." }, { status: 400 });

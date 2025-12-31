@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 import { db } from "@/shared/singletons/firebaseAdmin";
+import { resolveStaffSessionFromRequest } from "@/shared/services/sessionService";
 
 interface CustomPaymentPayload {
   amountPaidAmount?: number;
@@ -32,7 +33,12 @@ function resolvePaidAt(value: unknown) {
   return new Date().toISOString().split("T")[0];
 }
 
-export async function POST(request: Request, context: { params: Promise<{ loanId: string }> }) {
+export async function POST(request: NextRequest, context: { params: Promise<{ loanId: string }> }) {
+  const session = await resolveStaffSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
   const { loanId } = await context.params;
   if (!loanId) {
     return NextResponse.json({ error: "Missing loan id." }, { status: 400 });

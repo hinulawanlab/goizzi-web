@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import BorrowerApplicationTabs from "@/components/borrowers/BorrowerApplicationTabs";
 import { getBorrowerSummaryById } from "@/shared/services/borrowerService";
+import { requireStaffSession } from "@/shared/services/sessionService";
 import { getBorrowerApplicationById } from "@/shared/services/applicationService";
 import { getBorrowerReferences } from "@/shared/services/borrowerReferenceService";
 import {
@@ -29,6 +30,8 @@ export default async function BorrowerApplicationPage({ params }: BorrowerApplic
   if (!borrowerId || !applicationId) {
     notFound();
   }
+
+  await requireStaffSession();
 
   const borrowerPromise = getBorrowerSummaryById(borrowerId);
   const applicationPromise = getBorrowerApplicationById(borrowerId, applicationId);

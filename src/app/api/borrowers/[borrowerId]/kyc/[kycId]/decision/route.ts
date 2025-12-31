@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { hasAdminCredentials } from "@/shared/singletons/firebaseAdmin";
 import { setBorrowerKycDecisionWithNote, type KycDecisionAction } from "@/shared/services/kycDecisionService";
+import { resolveStaffSessionFromRequest } from "@/shared/services/sessionService";
 
 interface DecisionPayload {
   applicationId?: string;
@@ -15,6 +16,11 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ borrowerId: string; kycId: string }> }
 ) {
+  const session = await resolveStaffSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
   if (!hasAdminCredentials()) {
     return NextResponse.json({ error: "Firebase Admin credentials are not configured." }, { status: 500 });
   }

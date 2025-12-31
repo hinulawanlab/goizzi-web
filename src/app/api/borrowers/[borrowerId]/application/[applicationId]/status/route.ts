@@ -5,6 +5,7 @@ import {
   type ApplicationStatusAction,
   setBorrowerApplicationStatusWithNote
 } from "@/shared/services/applicationAuditService";
+import { resolveStaffSessionFromRequest } from "@/shared/services/sessionService";
 
 interface StatusPayload {
   status?: ApplicationStatusAction;
@@ -18,6 +19,11 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ borrowerId: string; applicationId: string }> }
 ) {
+  const session = await resolveStaffSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
   if (!hasAdminCredentials()) {
     return NextResponse.json({ error: "Firebase Admin credentials are not configured." }, { status: 500 });
   }

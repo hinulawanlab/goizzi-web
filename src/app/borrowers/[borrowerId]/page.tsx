@@ -9,6 +9,7 @@ import BorrowerSelfieModal from "@/components/borrowers/BorrowerSelfieModal";
 import BorrowerProfileRefreshButton from "@/components/borrowers/BorrowerProfileRefreshButton";
 import BorrowerProfileRefreshListener from "@/components/borrowers/BorrowerProfileRefreshListener";
 import { getBorrowerSummaryById } from "@/shared/services/borrowerService";
+import { requireStaffSession } from "@/shared/services/sessionService";
 import { getLocationObservations } from "@/shared/services/locationService";
 import { getAppConfigConstants } from "@/shared/services/appConfigService";
 import { refreshBorrowerLocationSummary } from "@/shared/services/locationSummaryService";
@@ -27,6 +28,8 @@ export default async function BorrowerProfilePage({ params }: BorrowerProfilePag
   if (!borrowerId) {
     notFound();
   }
+
+  await requireStaffSession();
 
   const borrowerPromise = getBorrowerSummaryById(borrowerId);
   const observationsPromise = getLocationObservations(borrowerId, 30);

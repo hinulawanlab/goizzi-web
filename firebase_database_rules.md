@@ -190,5 +190,5 @@ service cloud.firestore {
 
 <!-- firebase_database_rules.md -->
 <!-- Versioning -->
-version: v2.8
+version: v2.9
 lastUpdate: 2025-12-31

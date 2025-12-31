@@ -8,6 +8,7 @@ import PrintOnLoad from "@/components/shared/PrintOnLoad";
 import { getBorrowerSummaryById } from "@/shared/services/borrowerService";
 import { getBorrowerApplicationById } from "@/shared/services/applicationService";
 import { getLoanById } from "@/shared/services/loanService";
+import { requireStaffSession } from "@/shared/services/sessionService";
 
 interface BorrowerLoanApplicationFormPageProps {
   params: Promise<{
@@ -21,6 +22,8 @@ export default async function BorrowerLoanApplicationFormPage({ params }: Borrow
   if (!borrowerId || !loanId) {
     notFound();
   }
+
+  await requireStaffSession();
 
   const borrowerPromise = getBorrowerSummaryById(borrowerId);
   const loanPromise = getLoanById(loanId);

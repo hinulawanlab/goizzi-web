@@ -4,3 +4,6 @@
 
 ## Date and time format
 - use firebase timestamp across the platform
+
+## Retrospective
+- 2025-12-31: prefer server-verified session cookies for staff-only access, and gate admin APIs with role checks.

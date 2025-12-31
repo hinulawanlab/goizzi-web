@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 import { auth, db, hasAdminCredentials, storageBucket } from "@/shared/singletons/firebaseAdmin";
+import { resolveStaffSessionFromRequest } from "@/shared/services/sessionService";
 
 interface KycDocData {
   storageRefs?: string[];
@@ -60,7 +61,7 @@ async function isStaffUid(uid: string): Promise<boolean> {
   return data?.status === "active" && ["admin", "team lead", "team member", "auditor"].includes(data?.role ?? "");
 }
 
-export async function GET(request: Request, context: { params: Promise<{ borrowerId: string; kycId: string }> }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ borrowerId: string; kycId: string }> }) {
   if (!hasAdminCredentials()) {
     return NextResponse.json({ error: "Firebase Admin credentials are not configured." }, { status: 500 });
   }
@@ -69,20 +70,23 @@ export async function GET(request: Request, context: { params: Promise<{ borrowe
   }
   const bucket = storageBucket;
 
-  const token = getAuthToken(request);
-  if (!token) {
-    return NextResponse.json({ error: "Missing authorization token." }, { status: 401 });
-  }
-
-  try {
-    const decoded = await auth.verifyIdToken(token);
-    const isStaff = await isStaffUid(decoded.uid);
-    if (!isStaff) {
-      return NextResponse.json({ error: "Not authorized to access KYC images." }, { status: 403 });
+  const session = await resolveStaffSessionFromRequest(request);
+  if (!session) {
+    const token = getAuthToken(request);
+    if (!token) {
+      return NextResponse.json({ error: "Missing authorization token." }, { status: 401 });
     }
-  } catch (error) {
-    console.warn("Unable to verify Firebase ID token.", error);
-    return NextResponse.json({ error: "Invalid authorization token." }, { status: 401 });
+
+    try {
+      const decoded = await auth.verifyIdToken(token);
+      const isStaff = await isStaffUid(decoded.uid);
+      if (!isStaff) {
+        return NextResponse.json({ error: "Not authorized to access KYC images." }, { status: 403 });
+      }
+    } catch (error) {
+      console.warn("Unable to verify Firebase ID token.", error);
+      return NextResponse.json({ error: "Invalid authorization token." }, { status: 401 });
+    }
   }
 
   const { borrowerId, kycId } = await context.params;

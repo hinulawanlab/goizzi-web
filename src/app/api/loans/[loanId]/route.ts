@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
-import { auth, db, hasAdminCredentials } from "@/shared/singletons/firebaseAdmin";
+import { db, hasAdminCredentials } from "@/shared/singletons/firebaseAdmin";
 import { cancelLoanAndApplication, closeLoanEarly, updateLoanDetails } from "@/shared/services/loanUpdateService";
+import { resolveStaffSessionFromRequest } from "@/shared/services/sessionService";
 
 interface LoanUpdatePayload {
   action?: "update" | "proceed" | "cancel" | "close";
@@ -13,30 +14,6 @@ interface LoanUpdatePayload {
   paymentFrequency?: number;
   startDate?: string;
   reason?: string;
-}
-
-function getAuthToken(request: Request): string | null {
-  const header = request.headers.get("Authorization");
-  if (!header) {
-    return null;
-  }
-  const [scheme, token] = header.split(" ");
-  if (scheme !== "Bearer" || !token) {
-    return null;
-  }
-  return token;
-}
-
-async function resolveActorUid(request: Request): Promise<string | null> {
-  if (!auth) {
-    return null;
-  }
-  const token = getAuthToken(request);
-  if (!token) {
-    return null;
-  }
-  const decoded = await auth.verifyIdToken(token);
-  return decoded.uid ?? null;
 }
 
 async function isAdminRole(uid: string): Promise<boolean> {
@@ -52,9 +29,14 @@ async function isAdminRole(uid: string): Promise<boolean> {
 }
 
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   context: { params: Promise<{ loanId: string }> }
 ) {
+  const session = await resolveStaffSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
   if (!hasAdminCredentials()) {
     return NextResponse.json({ error: "Firebase Admin credentials are not configured." }, { status: 500 });
   }
@@ -79,7 +61,7 @@ export async function PATCH(
       if (!reason) {
         return NextResponse.json({ error: "Reason is required." }, { status: 400 });
       }
-      const actorUserId = await resolveActorUid(request);
+      const actorUserId = session.uid;
       if (!actorUserId) {
         return NextResponse.json({ error: "Missing authorization token." }, { status: 401 });
       }
@@ -101,7 +83,7 @@ export async function PATCH(
       if (!reason) {
         return NextResponse.json({ error: "Reason is required." }, { status: 400 });
       }
-      const actorUserId = (await resolveActorUid(request)) ?? undefined;
+      const actorUserId = session.uid ?? undefined;
       const result = await cancelLoanAndApplication({
         loanId,
         borrowerId: payload.borrowerId,

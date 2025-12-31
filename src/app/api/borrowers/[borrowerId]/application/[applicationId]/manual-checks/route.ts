@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { hasAdminCredentials } from "@/shared/singletons/firebaseAdmin";
 import { setBorrowerApplicationManualChecks } from "@/shared/services/applicationManualChecklistService";
+import { resolveStaffSessionFromRequest } from "@/shared/services/sessionService";
 
 interface ManualChecksPayload {
   manualVerified?: string[];
@@ -12,6 +13,11 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ borrowerId: string; applicationId: string }> }
 ) {
+  const session = await resolveStaffSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
   if (!hasAdminCredentials()) {
     return NextResponse.json({ error: "Firebase Admin credentials are not configured." }, { status: 500 });
   }

@@ -5,8 +5,10 @@ import UserDirectory from "@/components/users/UserDirectory";
 import { demoDashboardData } from "@/shared/data/demoDashboard";
 import { getBranchSummaries } from "@/shared/services/branchService";
 import { getUserSummaries } from "@/shared/services/userService";
+import { requireStaffSession } from "@/shared/services/sessionService";
 
 export default async function UsersPage() {
+  await requireStaffSession();
   const users = await getUserSummaries(40);
   const branches = await getBranchSummaries(60);
   const kycQueue = demoDashboardData.queue.filter((item) => item.tag.startsWith("KYC"));

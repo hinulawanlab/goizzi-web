@@ -5,7 +5,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 
 import { auth } from "@/shared/singletons/firebase";
 
@@ -28,7 +28,20 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const credential = await signInWithEmailAndPassword(auth, email, password);
+      const idToken = await credential.user.getIdToken();
+      const sessionResponse = await fetch("/api/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken })
+      });
+
+      if (!sessionResponse.ok) {
+        await signOut(auth);
+        setError("Access denied. Your account is not authorized for Goizzi CMS.");
+        return;
+      }
+
       setMessage("Authenticated, redirecting...");
       router.push("/borrowers");
     } catch (err) {

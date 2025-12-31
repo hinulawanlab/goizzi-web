@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import BorrowerLoanTabs from "@/components/borrowers/BorrowerLoanTabs";
 import { getBorrowerSummaryById } from "@/shared/services/borrowerService";
+import { requireStaffSession } from "@/shared/services/sessionService";
 import { getLoanById } from "@/shared/services/loanService";
 import { getLoanRepaymentSchedule } from "@/shared/services/loanRepaymentScheduleService";
 import { getLoanNotesByLoanId } from "@/shared/services/loanNoteService";
@@ -19,6 +20,8 @@ export default async function BorrowerLoanPage({ params }: BorrowerLoanPageProps
   if (!borrowerId || !loanId) {
     notFound();
   }
+
+  await requireStaffSession();
 
   const borrowerPromise = getBorrowerSummaryById(borrowerId);
   const loanPromise = getLoanById(loanId);

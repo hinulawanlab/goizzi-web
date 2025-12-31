@@ -43,6 +43,7 @@ export default function Sidebar() {
     setIsSigningOut(true);
 
     try {
+      await fetch("/api/session", { method: "DELETE" });
       await signOut(auth);
       router.push("/login");
     } catch (err) {

@@ -2,12 +2,18 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { hasAdminCredentials } from "@/shared/singletons/firebaseAdmin";
 import { setBorrowerKycMissingCount } from "@/shared/services/borrowerKycMissingService";
+import { resolveStaffSessionFromRequest } from "@/shared/services/sessionService";
 
 interface KycMissingPayload {
   kycMissingCount?: number;
 }
 
 export async function POST(request: NextRequest, context: { params: Promise<{ borrowerId: string }> }) {
+  const session = await resolveStaffSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
   if (!hasAdminCredentials()) {
     return NextResponse.json({ error: "Firebase Admin credentials are not configured." }, { status: 500 });
   }

@@ -2,8 +2,10 @@ import Sidebar from "@/components/navigation/Sidebar";
 import BorrowerDirectory from "@/components/borrowers/BorrowerDirectory";
 import BorrowerFollowUpGateModal from "@/components/borrowers/BorrowerFollowUpGateModal";
 import { getBorrowerFollowUps, getBorrowerSummaries } from "@/shared/services/borrowerService";
+import { requireStaffSession } from "@/shared/services/sessionService";
 
 export default async function BorrowersPage() {
+  await requireStaffSession();
   const borrowers = await getBorrowerSummaries(30);
   const followUps = await getBorrowerFollowUps(50);
 

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { Timestamp } from "firebase-admin/firestore";
 
 import { auth, db, hasAdminCredentials } from "@/shared/singletons/firebaseAdmin";
+import { resolveStaffSessionFromRequest } from "@/shared/services/sessionService";
 import type { UserRole, UserStatus, UserSummary } from "@/shared/types/user";
 
 const validRoles: UserRole[] = ["admin", "team lead", "team member", "auditor"];
@@ -51,6 +52,14 @@ function buildUserSummary(userId: string, data: Record<string, unknown>): UserSu
 }
 
 export async function PATCH(request: NextRequest, context: { params: Promise<{ userId: string }> }) {
+  const session = await resolveStaffSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  if (session.role !== "admin") {
+    return NextResponse.json({ error: "Admin access required." }, { status: 403 });
+  }
+
   if (!hasAdminCredentials()) {
     return NextResponse.json({ error: "Firebase Admin credentials are not configured." }, { status: 500 });
   }

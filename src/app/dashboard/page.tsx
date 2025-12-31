@@ -3,8 +3,10 @@ import KpiCard from "@/components/dashboard/KpiCard";
 import BorrowerTable from "@/components/dashboard/BorrowerTable";
 import QueueSection from "@/components/dashboard/QueueSection";
 import { getDashboardData } from "@/shared/services/dashboardService";
+import { requireStaffSession } from "@/shared/services/sessionService";
 
 export default async function DashboardPage() {
+  await requireStaffSession();
   const dashboardData = await getDashboardData();
 
   return (
