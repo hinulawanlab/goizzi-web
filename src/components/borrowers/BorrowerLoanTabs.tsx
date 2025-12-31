@@ -39,6 +39,7 @@ export default function BorrowerLoanTabs({
     actionMessage,
     handleNoteTextChange,
     handleAddNote,
+    handleSendNote,
     handleAction
   } = useBorrowerLoanActions({
     borrowerId: borrower.borrowerId,
@@ -63,6 +64,7 @@ export default function BorrowerLoanTabs({
           actionMessage={actionMessage}
           onNoteTextChange={handleNoteTextChange}
           onAddNote={handleAddNote}
+          onSendNote={handleSendNote}
           onAction={handleAction}
         />
       </div>

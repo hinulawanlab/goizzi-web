@@ -148,6 +148,10 @@ export function useBorrowerLoanActions({ borrowerId, loanId, applicationId }: Us
     );
   }, [persistNote]);
 
+  const handleSendNote = () => {
+    void persistNote("borrower", setNoteActionState, setNoteActionMessage, "Sending note...", "Note sent.");
+  };
+
   const handleAction = useCallback(
     (action: BorrowerLoanAction) => {
       if (!borrowerId || !loanId) {
@@ -174,11 +178,6 @@ export function useBorrowerLoanActions({ borrowerId, loanId, applicationId }: Us
         return;
       }
 
-      if (action === "Send notes") {
-        void persistNote("borrower", setActionState, setActionMessage, "Sending note...", "Note sent.");
-        return;
-      }
-
       runWithFeedback(
         setActionState,
         setActionMessage,
@@ -187,7 +186,7 @@ export function useBorrowerLoanActions({ borrowerId, loanId, applicationId }: Us
         ACTION_SUCCESS_MESSAGE
       );
     },
-    [borrowerId, loanId, applicationId, runWithFeedback, persistNote]
+    [borrowerId, loanId, applicationId, runWithFeedback]
   );
 
   return {
@@ -198,6 +197,7 @@ export function useBorrowerLoanActions({ borrowerId, loanId, applicationId }: Us
     actionMessage,
     handleNoteTextChange,
     handleAddNote,
+    handleSendNote,
     handleAction
   };
 }

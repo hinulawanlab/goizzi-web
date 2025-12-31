@@ -1,5 +1,7 @@
 "use client";
 
+import { Send, StickyNote } from "lucide-react";
+
 import type { ActionState } from "@/components/borrowers/borrowerApplicationTypes";
 import { borrowerLoanActions } from "@/components/borrowers/borrowerLoanTypes";
 
@@ -11,6 +13,7 @@ interface BorrowerLoanNotesActionsProps {
   actionMessage: string;
   onNoteTextChange: (value: string) => void;
   onAddNote: () => void;
+  onSendNote: () => void;
   onAction: (action: (typeof borrowerLoanActions)[number]) => void;
 }
 
@@ -22,6 +25,7 @@ export default function BorrowerLoanNotesActions({
   actionMessage,
   onNoteTextChange,
   onAddNote,
+  onSendNote,
   onAction
 }: BorrowerLoanNotesActionsProps) {
   return (
@@ -40,18 +44,34 @@ export default function BorrowerLoanNotesActions({
             className="mt-2 w-full flex-1 resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none"
             placeholder="Write a note for this loan."
           />
-          <div className="mt-3 flex flex-wrap items-center gap-3">
+          <div className="mt-3 flex flex-wrap items-center justify-end gap-3">
             <button
               type="button"
               onClick={onAddNote}
               disabled={noteActionState === "working" || !noteText.trim()}
-              className={`rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+              className={`rounded-full border p-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
                 noteActionState === "working" || !noteText.trim()
                   ? "cursor-not-allowed border-slate-200 text-slate-300"
                   : "cursor-pointer border-slate-900 bg-slate-900 text-white hover:border-slate-700 hover:bg-slate-800"
               }`}
+              title="Add note"
+              aria-label="Add note"
             >
-              Add note
+              <StickyNote className="h-4 w-4" aria-hidden />
+            </button>
+            <button
+              type="button"
+              onClick={onSendNote}
+              disabled={noteActionState === "working" || !noteText.trim()}
+              className={`rounded-full border p-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+                noteActionState === "working" || !noteText.trim()
+                  ? "cursor-not-allowed border-slate-200 text-slate-300"
+                  : "cursor-pointer border-slate-200 text-slate-700 hover:border-slate-300 hover:text-slate-900"
+              }`}
+              title="Send note"
+              aria-label="Send note"
+            >
+              <Send className="h-4 w-4" aria-hidden />
             </button>
           </div>
           {noteActionState === "working" && (
@@ -77,15 +97,14 @@ export default function BorrowerLoanNotesActions({
           <div className="mt-3 flex flex-wrap gap-2">
             {borrowerLoanActions.map((action) => {
               const isWorking = actionState === "working";
-              const disableAction = action === "Send notes" && !noteText.trim();
               return (
                 <button
                   key={action}
                   type="button"
                   onClick={() => onAction(action)}
-                  disabled={isWorking || disableAction}
+                  disabled={isWorking}
                   className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-                    isWorking || disableAction
+                    isWorking
                       ? "cursor-not-allowed border-slate-200 text-slate-300"
                       : "cursor-pointer border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
                   }`}
