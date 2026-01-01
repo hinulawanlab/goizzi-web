@@ -7,3 +7,4 @@
 
 ## Retrospective
 - 2025-12-31: prefer server-verified session cookies for staff-only access, and gate admin APIs with role checks.
+- 2026-01-01: source location confidence thresholds from appConfig constants with fallback defaults; show no-data in confidence UI when summary is missing.

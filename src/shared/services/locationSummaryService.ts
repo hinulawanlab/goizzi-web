@@ -37,6 +37,16 @@ export interface DerivedLocationSummary {
 
 const BORROWERS_COLLECTION = "borrowers";
 
+function resolveLocationStatus(confidenceScore: number, constants: AppConfigConstants) {
+  if (confidenceScore > constants.MAX_LOCATION_CONFIDENCE) {
+    return "Good";
+  }
+  if (confidenceScore > constants.MIN_LOCATION_CONFIDENCE) {
+    return "Low Confidence";
+  }
+  return "Needs Update";
+}
+
 export async function refreshBorrowerLocationSummary(
   borrowerId: string,
   observations: LocationObservation[],
@@ -94,12 +104,13 @@ export async function refreshBorrowerLocationSummary(
       lng: topRepresentative.geo.lng
     };
   }
+  const locationStatus = resolveLocationStatus(locationSummaryPayload.confidenceScore, constants);
 
   if (hasAdminCredentials() && db) {
     await db
       .collection(BORROWERS_COLLECTION)
       .doc(borrowerId)
-      .set({ locationSummary: locationSummaryPayload }, { merge: true });
+      .set({ locationSummary: locationSummaryPayload, locationStatus }, { merge: true });
   }
 
   return {

@@ -85,7 +85,7 @@ function mapBorrowerDoc(doc: DocumentSnapshot): BorrowerSummary {
   const branchDocumentId = primaryBranchId ?? fallbackBranchId;
 
   const locationConfidence =
-    typeof data.locationSummary?.confidenceScore === "number" ? data.locationSummary.confidenceScore : 0.6;
+    typeof data.locationSummary?.confidenceScore === "number" ? data.locationSummary.confidenceScore : 0;
 
   const locationSummary = data.locationSummary as Record<string, unknown> | undefined;
   const frequentAreas = normalizeFrequentAreas(locationSummary);

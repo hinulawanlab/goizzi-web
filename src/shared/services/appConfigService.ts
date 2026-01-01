@@ -1,16 +1,26 @@
 import { db, hasAdminCredentials } from "@/shared/singletons/firebaseAdmin";
-import { LOCATION_CLUSTER_MIN_POINTS, LOCATION_CLUSTER_RADIUS_METERS, RECENT_TOP_LOCATION_LIMIT } from "@/appConfig/constants";
+import {
+  LOCATION_CLUSTER_MIN_POINTS,
+  LOCATION_CLUSTER_RADIUS_METERS,
+  MAX_LOCATION_CONFIDENCE,
+  MIN_LOCATION_CONFIDENCE,
+  RECENT_TOP_LOCATION_LIMIT
+} from "@/appConfig/constants";
 
 export interface AppConfigConstants {
   LOCATION_CLUSTER_RADIUS_METERS: number;
   LOCATION_CLUSTER_MIN_POINTS: number;
   RECENT_TOP_LOCATION_LIMIT: number;
+  MIN_LOCATION_CONFIDENCE: number;
+  MAX_LOCATION_CONFIDENCE: number;
 }
 
 const FALLBACK_CONSTANTS: AppConfigConstants = {
   LOCATION_CLUSTER_RADIUS_METERS,
   LOCATION_CLUSTER_MIN_POINTS,
-  RECENT_TOP_LOCATION_LIMIT
+  RECENT_TOP_LOCATION_LIMIT,
+  MIN_LOCATION_CONFIDENCE,
+  MAX_LOCATION_CONFIDENCE
 };
 
 const COLLECTION_PATH = "appConfig";
@@ -46,6 +56,14 @@ async function fetchFromFirestore(): Promise<AppConfigConstants | null> {
       RECENT_TOP_LOCATION_LIMIT: coerceNumber(
         data.RECENT_TOP_LOCATION_LIMIT,
         FALLBACK_CONSTANTS.RECENT_TOP_LOCATION_LIMIT
+      ),
+      MIN_LOCATION_CONFIDENCE: coerceNumber(
+        data.MIN_LOCATION_CONFIDENCE,
+        FALLBACK_CONSTANTS.MIN_LOCATION_CONFIDENCE
+      ),
+      MAX_LOCATION_CONFIDENCE: coerceNumber(
+        data.MAX_LOCATION_CONFIDENCE,
+        FALLBACK_CONSTANTS.MAX_LOCATION_CONFIDENCE
       )
     };
   } catch (error) {

@@ -1,3 +1,5 @@
+// src/shared/services/locationAnalyzer.ts
+
 import { LOCATION_CLUSTER_MIN_POINTS, LOCATION_CLUSTER_RADIUS_METERS, RECENT_TOP_LOCATION_LIMIT } from "@/appConfig/constants";
 import type { FrequentArea } from "@/shared/types/dashboard";
 import type { LocationObservation } from "@/shared/types/location";

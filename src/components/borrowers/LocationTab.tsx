@@ -8,7 +8,7 @@ import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, MapPin, Re
 import type { BorrowerSummary } from "@/shared/types/dashboard";
 import type { LocationObservation } from "@/shared/types/location";
 
-const STALE_THRESHOLD_DAYS = 10;
+const STALE_THRESHOLD_DAYS = 30;
 const REFERENCE_TIMESTAMP = Date.now();
 
 function formatDate(value: string) {
@@ -345,6 +345,7 @@ export default function LocationTab({ borrower, observations, topSourcesCount, t
           }
         }
       : null;
+  const hasLocationSummary = borrower.locationSummaryUpdatedAt !== "N/A";
 
   const handleShowTopAreaOnMap = () => {
     if (topAreaObservation) {
@@ -386,15 +387,24 @@ export default function LocationTab({ borrower, observations, topSourcesCount, t
             </div>
             <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
               <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Confidence</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">
-                {(borrower.locationConfidence * 100).toFixed(0)}%
-              </p>
-              <p className="text-xs text-slate-500">
-                Updated {borrower.locationSummaryUpdatedAt ?? borrower.lastLocationAt}
-                {typeof topSourcesCount === "number" && topSourcesCount > 0 && (
-                  <> · ({topSourcesCount} sources)</>
-                )}
-              </p>
+              {hasLocationSummary ? (
+                <>
+                  <p className="mt-2 text-2xl font-semibold text-slate-900">
+                    {(borrower.locationConfidence * 100).toFixed(0)}%
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Updated {borrower.locationSummaryUpdatedAt ?? borrower.lastLocationAt}
+                    {typeof topSourcesCount === "number" && topSourcesCount > 0 && (
+                      <> · ({topSourcesCount} sources)</>
+                    )}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="mt-2 text-2xl font-semibold text-slate-900">No data</p>
+                  <p className="text-xs text-slate-500">No location summary yet.</p>
+                </>
+              )}
             </div>
             <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
               <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Last seen</p>

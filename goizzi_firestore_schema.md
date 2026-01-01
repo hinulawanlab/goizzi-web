@@ -65,6 +65,7 @@ Small, fast “profile header” document. Keep PII-heavy KYC in a subcollection
 - `createdByUserId: string?`
 - `primaryBranchId: string?` (where they usually transact)
 - `borrowerId: string`
+- `locationStatus: string` (`Good|Low Confidence|Needs Update`)
 
 **Denormalized quick stats**
 - `activeLoanCount: number`
@@ -83,6 +84,8 @@ Small, fast “profile header” document. Keep PII-heavy KYC in a subcollection
   - `LOCATION_CLUSTER_RADIUS_METERS: number` (meters to group raw GPS points)
   - `LOCATION_CLUSTER_MIN_POINTS: number` (minimum observations required for a cluster)
   - `RECENT_TOP_LOCATION_LIMIT: number` (how many top location clusters to store per borrower)
+  - `MIN_LOCATION_CONFIDENCE: number` (lower bound threshold for location status)
+  - `MAX_LOCATION_CONFIDENCE: number` (upper bound threshold for location status)
 
 **Subcollections**
 ```
