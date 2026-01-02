@@ -26,6 +26,10 @@ interface ActorProfile {
   userId?: string;
 }
 
+interface SubmitNoteOptions {
+  clearFollowUp?: boolean;
+}
+
 export function useBorrowerApplicationActions({
   borrowerId,
   applicationId,
@@ -62,6 +66,25 @@ export function useBorrowerApplicationActions({
     };
   };
 
+  const clearBorrowerFollowUp = async () => {
+    if (!borrowerId) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/borrowers/${borrowerId}/follow-up/clear`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+
+      if (!response.ok) {
+        throw new Error("Follow-up clear failed.");
+      }
+    } catch (error) {
+      console.warn("Unable to clear borrower follow-up:", error);
+    }
+  };
+
   const handleKycDecisionNote = (note: BorrowerNote) => {
     setNoteEntries((prev) => [note, ...prev]);
     if (note.createdAt) {
@@ -77,7 +100,7 @@ export function useBorrowerApplicationActions({
     }
   };
 
-  const submitNote = async (payloadOverrides?: Partial<BorrowerNote>) => {
+  const submitNote = async (payloadOverrides?: Partial<BorrowerNote>, options?: SubmitNoteOptions) => {
     const trimmedNote = noteText.trim();
     if (!trimmedNote) {
       setNoteActionState("error");
@@ -95,6 +118,9 @@ export function useBorrowerApplicationActions({
     setNoteActionMessage("Saving note...");
 
     const actor = getActorProfile();
+    if (options?.clearFollowUp) {
+      void clearBorrowerFollowUp();
+    }
 
     try {
       const response = await fetch(`/api/borrowers/${borrowerId}/notes`, {
@@ -137,13 +163,16 @@ export function useBorrowerApplicationActions({
   };
 
   const handleSendNote = async () => {
-    await submitNote({
-      type: "borrower",
-      borrowerId,
-      callActive: false,
-      isActive: false,
-      messageActive: false
-    });
+    await submitNote(
+      {
+        type: "borrower",
+        borrowerId,
+        callActive: false,
+        isActive: false,
+        messageActive: false
+      },
+      { clearFollowUp: true }
+    );
   };
 
   const handleStatusChange = async (status: LoanAction) => {
@@ -283,6 +312,7 @@ export function useBorrowerApplicationActions({
     handleKycDecisionNote,
     handleStatusChange,
     handleApproveLoan,
-    resetStatusAction
+    resetStatusAction,
+    clearBorrowerFollowUp
   };
 }

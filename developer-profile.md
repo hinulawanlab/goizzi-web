@@ -10,3 +10,6 @@
 - 2026-01-01: source location confidence thresholds from appConfig constants with fallback defaults; show no-data in confidence UI when summary is missing.
 - 2026-01-01: keep borrower location observation UI focused on essentials; remove accuracy column when not reliable.
 - 2026-01-01: recompute branch stats only when the branches route is navigated; avoid background fetching.
+- 2026-01-02: default list-style payment edits to inline rows with a visible custom-payment row and retain toggle control for clarity.
+- 2026-01-02: prefer plain row styling with standard inputs/buttons for dense payment entry screens.
+- 2026-01-02: constrain payments list to a scrollable panel within the notes/actions height.

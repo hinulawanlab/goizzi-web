@@ -90,7 +90,9 @@ export default function BorrowerLoanTabs({
           onRefresh={handleRefresh}
           isRefreshing={isRefreshing}
         />
-        <div className="lg:flex-1 lg:overflow-y-auto lg:pr-2 pb-4">
+        <div
+          className={`lg:flex-1 lg:pr-2 pb-4 ${activeTab === "payments" ? "lg:overflow-hidden" : "lg:overflow-y-auto"}`}
+        >
           <BorrowerLoanTabSection
             activeTab={activeTab}
             borrower={borrower}

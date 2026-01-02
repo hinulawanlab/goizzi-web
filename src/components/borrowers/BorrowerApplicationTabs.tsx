@@ -84,6 +84,7 @@ export default function BorrowerApplicationTabs({
     noteActionMessage,
     statusActionState,
     statusActionMessage,
+    clearBorrowerFollowUp,
     handleAddNote,
     handleSendNote,
     handleNoteTextChange,
@@ -270,6 +271,7 @@ export default function BorrowerApplicationTabs({
   }, [handleRefresh, isApprovalOpen, syncMissingChecklistCount]);
 
   const handleStatusAction = (status: LoanAction) => {
+    void clearBorrowerFollowUp();
     if (status === "Approve") {
       resetStatusAction();
       setManualChecklistState("idle");
