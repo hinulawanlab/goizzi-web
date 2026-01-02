@@ -12,6 +12,7 @@ import type { BorrowerSummary } from "@/shared/types/dashboard";
 import type { LoanSummary } from "@/shared/types/loan";
 import type { RepaymentScheduleEntry } from "@/shared/types/repaymentSchedule";
 import type { LoanNote } from "@/shared/types/loanNote";
+import type { LoanProductSummary } from "@/shared/types/product";
 
 interface BorrowerLoanTabsProps {
   borrower: BorrowerSummary;
@@ -19,6 +20,7 @@ interface BorrowerLoanTabsProps {
   repaymentSchedule: RepaymentScheduleEntry[];
   loanNotes: LoanNote[];
   loanNotesError?: string;
+  loanProducts: LoanProductSummary[];
 }
 
 export default function BorrowerLoanTabs({
@@ -26,7 +28,8 @@ export default function BorrowerLoanTabs({
   loan,
   repaymentSchedule,
   loanNotes,
-  loanNotesError
+  loanNotesError,
+  loanProducts
 }: BorrowerLoanTabsProps) {
   const searchParams = useSearchParams();
   const resolvedTab = useMemo(() => {
@@ -95,6 +98,7 @@ export default function BorrowerLoanTabs({
             repaymentSchedule={repaymentSchedule}
             loanNotes={loanNotes}
             loanNotesError={loanNotesError}
+            loanProducts={loanProducts}
           />
         </div>
       </div>

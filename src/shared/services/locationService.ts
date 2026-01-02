@@ -1,3 +1,4 @@
+// src/shared/services/locationService.ts/loans/{loanId}
 import type { DocumentSnapshot } from "firebase-admin/firestore";
 
 import { db, hasAdminCredentials } from "@/shared/singletons/firebaseAdmin";

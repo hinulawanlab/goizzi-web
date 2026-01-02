@@ -2,11 +2,12 @@ import Sidebar from "@/components/navigation/Sidebar";
 import BranchDirectory from "@/components/branches/BranchDirectory";
 import QueueSection from "@/components/dashboard/QueueSection";
 import { demoDashboardData } from "@/shared/data/demoDashboard";
-import { getBranchSummaries } from "@/shared/services/branchService";
+import { getBranchSummaries, recomputeAllBranchStats } from "@/shared/services/branchService";
 import { requireStaffSession } from "@/shared/services/sessionService";
 
 export default async function BranchesPage() {
   await requireStaffSession();
+  await recomputeAllBranchStats();
   const branches = await getBranchSummaries(15);
   const kycQueue = demoDashboardData.queue.filter((item) => item.tag.startsWith("KYC"));
   const locationQueue = demoDashboardData.queue.filter((item) => item.tag.includes("Location"));

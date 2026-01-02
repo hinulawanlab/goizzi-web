@@ -7,6 +7,7 @@ import { requireStaffSession } from "@/shared/services/sessionService";
 import { getLoanById } from "@/shared/services/loanService";
 import { getLoanRepaymentSchedule } from "@/shared/services/loanRepaymentScheduleService";
 import { getLoanNotesByLoanId } from "@/shared/services/loanNoteService";
+import { getActiveLoanProducts } from "@/shared/services/productService";
 
 interface BorrowerLoanPageProps {
   params: Promise<{
@@ -27,12 +28,14 @@ export default async function BorrowerLoanPage({ params }: BorrowerLoanPageProps
   const loanPromise = getLoanById(loanId);
   const schedulePromise = getLoanRepaymentSchedule(loanId);
   const loanNotesPromise = getLoanNotesByLoanId(loanId);
+  const loanProductsPromise = getActiveLoanProducts();
 
-  const [borrower, loan, repaymentSchedule, loanNotesResult] = await Promise.all([
+  const [borrower, loan, repaymentSchedule, loanNotesResult, loanProducts] = await Promise.all([
     borrowerPromise,
     loanPromise,
     schedulePromise,
-    loanNotesPromise
+    loanNotesPromise,
+    loanProductsPromise
   ]);
 
   if (!borrower || !loan || loan.borrowerId !== borrowerId) {
@@ -49,6 +52,7 @@ export default async function BorrowerLoanPage({ params }: BorrowerLoanPageProps
             repaymentSchedule={repaymentSchedule}
             loanNotes={loanNotesResult.notes}
             loanNotesError={loanNotesResult.error}
+            loanProducts={loanProducts}
           />
         </main>
       </div>

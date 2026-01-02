@@ -43,7 +43,6 @@ export default function BorrowerLoanHeaderSection({
     <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-lg">
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.4em] text-slate-400">Loan details</p>
           <h2 className="text-2xl font-semibold text-black/90">{borrowerName}</h2>
           <p className="text-sm text-slate-500">
             Review loan activity, payment history, and statement of account for this borrower.

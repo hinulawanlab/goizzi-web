@@ -1,4 +1,5 @@
-import type { DocumentSnapshot } from "firebase-admin/firestore";
+import type { DocumentSnapshot, Query } from "firebase-admin/firestore";
+import { FieldValue } from "firebase-admin/firestore";
 
 import { db, hasAdminCredentials } from "@/shared/singletons/firebaseAdmin";
 import { demoBranches } from "@/shared/data/demoBranches";
@@ -72,6 +73,74 @@ async function fetchBranchesFromFirestore(limit = 20): Promise<BranchSummary[]> 
   }
 
   return snapshot.docs.map(mapBranchDoc);
+}
+
+async function getQueryCount(query: Query): Promise<number> {
+  const queryWithCount = query as Query & { count?: () => { get: () => Promise<{ data: () => { count?: number } }> } };
+
+  if (typeof queryWithCount.count === "function") {
+    const aggregateSnapshot = await queryWithCount.count().get();
+    const aggregateData = aggregateSnapshot.data();
+    if (typeof aggregateData.count === "number") {
+      return aggregateData.count;
+    }
+  }
+
+  const snapshot = await query.get();
+  return snapshot.size;
+}
+
+async function recomputeBranchStats(branchId: string): Promise<void> {
+  if (!db) {
+    throw new Error("Firestore Admin client is not initialized.");
+  }
+
+  const activeBorrowersQuery = db
+    .collection("borrowers")
+    .where("primaryBranchId", "==", branchId)
+    .where("status", "==", "active");
+
+  const borrowerCount = await getQueryCount(activeBorrowersQuery);
+  const kycPendingFalse = await getQueryCount(activeBorrowersQuery.where("isKYCverified", "==", false));
+  const kycPendingNull = await getQueryCount(activeBorrowersQuery.where("isKYCverified", "==", null));
+  const locationAlerts = await getQueryCount(
+    activeBorrowersQuery.where("locationStatus", "in", ["Low Confidence", "Needs Update"])
+  );
+  const activeLoanCount = await getQueryCount(
+    db.collection("loans").where("branchId", "==", branchId).where("status", "==", "active")
+  );
+
+  await db
+    .collection("branches")
+    .doc(branchId)
+    .set(
+      {
+        borrowerCount,
+        kycPending: kycPendingFalse + kycPendingNull,
+        locationAlerts,
+        activeLoanCount,
+        updatedAt: FieldValue.serverTimestamp()
+      },
+      { merge: true }
+    );
+}
+
+export async function recomputeAllBranchStats(): Promise<void> {
+  if (!hasAdminCredentials()) {
+    return;
+  }
+  if (!db) {
+    throw new Error("Firestore Admin client is not initialized.");
+  }
+
+  const snapshot = await db.collection("branches").get();
+  if (snapshot.empty) {
+    return;
+  }
+
+  for (const doc of snapshot.docs) {
+    await recomputeBranchStats(doc.id);
+  }
 }
 
 export async function getBranchSummaries(limit = 20): Promise<BranchSummary[]> {

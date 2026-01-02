@@ -11,6 +11,8 @@ import {
 
 interface LoanUpdateInput {
   loanId: string;
+  productId?: string;
+  productName?: string;
   principalAmount?: number;
   termMonths?: number;
   interestRate?: number;
@@ -140,6 +142,14 @@ export async function updateLoanDetails(input: LoanUpdateInput) {
 
   if (typeof input.principalAmount === "number") {
     payload.principalAmount = input.principalAmount;
+  }
+
+  if (typeof input.productId === "string") {
+    payload.productId = input.productId;
+  }
+
+  if (typeof input.productName === "string") {
+    payload.productName = input.productName;
   }
 
   if (typeof input.termMonths === "number") {

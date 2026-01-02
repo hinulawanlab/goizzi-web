@@ -8,6 +8,8 @@ interface LoanUpdatePayload {
   action?: "update" | "proceed" | "cancel" | "close";
   borrowerId?: string;
   applicationId?: string;
+  productId?: string;
+  productName?: string;
   principalAmount?: number;
   termMonths?: number;
   interestRate?: number;
@@ -96,6 +98,8 @@ export async function PATCH(
 
     const updateResult = await updateLoanDetails({
       loanId,
+      productId: payload.productId,
+      productName: payload.productName,
       principalAmount: payload.principalAmount,
       termMonths: payload.termMonths,
       interestRate: payload.interestRate,

@@ -158,7 +158,6 @@ function ObservationList({
               <th className="px-3 py-2">Source</th>
               <th className="px-3 py-2">Label</th>
               <th className="px-3 py-2">Coords</th>
-              <th className="px-3 py-2">Accuracy</th>
               <th className="px-3 py-2">Actions</th>
             </tr>
           </thead>
@@ -188,9 +187,6 @@ function ObservationList({
                     <span className="whitespace-nowrap">
                       {observation.geo.lat.toFixed(6)}, {observation.geo.lng.toFixed(6)}
                     </span>
-                  </td>
-                  <td className="px-3 py-3 text-slate-700">
-                    {observation.accuracyMeters ? `${observation.accuracyMeters} m` : "—"}
                   </td>
                   <td className="px-3 py-3">
                     <div className="flex flex-wrap gap-2">

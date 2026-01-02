@@ -13,6 +13,7 @@ import BorrowerLoanPaymentsTab from "@/components/borrowers/BorrowerLoanPayments
 import LoanStatusActionModal from "@/components/borrowers/LoanStatusActionModal";
 import type { RepaymentScheduleEntry } from "@/shared/types/repaymentSchedule";
 import type { LoanNote } from "@/shared/types/loanNote";
+import type { LoanProductSummary } from "@/shared/types/product";
 import { auth } from "@/shared/singletons/firebase";
 import {
   buildRepaymentSchedule,
@@ -27,6 +28,7 @@ interface BorrowerLoanTabSectionProps {
   repaymentSchedule: RepaymentScheduleEntry[];
   loanNotes: LoanNote[];
   loanNotesError?: string;
+  loanProducts: LoanProductSummary[];
 }
 
 function formatDate(value?: string) {
@@ -151,7 +153,8 @@ export default function BorrowerLoanTabSection({
   loan,
   repaymentSchedule,
   loanNotes,
-  loanNotesError
+  loanNotesError,
+  loanProducts
 }: BorrowerLoanTabSectionProps) {
   const router = useRouter();
   const [principalInput, setPrincipalInput] = useState(() => formatEditableAmount(loan.principalAmount));
@@ -163,6 +166,7 @@ export default function BorrowerLoanTabSection({
   );
   const [interestRateInput, setInterestRateInput] = useState(() => formatEditableRate(loan.interestRate));
   const [startDateInput, setStartDateInput] = useState(() => formatInputDate(loan.startDate));
+  const [productIdInput, setProductIdInput] = useState(loan.productId ?? "");
   const [isEditable, setIsEditable] = useState(false);
   const [isLocked, setIsLocked] = useState(() => !isLoanEditable(loan.status));
   const [actionState, setActionState] = useState<ActionState>("idle");
@@ -185,6 +189,43 @@ export default function BorrowerLoanTabSection({
     }
   }, [loan.status]);
 
+  const activeProducts = useMemo(
+    () => loanProducts.filter((product) => product.isActive),
+    [loanProducts]
+  );
+  const activeProductIds = useMemo(
+    () => new Set(activeProducts.map((product) => product.productId)),
+    [activeProducts]
+  );
+  const currentProductId = loan.productId ?? "";
+  const currentProductName = loan.productName ?? loan.productId ?? "Current product";
+  const currentProductIsActive = currentProductId ? activeProductIds.has(currentProductId) : false;
+  const defaultProductId = useMemo(() => {
+    if (loan.productId) {
+      return loan.productId;
+    }
+    if (loan.productName) {
+      const match = activeProducts.find((product) => product.name === loan.productName);
+      return match?.productId ?? "";
+    }
+    return "";
+  }, [activeProducts, loan.productId, loan.productName]);
+  const productOptions = useMemo(() => {
+    if (currentProductId && !currentProductIsActive) {
+      return [
+        {
+          productId: currentProductId,
+          name: currentProductName,
+          isActive: false
+        },
+        ...activeProducts
+      ];
+    }
+    return activeProducts;
+  }, [activeProducts, currentProductId, currentProductIsActive, currentProductName]);
+  const selectedProduct =
+    activeProducts.find((product) => product.productId === productIdInput) ?? null;
+
   useEffect(() => {
     if (!isEditable) {
       setPrincipalInput(formatEditableAmount(loan.principalAmount));
@@ -192,8 +233,10 @@ export default function BorrowerLoanTabSection({
       setPaymentFrequencyInput(loan.paymentFrequency ? loan.paymentFrequency.toString() : "");
       setInterestRateInput(formatEditableRate(loan.interestRate));
       setStartDateInput(formatInputDate(loan.startDate));
+      setProductIdInput(defaultProductId);
     }
   }, [
+    defaultProductId,
     isEditable,
     loan.principalAmount,
     loan.termMonths,
@@ -306,6 +349,7 @@ export default function BorrowerLoanTabSection({
     setPaymentFrequencyInput(loan.paymentFrequency ? loan.paymentFrequency.toString() : "");
     setInterestRateInput(formatEditableRate(loan.interestRate));
     setStartDateInput(formatInputDate(loan.startDate));
+    setProductIdInput(defaultProductId);
     setIsEditable(false);
     setActionState("idle");
     setActionMessage("");
@@ -600,13 +644,12 @@ export default function BorrowerLoanTabSection({
                                 }
                                 aria-label={note.isActive ? "Set inactive" : "Set active"}
                                 title={note.isActive ? "Click to deactivate" : "Click to activate"}
-                                className={`rounded-full border p-2 transition ${
-                                  isWorking
-                                    ? "cursor-not-allowed border-slate-200 text-slate-300"
-                                    : note.isActive
-                                      ? "cursor-pointer border-emerald-200 text-emerald-700 hover:border-emerald-300"
-                                      : "cursor-pointer border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
-                                }`}
+                                className={`rounded-full border p-2 transition ${isWorking
+                                  ? "cursor-not-allowed border-slate-200 text-slate-300"
+                                  : note.isActive
+                                    ? "cursor-pointer border-emerald-200 text-emerald-700 hover:border-emerald-300"
+                                    : "cursor-pointer border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                                  }`}
                               >
                                 {note.isActive ? (
                                   <Check className="h-4 w-4" aria-hidden />
@@ -627,13 +670,12 @@ export default function BorrowerLoanTabSection({
                                 }
                                 aria-label={note.callActive ? "Disable call" : "Enable call"}
                                 title={note.callActive ? "Click to disable call" : "Click to enable call"}
-                                className={`rounded-full border p-2 transition ${
-                                  isWorking
-                                    ? "cursor-not-allowed border-slate-200 text-slate-300"
-                                    : note.callActive
-                                      ? "cursor-pointer border-blue-200 text-blue-700 hover:border-blue-300"
-                                      : "cursor-pointer border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
-                                }`}
+                                className={`rounded-full border p-2 transition ${isWorking
+                                  ? "cursor-not-allowed border-slate-200 text-slate-300"
+                                  : note.callActive
+                                    ? "cursor-pointer border-blue-200 text-blue-700 hover:border-blue-300"
+                                    : "cursor-pointer border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                                  }`}
                               >
                                 {note.callActive ? (
                                   <Phone className="h-4 w-4" aria-hidden />
@@ -654,13 +696,12 @@ export default function BorrowerLoanTabSection({
                                 }
                                 aria-label={note.messageActive ? "Disable message" : "Enable message"}
                                 title={note.messageActive ? "Click to disable message" : "Click to enable message"}
-                                className={`rounded-full border p-2 transition ${
-                                  isWorking
-                                    ? "cursor-not-allowed border-slate-200 text-slate-300"
-                                    : note.messageActive
-                                      ? "cursor-pointer border-purple-200 text-purple-700 hover:border-purple-300"
-                                      : "cursor-pointer border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
-                                }`}
+                                className={`rounded-full border p-2 transition ${isWorking
+                                  ? "cursor-not-allowed border-slate-200 text-slate-300"
+                                  : note.messageActive
+                                    ? "cursor-pointer border-purple-200 text-purple-700 hover:border-purple-300"
+                                    : "cursor-pointer border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                                  }`}
                               >
                                 {note.messageActive ? (
                                   <MessageSquare className="h-4 w-4" aria-hidden />
@@ -696,7 +737,6 @@ export default function BorrowerLoanTabSection({
 
   return (
     <section className="rounded-3xl border border-slate-100 bg-white p-3 pl-6 shadow-md">
-      {/* <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Loan snapshot</p> */}
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-xl font-semibold text-slate-900">Loan details</h3>
         <span className="text-xs uppercase tracking-[0.2em] text-slate-400">
@@ -707,12 +747,12 @@ export default function BorrowerLoanTabSection({
       <div className="mt-2 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         <div>
           <DetailRow label="Borrower" value={borrower.fullName} />
-          <DetailRow label="Borrower ID" value={borrower.borrowerId} />
+          {/* <DetailRow label="Borrower ID" value={borrower.borrowerId} /> */}
           <DetailRow label="Loan ID" value={loan.loanId} />
           <DetailRow label="Status" value={loan.status} />
           <DetailRow label="Product" value={loan.productName ?? loan.productId} />
           <DetailRow label="Interest rate" value={formatRate(loan.interestRate)} />
-          <DetailRow label="Outstanding" value={formatAmount(loan.totalOutstandingAmount, loan.currency)} />
+          {/* <DetailRow label="Outstanding" value={formatAmount(loan.totalOutstandingAmount, loan.currency)} /> */}
           <DetailRow label="Next due" value={formatDate(nextDueDate)} />
           <DetailRow label="Maturity date" value={formatDate(loan.maturityDate ?? maturityDate)} />
           <DetailRow label="Last payment" value={formatDate(loan.lastPaymentAt)} />
@@ -721,6 +761,36 @@ export default function BorrowerLoanTabSection({
 
         <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
           <div className="space-y-1">
+            <div>
+              <label className="text-[11px] uppercase tracking-[0.3em] text-slate-400" htmlFor="loan-product">
+                Loan product
+              </label>
+              <select
+                id="loan-product"
+                value={productIdInput}
+                onChange={(event) => setProductIdInput(event.target.value)}
+                disabled={!isEditable || isLocked || isWorking || activeProducts.length === 0}
+                className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm shadow-sm focus:outline-none ${!isEditable || isLocked || activeProducts.length === 0
+                  ? "border-slate-200 bg-slate-100 text-slate-400"
+                  : "cursor-pointer border-slate-200 bg-white text-slate-700 focus:border-slate-400"
+                  }`}
+              >
+                <option value="">
+                  {activeProducts.length ? "Select active product" : "No active products available"}
+                </option>
+                {productOptions.map((product) => (
+                  <option key={product.productId} value={product.productId} disabled={!product.isActive}>
+                    {product.name}
+                    {!product.isActive ? " (inactive)" : ""}
+                  </option>
+                ))}
+              </select>
+              {!currentProductIsActive && currentProductId && (
+                <p className="mt-2 text-xs text-amber-600">
+                  Current product is inactive. Select an active product to update.
+                </p>
+              )}
+            </div>
             <div>
               <label className="text-[11px] uppercase tracking-[0.3em] text-slate-400" htmlFor="loan-principal">
                 Principal ({loan.currency ?? "PHP"})
@@ -733,11 +803,10 @@ export default function BorrowerLoanTabSection({
                 value={principalInput}
                 onChange={(event) => setPrincipalInput(event.target.value)}
                 disabled={!isEditable || isLocked || isWorking}
-                className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm shadow-sm focus:outline-none ${
-                  !isEditable || isLocked
-                    ? "border-slate-200 bg-slate-100 text-slate-400"
-                    : "border-slate-200 bg-white text-slate-700 focus:border-slate-400"
-                }`}
+                className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm shadow-sm focus:outline-none ${!isEditable || isLocked
+                  ? "border-slate-200 bg-slate-100 text-slate-400"
+                  : "border-slate-200 bg-white text-slate-700 focus:border-slate-400"
+                  }`}
               />
             </div>
 
@@ -753,88 +822,100 @@ export default function BorrowerLoanTabSection({
                 value={termMonthsInput}
                 onChange={(event) => setTermMonthsInput(event.target.value)}
                 disabled={!isEditable || isLocked || isWorking}
-                className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm shadow-sm focus:outline-none ${
-                  !isEditable || isLocked
-                    ? "border-slate-200 bg-slate-100 text-slate-400"
-                    : "border-slate-200 bg-white text-slate-700 focus:border-slate-400"
-                }`}
+                className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm shadow-sm focus:outline-none ${!isEditable || isLocked
+                  ? "border-slate-200 bg-slate-100 text-slate-400"
+                  : "border-slate-200 bg-white text-slate-700 focus:border-slate-400"
+                  }`}
                 placeholder="Enter term in months"
               />
             </div>
 
-            <div>
-              <label className="text-[11px] uppercase tracking-[0.3em] text-slate-400" htmlFor="loan-interest-rate">
-                Interest rate (%)
-              </label>
-              <input
-                id="loan-interest-rate"
-                type="number"
-                min="0"
-                step="0.01"
-                value={interestRateInput}
-                onChange={(event) => setInterestRateInput(event.target.value)}
-                disabled={!isEditable || isLocked || isWorking}
-                className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm shadow-sm focus:outline-none ${
-                  !isEditable || isLocked
-                    ? "border-slate-200 bg-slate-100 text-slate-400"
-                    : "border-slate-200 bg-white text-slate-700 focus:border-slate-400"
-                }`}
-                placeholder="Enter interest rate"
-              />
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <label
+                  className="text-[11px] uppercase tracking-[0.3em] text-slate-400"
+                  htmlFor="loan-interest-rate"
+                >
+                  Interest rate (%)
+                </label>
+                <input
+                  id="loan-interest-rate"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={interestRateInput}
+                  onChange={(event) => setInterestRateInput(event.target.value)}
+                  disabled={!isEditable || isLocked || isWorking}
+                  placeholder="Enter interest rate"
+                  className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm shadow-sm focus:outline-none ${!isEditable || isLocked
+                      ? "border-slate-200 bg-slate-100 text-slate-400"
+                      : "border-slate-200 bg-white text-slate-700 focus:border-slate-400"
+                    }`}
+                />
+              </div>
+
+              <div className="flex-1">
+                <label
+                  className="text-[11px] uppercase tracking-[0.3em] text-slate-400"
+                  htmlFor="loan-frequency"
+                >
+                  Payments per month
+                </label>
+                <select
+                  id="loan-frequency"
+                  value={paymentFrequencyInput}
+                  onChange={(event) => setPaymentFrequencyInput(event.target.value)}
+                  disabled={!isEditable || isLocked || isWorking}
+                  className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm shadow-sm focus:outline-none ${!isEditable || isLocked
+                      ? "border-slate-200 bg-slate-100 text-slate-400"
+                      : "border-slate-200 bg-white text-slate-700 focus:border-slate-400"
+                    }`}
+                >
+                  <option value="">Select payment frequency</option>
+                  <option value="1">Once a month</option>
+                  <option value="2">Bi-monthly</option>
+                  <option value="4">Weekly</option>
+                </select>
+              </div>
             </div>
 
-            <div>
-              <label className="text-[11px] uppercase tracking-[0.3em] text-slate-400" htmlFor="loan-frequency">
-                Payments per month
-              </label>
-              <select
-                id="loan-frequency"
-                value={paymentFrequencyInput}
-                onChange={(event) => setPaymentFrequencyInput(event.target.value)}
-                disabled={!isEditable || isLocked || isWorking}
-                className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm shadow-sm focus:outline-none ${
-                  !isEditable || isLocked
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <label
+                  className="text-[11px] uppercase tracking-[0.3em] text-slate-400"
+                  htmlFor="loan-start-date"
+                >
+                  Loan date cycle
+                </label>
+                <input
+                  id="loan-start-date"
+                  type="date"
+                  value={startDateInput}
+                  onChange={(event) => setStartDateInput(event.target.value)}
+                  disabled={!isEditable || isLocked || isWorking}
+                  className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm shadow-sm focus:outline-none ${!isEditable || isLocked
                     ? "border-slate-200 bg-slate-100 text-slate-400"
                     : "border-slate-200 bg-white text-slate-700 focus:border-slate-400"
-                }`}
-              >
-                <option value="">Select payment frequency</option>
-                <option value="1">Once a month</option>
-                <option value="2">Bi-monthly</option>
-                <option value="4">Weekly</option>
-              </select>
-            </div>
+                    }`}
+                />
+              </div>
 
-            <div>
-              <label className="text-[11px] uppercase tracking-[0.3em] text-slate-400" htmlFor="loan-start-date">
-                Loan date cycle
-              </label>
-              <input
-                id="loan-start-date"
-                type="date"
-                value={startDateInput}
-                onChange={(event) => setStartDateInput(event.target.value)}
-                disabled={!isEditable || isLocked || isWorking}
-                className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm shadow-sm focus:outline-none ${
-                  !isEditable || isLocked
-                    ? "border-slate-200 bg-slate-100 text-slate-400"
-                    : "border-slate-200 bg-white text-slate-700 focus:border-slate-400"
-                }`}
-              />
-            </div>
-
-            <div>
-              <label className="text-[11px] uppercase tracking-[0.3em] text-slate-400" htmlFor="loan-maturity-date">
-                Maturity date
-              </label>
-              <input
-                id="loan-maturity-date"
-                type="text"
-                value={maturityDate === "N/A" ? "" : maturityDate}
-                placeholder={maturityDate}
-                readOnly
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm"
-              />
+              <div className="flex-1">
+                <label
+                  className="text-[11px] uppercase tracking-[0.3em] text-slate-400"
+                  htmlFor="loan-maturity-date"
+                >
+                  Maturity date
+                </label>
+                <input
+                  id="loan-maturity-date"
+                  type="text"
+                  value={maturityDate === "N/A" ? "" : maturityDate}
+                  placeholder={maturityDate}
+                  readOnly
+                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -848,11 +929,10 @@ export default function BorrowerLoanTabSection({
               setStatusActionType("cancel");
             }}
             disabled={isWorking}
-            className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-              isWorking
-                ? "cursor-not-allowed border-slate-200 text-slate-300"
-                : "border-rose-200 text-rose-600 hover:border-rose-300 hover:text-rose-700"
-            }`}
+            className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${isWorking
+              ? "cursor-not-allowed border-slate-200 text-slate-300"
+              : "border-rose-200 text-rose-600 hover:border-rose-300 hover:text-rose-700"
+              }`}
           >
             Cancel loan
           </button>
@@ -868,11 +948,10 @@ export default function BorrowerLoanTabSection({
                   }
                 }}
                 disabled={isLocked || isWorking}
-                className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-                  isLocked || isWorking
-                    ? "cursor-not-allowed border-slate-200 text-slate-300"
-                    : "border-slate-900 text-slate-900 hover:border-slate-700 hover:text-slate-700"
-                }`}
+                className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${isLocked || isWorking
+                  ? "cursor-not-allowed border-slate-200 text-slate-300"
+                  : "border-slate-900 text-slate-900 hover:border-slate-700 hover:text-slate-700"
+                  }`}
               >
                 Edit loan
               </button>
@@ -909,11 +988,10 @@ export default function BorrowerLoanTabSection({
                   );
                 }}
                 disabled={isLocked || isWorking || !isProceedReady}
-                className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-                  isLocked || isWorking || !isProceedReady
-                    ? "cursor-not-allowed border-slate-200 text-slate-300"
-                    : "border-slate-900 bg-slate-900 text-white hover:border-slate-700 hover:bg-slate-800"
-                }`}
+                className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${isLocked || isWorking || !isProceedReady
+                  ? "cursor-not-allowed border-slate-200 text-slate-300"
+                  : "border-slate-900 bg-slate-900 text-white hover:border-slate-700 hover:bg-slate-800"
+                  }`}
               >
                 Proceed with loan
               </button>
@@ -942,6 +1020,15 @@ export default function BorrowerLoanTabSection({
                     return;
                   }
 
+                  const shouldUpdateProduct =
+                    selectedProduct && selectedProduct.productId !== loan.productId;
+                  const productPayload = shouldUpdateProduct
+                    ? {
+                      productId: selectedProduct.productId,
+                      productName: selectedProduct.name
+                    }
+                    : {};
+
                   void patchLoan(
                     {
                       action: "update",
@@ -949,7 +1036,8 @@ export default function BorrowerLoanTabSection({
                       termMonths: resolvedTermMonths,
                       interestRate: resolvedInterestRate,
                       paymentFrequency: resolvedPaymentFrequency,
-                      startDate: resolvedStartDate
+                      startDate: resolvedStartDate,
+                      ...productPayload
                     },
                     "Updating loan details...",
                     "Loan details updated.",
@@ -957,11 +1045,10 @@ export default function BorrowerLoanTabSection({
                   );
                 }}
                 disabled={isWorking}
-                className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-                  isWorking
-                    ? "cursor-not-allowed border-slate-200 text-slate-300"
-                    : "border-slate-900 bg-slate-900 text-white hover:border-slate-700 hover:bg-slate-800"
-                }`}
+                className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${isWorking
+                  ? "cursor-not-allowed border-slate-200 text-slate-300"
+                  : "border-slate-900 bg-slate-900 text-white hover:border-slate-700 hover:bg-slate-800"
+                  }`}
               >
                 Update loan details
               </button>
@@ -969,11 +1056,10 @@ export default function BorrowerLoanTabSection({
                 type="button"
                 onClick={handleCancelEdit}
                 disabled={isWorking}
-                className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-                  isWorking
-                    ? "cursor-not-allowed border-slate-200 text-slate-300"
-                    : "border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
-                }`}
+                className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${isWorking
+                  ? "cursor-not-allowed border-slate-200 text-slate-300"
+                  : "border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                  }`}
               >
                 Cancel
               </button>
@@ -988,11 +1074,10 @@ export default function BorrowerLoanTabSection({
             type="button"
             onClick={() => setStatusActionType("close")}
             disabled={isWorking}
-            className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-              isWorking
-                ? "cursor-not-allowed border-slate-200 text-slate-300"
-                : "border-slate-900 bg-slate-900 text-white hover:border-slate-700 hover:bg-slate-800"
-            }`}
+            className={`cursor-pointer rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${isWorking
+              ? "cursor-not-allowed border-slate-200 text-slate-300"
+              : "border-slate-900 bg-slate-900 text-white hover:border-slate-700 hover:bg-slate-800"
+              }`}
           >
             Mark as completed
           </button>
