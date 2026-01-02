@@ -13,3 +13,4 @@
 - 2026-01-02: default list-style payment edits to inline rows with a visible custom-payment row and retain toggle control for clarity.
 - 2026-01-02: prefer plain row styling with standard inputs/buttons for dense payment entry screens.
 - 2026-01-02: constrain payments list to a scrollable panel within the notes/actions height.
+- 2026-01-02: avoid body-level scrolling on the loan payments view; keep scroll inside the payments table.

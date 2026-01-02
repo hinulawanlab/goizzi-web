@@ -2,7 +2,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Pencil } from "lucide-react";
+import { Check, Pencil, X } from "lucide-react";
 
 import type { ActionState } from "@/components/borrowers/borrowerApplicationTypes";
 import type { PaymentBreakdown, RepaymentScheduleEntry } from "@/shared/types/repaymentSchedule";
@@ -357,7 +357,8 @@ export default function BorrowerLoanPaymentsTab({ loanId, scheduleEntries }: Bor
 
   const listGridClass =
     "grid grid-cols-[minmax(140px,1fr)_minmax(140px,1fr)_minmax(120px,1fr)_minmax(110px,1fr)_minmax(110px,1fr)_minmax(130px,1fr)_minmax(110px,1fr)_minmax(100px,1fr)_minmax(200px,1.4fr)_minmax(120px,0.9fr)] gap-3 items-start";
-  const baseInputClass = "w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-700 focus:border-slate-400 focus:outline-none";
+  const baseInputClass =
+    "w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-400 focus:border-slate-400 focus:text-slate-700 focus:outline-none";
   const disabledInputClass = "border-slate-200 bg-slate-100 text-slate-400";
 
   return (
@@ -463,15 +464,16 @@ export default function BorrowerLoanPaymentsTab({ loanId, scheduleEntries }: Bor
                     type="button"
                     onClick={handleCustomSubmit}
                     disabled={customState === "working" || !isCustomPaymentValid}
-                    className={`inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-medium ${
-                      customState === "working" || !isCustomPaymentValid
-                        ? "cursor-not-allowed border-slate-200 text-slate-300"
-                        : "cursor-pointer border-emerald-300 text-emerald-700 hover:border-emerald-400"
-                    }`}
-                  >
-                    <Check className="h-4 w-4" aria-hidden />
-                    Apply
-                  </button>
+                  className={`inline-flex items-center rounded-md border px-2 py-1.5 text-xs font-medium ${
+                    customState === "working" || !isCustomPaymentValid
+                      ? "cursor-not-allowed border-slate-200 text-slate-300"
+                      : "cursor-pointer border-emerald-300 text-emerald-700 hover:border-emerald-400"
+                  }`}
+                  title="Apply custom payment"
+                  aria-label="Apply custom payment"
+                >
+                  <Check className="h-4 w-4" aria-hidden />
+                </button>
                 </div>
               </div>
 
@@ -495,7 +497,12 @@ export default function BorrowerLoanPaymentsTab({ loanId, scheduleEntries }: Bor
           )}
 
           {rows.map(({ entry, draft, rowState, isPaid, isEditing, disableInputs, disableAction }) => (
-            <div key={entry.scheduleId} className="border-b border-slate-100 px-4 py-3 last:border-b-0">
+            <div
+              key={entry.scheduleId}
+              className={`border-b border-slate-100 px-4 py-3 last:border-b-0 ${
+                isPaid ? "bg-emerald-50/60" : "bg-white"
+              }`}
+            >
               <div className={listGridClass}>
                 <div className="space-y-1">
                   {isPaid && (
@@ -583,39 +590,43 @@ export default function BorrowerLoanPaymentsTab({ loanId, scheduleEntries }: Bor
                     <button
                       type="button"
                       onClick={() => setRowState(entry.scheduleId, { isEditing: true, state: "idle", message: "" })}
-                      className="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:border-slate-400 hover:text-slate-900 cursor-pointer"
-                    >
-                      <Pencil className="h-4 w-4" aria-hidden />
-                      Edit
-                    </button>
-                  )}
-                  {isEditing && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        updateEntry(entry);
-                        setRowState(entry.scheduleId, { isEditing: false, state: "idle", message: "" });
-                      }}
-                      className="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:border-slate-400 hover:text-slate-900 cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                  )}
-                  {(isEditing || !isPaid) && (
-                    <button
-                      type="button"
-                      onClick={() => handleSubmit(entry, isPaid ? "edit" : "apply")}
-                      disabled={disableAction}
-                      className={`inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-medium ${
-                        disableAction
-                          ? "cursor-not-allowed border-slate-200 text-slate-300"
-                          : "cursor-pointer border-emerald-300 text-emerald-700 hover:border-emerald-400"
-                      }`}
-                    >
-                      <Check className="h-4 w-4" aria-hidden />
-                      {isPaid ? "Save" : "Apply"}
-                    </button>
-                  )}
+                    className="inline-flex items-center rounded-md border border-slate-300 px-2 py-1.5 text-xs font-medium text-slate-700 hover:border-slate-400 hover:text-slate-900 cursor-pointer"
+                    title="Edit payment"
+                    aria-label="Edit payment"
+                  >
+                    <Pencil className="h-4 w-4" aria-hidden />
+                  </button>
+                )}
+                {isEditing && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateEntry(entry);
+                      setRowState(entry.scheduleId, { isEditing: false, state: "idle", message: "" });
+                    }}
+                    className="inline-flex items-center rounded-md border border-slate-300 px-2 py-1.5 text-xs font-medium text-slate-700 hover:border-slate-400 hover:text-slate-900 cursor-pointer"
+                    title="Cancel edit"
+                    aria-label="Cancel edit"
+                  >
+                    <X className="h-4 w-4" aria-hidden />
+                  </button>
+                )}
+                {(isEditing || !isPaid) && (
+                  <button
+                    type="button"
+                    onClick={() => handleSubmit(entry, isPaid ? "edit" : "apply")}
+                    disabled={disableAction}
+                    className={`inline-flex items-center rounded-md border px-2 py-1.5 text-xs font-medium ${
+                      disableAction
+                        ? "cursor-not-allowed border-slate-200 text-slate-300"
+                        : "cursor-pointer border-emerald-300 text-emerald-700 hover:border-emerald-400"
+                    }`}
+                    title={isPaid ? "Save payment" : "Apply payment"}
+                    aria-label={isPaid ? "Save payment" : "Apply payment"}
+                  >
+                    <Check className="h-4 w-4" aria-hidden />
+                  </button>
+                )}
                 </div>
               </div>
 
