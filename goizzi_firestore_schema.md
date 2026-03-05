@@ -124,6 +124,7 @@ Raw signals used to compute “usual location.” Keep event-based.
 - `geohash: string?`
 - `geo: geopoint?`
 - `accuracyMeters: number?`
+- `locationType: string?` (`home|work`; optional staff label)
 - `branchId: string?`
 - `loanId: string?`
 - `paymentId: string?`

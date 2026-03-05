@@ -3,7 +3,7 @@ import type { DocumentSnapshot } from "firebase-admin/firestore";
 
 import { db, hasAdminCredentials } from "@/shared/singletons/firebaseAdmin";
 import { demoBorrowerLocations } from "@/shared/data/demoBorrowerLocations";
-import type { LocationObservation } from "@/shared/types/location";
+import type { LocationObservation, LocationType } from "@/shared/types/location";
 
 function formatTimestamp(value: unknown): string {
   if (!value) {
@@ -72,6 +72,7 @@ function mapObservationDoc(doc: DocumentSnapshot): LocationObservation {
     source: typeof data.source === "string" ? data.source : "manual",
     capturedAt: formatTimestamp(data.capturedAt),
     label: typeof data.label === "string" ? data.label : "Location",
+    locationType: data.locationType === "home" || data.locationType === "work" ? data.locationType : undefined,
     geo,
     accuracyMeters: typeof data.accuracyMeters === "number" ? data.accuracyMeters : undefined,
     createdBy: typeof data.createdByUserId === "string" ? data.createdByUserId : undefined,
@@ -113,4 +114,39 @@ export async function getLocationObservations(borrowerId: string, limit = 20): P
   }
 
   return demoBorrowerLocations[borrowerId] ?? [];
+}
+
+export async function updateLocationObservationType(
+  borrowerId: string,
+  observationId: string,
+  locationType: LocationType | null
+): Promise<LocationObservation> {
+  if (!db) {
+    throw new Error("Firestore Admin client is not initialized.");
+  }
+  if (!borrowerId || !observationId) {
+    throw new Error("Borrower or observation id is missing.");
+  }
+
+  const observationRef = db
+    .collection("borrowers")
+    .doc(borrowerId)
+    .collection("locationObservations")
+    .doc(observationId);
+
+  const updatePayload: Record<string, unknown> = {
+    updatedAt: new Date().toISOString()
+  };
+  if (locationType === null) {
+    updatePayload.locationType = null;
+  } else {
+    updatePayload.locationType = locationType;
+  }
+
+  await observationRef.set(updatePayload, { merge: true });
+  const updatedDoc = await observationRef.get();
+  if (!updatedDoc.exists) {
+    throw new Error("Location observation not found.");
+  }
+  return mapObservationDoc(updatedDoc);
 }

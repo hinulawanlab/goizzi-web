@@ -401,6 +401,7 @@ export default function BorrowerApplicationTabs({
           payslipKycs={payslipKycs}
           propertyTitleKycs={propertyTitleKycs}
           otherKycs={otherKycs}
+          selfieKycs={selfieKycs}
           refreshTokensByTab={refreshTokensByTab}
           auditStatus={auditStatus}
             auditUpdatedAt={auditUpdatedAt}

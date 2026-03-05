@@ -1,12 +1,12 @@
 import Sidebar from "@/components/navigation/Sidebar";
 import BorrowerDirectory from "@/components/borrowers/BorrowerDirectory";
 import BorrowerFollowUpGateModal from "@/components/borrowers/BorrowerFollowUpGateModal";
-import { getBorrowerFollowUps, getBorrowerSummaries } from "@/shared/services/borrowerService";
+import { getBorrowerDirectoryPage, getBorrowerFollowUps } from "@/shared/services/borrowerService";
 import { requireStaffSession } from "@/shared/services/sessionService";
 
 export default async function BorrowersPage() {
   await requireStaffSession();
-  const borrowers = await getBorrowerSummaries(30);
+  const initialDirectoryPage = await getBorrowerDirectoryPage(1, 100);
   const followUps = await getBorrowerFollowUps(50);
 
   return (
@@ -17,7 +17,11 @@ export default async function BorrowersPage() {
           {/* <div className="rounded-3xl border border-slate-100 bg-white p-8 shadow-lg">
             </div> */}
           <BorrowerFollowUpGateModal followUps={followUps} />
-          <BorrowerDirectory borrowers={borrowers} />
+          <BorrowerDirectory
+            borrowers={initialDirectoryPage.borrowers}
+            total={initialDirectoryPage.total}
+            pageSize={initialDirectoryPage.pageSize}
+          />
         </main>
       </div>
     </div>

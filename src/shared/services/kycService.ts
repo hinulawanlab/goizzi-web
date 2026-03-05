@@ -351,7 +351,20 @@ async function fetchSelfieKycs(borrowerId: string, limit = 10): Promise<Borrower
     throw new Error("No selfie KYC documents found.");
   }
 
-  return snapshot.docs.map((doc) => mapSelfieDoc(doc, borrowerId)).filter(Boolean) as BorrowerGovernmentIdKyc[];
+  const mapped = snapshot.docs.map((doc) => mapSelfieDoc(doc, borrowerId)).filter(Boolean) as BorrowerGovernmentIdKyc[];
+
+  if (!storageBucket) {
+    return mapped;
+  }
+
+  const withUrls = await Promise.all(
+    mapped.map(async (kyc) => ({
+      ...kyc,
+      imageUrls: await createSignedUrlsForRefs(kyc.storageRefs ?? [])
+    }))
+  );
+
+  return withUrls;
 }
 
 async function fetchProofOfBillingKycs(borrowerId: string, limit = 10): Promise<BorrowerProofOfBillingKyc[]> {

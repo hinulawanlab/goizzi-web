@@ -34,6 +34,32 @@
   .print-footer::after {
     content: "Page " counter(page) " of " counter(pages);
   }
+
+  .loan-print-page.page-1 {
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .loan-print-page.page-2 {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  .loan-print-form {
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
+  .loan-print-header {
+    position: relative;
+    padding-right: 150px;
+  }
+
+  .maker-selfie-box {
+    position: absolute;
+    top: 0;
+    right: 0;
+  }
 }
 
 .print-vertical-brand,

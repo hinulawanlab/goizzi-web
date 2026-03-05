@@ -6,6 +6,24 @@ import { demoDashboardData } from "@/shared/data/demoDashboard";
 import { demoBorrowerFollowUps } from "@/shared/data/demoBorrowerFollowUps";
 import type { BorrowerFollowUpSummary } from "@/shared/types/borrowerFollowUp";
 import type { BorrowerSummary, FrequentArea, LocationQuality } from "@/shared/types/dashboard";
+import {
+  rebuildBorrowerSearchIndexForBorrower,
+  searchBorrowerIndexByFullName
+} from "@/shared/services/borrowerSearchIndexService";
+
+export interface BorrowerDirectoryPage {
+  borrowers: BorrowerSummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface BorrowerSearchSuggestion {
+  borrowerId: string;
+  fullName: string;
+  phone: string;
+  branch: string;
+}
 
 function normalizeKycVerified(value: unknown): boolean | null {
   if (typeof value === "boolean") {
@@ -282,6 +300,87 @@ async function fetchBorrowersFromFirestore(limit = 30): Promise<BorrowerSummary[
   return snapshot.docs.map(mapBorrowerDoc);
 }
 
+async function fetchAllBorrowersFromFirestore(): Promise<BorrowerSummary[]> {
+  if (!db) {
+    throw new Error("Firestore Admin client is not initialized.");
+  }
+
+  const borrowers: BorrowerSummary[] = [];
+  let lastDoc: DocumentSnapshot | null = null;
+
+  while (true) {
+    let query = db.collection("borrowers").orderBy("updatedAt", "desc").limit(400);
+    if (lastDoc) {
+      query = query.startAfter(lastDoc);
+    }
+
+    const snapshot = await query.get();
+    if (snapshot.empty) {
+      break;
+    }
+
+    snapshot.docs.forEach((doc) => borrowers.push(mapBorrowerDoc(doc)));
+    lastDoc = snapshot.docs[snapshot.docs.length - 1] ?? null;
+
+    if (snapshot.size < 400) {
+      break;
+    }
+  }
+
+  return borrowers;
+}
+
+async function fetchBorrowerIdsFromApplicationDocsByName(searchTerm: string): Promise<string[]> {
+  if (!db) {
+    return [];
+  }
+
+  const matchedIds = new Set<string>();
+  let lastDoc: DocumentSnapshot | null = null;
+  const normalizedTerm = normalizeSearchTerm(searchTerm);
+
+  while (true) {
+    let query = db.collectionGroup("application").limit(400);
+    if (lastDoc) {
+      query = query.startAfter(lastDoc);
+    }
+
+    const snapshot = await query.get();
+    if (snapshot.empty) {
+      break;
+    }
+
+    snapshot.docs.forEach((doc) => {
+      const data = doc.data() || {};
+      const borrowerMap = typeof data.borrower === "object" && data.borrower !== null
+        ? (data.borrower as Record<string, unknown>)
+        : null;
+      const nestedFullName =
+        borrowerMap && typeof borrowerMap.fullName === "string" ? normalizeSearchTerm(borrowerMap.fullName) : "";
+      const topLevelFullName =
+        typeof data.fullName === "string" ? normalizeSearchTerm(data.fullName) : "";
+      const candidateName = nestedFullName || topLevelFullName;
+
+      if (!candidateName || !candidateName.includes(normalizedTerm)) {
+        return;
+      }
+
+      const segments = doc.ref.path.split("/");
+      const borrowerId = segments.length >= 2 ? segments[1] : "";
+      if (borrowerId) {
+        matchedIds.add(borrowerId);
+      }
+    });
+
+    lastDoc = snapshot.docs[snapshot.docs.length - 1] ?? null;
+    if (snapshot.size < 400) {
+      break;
+    }
+  }
+
+  return Array.from(matchedIds);
+}
+
 async function fetchBorrowerFollowUpsFromFirestore(limit = 50): Promise<BorrowerFollowUpSummary[]> {
   if (!db) {
     throw new Error("Firestore Admin client is not initialized.");
@@ -312,6 +411,172 @@ export async function getBorrowerSummaries(limit = 30): Promise<BorrowerSummary[
   }
 
   return demoDashboardData.borrowers;
+}
+
+function normalizeSearchTerm(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function normalizeDigits(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
+function matchesBorrowerSearch(borrower: BorrowerSummary, searchTerm: string): boolean {
+  const normalizedTerm = normalizeSearchTerm(searchTerm);
+  if (!normalizedTerm) {
+    return true;
+  }
+
+  const borrowerId = borrower.borrowerId.toLowerCase();
+  const fullName = borrower.fullName.toLowerCase();
+  const phone = borrower.phone.toLowerCase();
+  const normalizedPhone = normalizeDigits(borrower.phone);
+  const normalizedTermDigits = normalizeDigits(normalizedTerm);
+
+  return (
+    borrowerId.includes(normalizedTerm) ||
+    fullName.includes(normalizedTerm) ||
+    phone.includes(normalizedTerm) ||
+    (normalizedTermDigits.length >= 2 && normalizedPhone.includes(normalizedTermDigits))
+  );
+}
+
+function paginateBorrowers(borrowers: BorrowerSummary[], page: number, pageSize: number): BorrowerDirectoryPage {
+  const safePageSize = Number.isFinite(pageSize) ? Math.min(Math.max(Math.floor(pageSize), 1), 200) : 100;
+  const safePage = Number.isFinite(page) ? Math.max(Math.floor(page), 1) : 1;
+  const total = borrowers.length;
+  const offset = (safePage - 1) * safePageSize;
+  const pageBorrowers = borrowers.slice(offset, offset + safePageSize);
+
+  return {
+    borrowers: pageBorrowers,
+    total,
+    page: safePage,
+    pageSize: safePageSize
+  };
+}
+
+async function fetchBorrowersByIds(ids: string[]): Promise<BorrowerSummary[]> {
+  if (!ids.length) {
+    return [];
+  }
+
+  if (hasAdminCredentials() && db) {
+    const adminDb = db;
+    const refs = ids.map((id) => adminDb.collection("borrowers").doc(id));
+    const snapshots = await adminDb.getAll(...refs);
+    const mapped = snapshots.filter((doc) => doc.exists).map((doc) => mapBorrowerDoc(doc));
+    const enriched = await enrichBorrowersWithBranchNames(mapped);
+    const byId = new Map(enriched.map((borrower) => [borrower.borrowerId, borrower]));
+    return ids.map((id) => byId.get(id)).filter((borrower): borrower is BorrowerSummary => Boolean(borrower));
+  }
+
+  const byId = new Map(demoDashboardData.borrowers.map((borrower) => [borrower.borrowerId, borrower]));
+  return ids.map((id) => byId.get(id)).filter((borrower): borrower is BorrowerSummary => Boolean(borrower));
+}
+
+async function findBorrowerIdsBySearchTerm(searchTerm: string): Promise<string[]> {
+  const normalizedTerm = normalizeSearchTerm(searchTerm);
+  if (!normalizedTerm) {
+    return [];
+  }
+
+  if (hasAdminCredentials()) {
+    try {
+      const indexMatches = await searchBorrowerIndexByFullName(normalizedTerm);
+      if (indexMatches.length) {
+        return indexMatches.map((match) => match.borrowerId);
+      }
+
+      const borrowers = await fetchAllBorrowersFromFirestore();
+      const fallbackMatches = borrowers.filter((borrower) => matchesBorrowerSearch(borrower, normalizedTerm));
+      const fallbackIds = fallbackMatches.map((borrower) => borrower.borrowerId);
+      if (fallbackIds.length) {
+        void Promise.allSettled(fallbackIds.map((borrowerId) => rebuildBorrowerSearchIndexForBorrower(borrowerId)));
+        return fallbackIds;
+      }
+
+      const deepFallbackIds = await fetchBorrowerIdsFromApplicationDocsByName(normalizedTerm);
+      if (deepFallbackIds.length) {
+        void Promise.allSettled(deepFallbackIds.map((borrowerId) => rebuildBorrowerSearchIndexForBorrower(borrowerId)));
+        return deepFallbackIds;
+      }
+
+      return [];
+    } catch (error) {
+      console.warn("Unable to search borrowers using search index:", error);
+    }
+  }
+
+  const fallbackMatches = demoDashboardData.borrowers.filter((borrower) => matchesBorrowerSearch(borrower, normalizedTerm));
+  return fallbackMatches.map((borrower) => borrower.borrowerId);
+}
+
+export async function getBorrowerDirectoryPage(page = 1, pageSize = 100): Promise<BorrowerDirectoryPage> {
+  const safePageSize = Number.isFinite(pageSize) ? Math.min(Math.max(Math.floor(pageSize), 1), 200) : 100;
+  const safePage = Number.isFinite(page) ? Math.max(Math.floor(page), 1) : 1;
+
+  if (hasAdminCredentials() && db) {
+    try {
+      const baseQuery = db.collection("borrowers");
+      const countSnapshot = await baseQuery.count().get();
+      const total = Number(countSnapshot.data().count ?? 0);
+
+      const offset = Math.max((safePage - 1) * safePageSize, 0);
+      const snapshot = await baseQuery
+        .orderBy("updatedAt", "desc")
+        .offset(offset)
+        .limit(safePageSize)
+        .get();
+
+      const borrowers = await enrichBorrowersWithBranchNames(snapshot.docs.map(mapBorrowerDoc));
+      return {
+        borrowers,
+        total,
+        page: safePage,
+        pageSize: safePageSize
+      };
+    } catch (error) {
+      console.warn("Unable to fetch paginated borrowers from Firestore:", error);
+    }
+  }
+
+  return paginateBorrowers(demoDashboardData.borrowers, safePage, safePageSize);
+}
+
+export async function searchBorrowerDirectory(searchTerm: string, page = 1, pageSize = 100): Promise<BorrowerDirectoryPage> {
+  const safePageSize = Number.isFinite(pageSize) ? Math.min(Math.max(Math.floor(pageSize), 1), 200) : 100;
+  const safePage = Number.isFinite(page) ? Math.max(Math.floor(page), 1) : 1;
+
+  const matchedBorrowerIds = await findBorrowerIdsBySearchTerm(searchTerm);
+  const total = matchedBorrowerIds.length;
+  const offset = (safePage - 1) * safePageSize;
+  const pageBorrowerIds = matchedBorrowerIds.slice(offset, offset + safePageSize);
+  const borrowers = await fetchBorrowersByIds(pageBorrowerIds);
+
+  return {
+    borrowers,
+    total,
+    page: safePage,
+    pageSize: safePageSize
+  };
+}
+
+export async function getBorrowerSearchSuggestions(searchTerm: string, limit = 8): Promise<BorrowerSearchSuggestion[]> {
+  const normalizedTerm = normalizeSearchTerm(searchTerm);
+  if (!normalizedTerm) {
+    return [];
+  }
+
+  const safeLimit = Number.isFinite(limit) ? Math.min(Math.max(Math.floor(limit), 1), 20) : 8;
+  const matchedBorrowerIds = await findBorrowerIdsBySearchTerm(normalizedTerm);
+  const borrowers = await fetchBorrowersByIds(matchedBorrowerIds.slice(0, safeLimit));
+  return borrowers.map((borrower) => ({
+    borrowerId: borrower.borrowerId,
+    fullName: borrower.fullName,
+    phone: borrower.phone,
+    branch: borrower.branch
+  }));
 }
 
 export async function getBorrowerFollowUps(limit = 50): Promise<BorrowerFollowUpSummary[]> {

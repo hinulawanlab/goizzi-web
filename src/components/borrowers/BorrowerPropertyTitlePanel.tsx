@@ -8,6 +8,7 @@ interface BorrowerPropertyTitlePanelProps {
   borrowerId: string;
   applicationId: string;
   kycs: BorrowerPropertyTitleKyc[];
+  disableDecisionActions?: boolean;
   onDecisionNoteAdded?: (note: BorrowerNote) => void;
   onDecisionComplete?: () => void;
 }
@@ -16,6 +17,7 @@ export default function BorrowerPropertyTitlePanel({
   borrowerId,
   applicationId,
   kycs,
+  disableDecisionActions = false,
   onDecisionNoteAdded,
   onDecisionComplete
 }: BorrowerPropertyTitlePanelProps) {
@@ -30,6 +32,7 @@ export default function BorrowerPropertyTitlePanel({
       emptyMessage="Property title uploads will appear once submitted."
       contextLabel="Property title image"
       kycs={kycs}
+      disableDecisionActions={disableDecisionActions}
       onDecisionNoteAdded={onDecisionNoteAdded}
       onDecisionComplete={onDecisionComplete}
     />

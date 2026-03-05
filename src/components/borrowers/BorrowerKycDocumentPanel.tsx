@@ -41,6 +41,9 @@ interface BorrowerKycDocumentPanelProps<T extends KycDocumentEntry> {
   contextLabel: string;
   kycs: T[];
   metadataFields?: KycMetadataField<T>[];
+  enableImagePrint?: boolean;
+  printHeading?: string;
+  disableDecisionActions?: boolean;
   onDecisionNoteAdded?: (note: BorrowerNote) => void;
   onDecisionComplete?: () => void;
 }
@@ -95,6 +98,9 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
   contextLabel,
   kycs,
   metadataFields,
+  enableImagePrint = false,
+  printHeading,
+  disableDecisionActions = false,
   onDecisionNoteAdded,
   onDecisionComplete
 }: BorrowerKycDocumentPanelProps<T>) {
@@ -103,6 +109,8 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
   const [approvalOverrides, setApprovalOverrides] = useState<Record<string, boolean>>({});
   const [waiveOverrides, setWaiveOverrides] = useState<Record<string, boolean>>({});
   const [viewerImage, setViewerImage] = useState<{ url: string; alt: string } | null>(null);
+  const [selectedImages, setSelectedImages] = useState<Record<string, boolean>>({});
+  const [isPreparingPrint, setIsPreparingPrint] = useState(false);
 
   const sortedKycs = useMemo(() => {
     return [...kycs].sort((left, right) => {
@@ -115,6 +123,39 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
   const imageStates = useKycImageLoader(borrowerId, visibleKycs, {
     contextLabel
   });
+  const effectivePrintHeading = printHeading ?? title;
+
+  const selectedPrintImages = useMemo(() => {
+    const selected: Array<{ key: string; url: string; caption: string }> = [];
+    visibleKycs.forEach((entry) => {
+      const rowTitle = resolveDecisionLabel(entry, title);
+      const urls = imageStates[entry.kycId]?.urls ?? [];
+      urls.forEach((url, index) => {
+        const key = `${entry.kycId}:${index}`;
+        if (!selectedImages[key]) {
+          return;
+        }
+        selected.push({
+          key,
+          url,
+          caption: `${rowTitle} ${index + 1}`
+        });
+      });
+    });
+    return selected;
+  }, [imageStates, selectedImages, title, visibleKycs]);
+
+  useEffect(() => {
+    const handleAfterPrint = () => {
+      document.body.classList.remove("kyc-image-print-mode");
+      setIsPreparingPrint(false);
+    };
+    window.addEventListener("afterprint", handleAfterPrint);
+    return () => {
+      window.removeEventListener("afterprint", handleAfterPrint);
+      document.body.classList.remove("kyc-image-print-mode");
+    };
+  }, []);
 
   useEffect(() => {
     if (visibleKycs.length > 0) {
@@ -194,6 +235,24 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
     }
   };
 
+  const handleImageToggle = (key: string) => {
+    setSelectedImages((current) => ({
+      ...current,
+      [key]: !current[key]
+    }));
+  };
+
+  const handlePrintSelected = () => {
+    if (!selectedPrintImages.length) {
+      return;
+    }
+    setIsPreparingPrint(true);
+    document.body.classList.add("kyc-image-print-mode");
+    setTimeout(() => {
+      window.print();
+    }, 120);
+  };
+
   if (!visibleKycs.length) {
     return (
       <div className="rounded-3xl border border-slate-100 bg-white p-6 text-center shadow-lg">
@@ -245,7 +304,23 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
                 </div>
               )}
 
-              <div className="mt-4 max-h-105 overflow-y-auto pr-2">
+                <div className="mt-4 max-h-105 overflow-y-auto pr-2">
+                {enableImagePrint && (
+                  <div className="mb-3 flex items-center justify-end gap-3">
+                    <span className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                      {selectedPrintImages.length} selected
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handlePrintSelected}
+                      disabled={selectedPrintImages.length === 0 || isPreparingPrint}
+                      className="cursor-pointer rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300"
+                    >
+                      {isPreparingPrint ? "Preparing..." : "Print"}
+                    </button>
+                  </div>
+                )}
+
                 {imageState?.status === "loading" && (
                   <div className="flex items-center gap-2 text-sm text-slate-500">
                     <span className="inline-flex h-4 w-4 animate-spin rounded-full border border-slate-300 border-t-transparent" />
@@ -265,31 +340,52 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
                       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                         {imageState.urls.map((url, index) => {
                           const alt = `${rowTitle} ${index + 1}`;
+                          const selectionKey = `${entry.kycId}:${index}`;
+                          const isSelected = Boolean(selectedImages[selectionKey]);
                           return (
-                            <button
+                            <div
                               key={`${entry.kycId}-photo-${index}`}
-                              type="button"
-                              onClick={() => setViewerImage({ url, alt })}
-                              className="overflow-hidden rounded-2xl border border-slate-100 bg-slate-50 text-left"
+                              className="relative overflow-hidden rounded-2xl border border-slate-100 bg-slate-50"
                             >
-                              <Image
-                                src={url}
-                                alt={alt}
-                                width={320}
-                                height={240}
-                                unoptimized
-                                className="h-44 w-full object-cover"
-                                onError={(event) => {
-                                  console.warn(`${contextLabel} image tag failed to load.`, {
-                                    borrowerId,
-                                    kycId: entry.kycId,
-                                    index,
-                                    url,
-                                    message: event.currentTarget?.currentSrc ?? "unknown-src"
-                                  });
-                                }}
-                              />
-                            </button>
+                              <button
+                                type="button"
+                                onClick={() => setViewerImage({ url, alt })}
+                                className="w-full cursor-pointer text-left"
+                              >
+                                <Image
+                                  src={url}
+                                  alt={alt}
+                                  width={320}
+                                  height={240}
+                                  unoptimized
+                                  className="h-44 w-full object-cover"
+                                  onError={(event) => {
+                                    console.warn(`${contextLabel} image tag failed to load.`, {
+                                      borrowerId,
+                                      kycId: entry.kycId,
+                                      index,
+                                      url,
+                                      message: event.currentTarget?.currentSrc ?? "unknown-src"
+                                    });
+                                  }}
+                                />
+                              </button>
+                              {enableImagePrint && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleImageToggle(selectionKey)}
+                                  title={isSelected ? "Unselect image for print" : "Select image for print"}
+                                  aria-label={isSelected ? "Unselect image for print" : "Select image for print"}
+                                  className={`absolute right-2 top-2 inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border text-xs font-bold transition ${
+                                    isSelected
+                                      ? "border-emerald-500 bg-emerald-500 text-white"
+                                      : "border-white bg-white/90 text-slate-600 hover:bg-white"
+                                  }`}
+                                >
+                                  {isSelected ? "✓" : ""}
+                                </button>
+                              )}
+                            </div>
                           );
                         })}
                       </div>
@@ -306,6 +402,7 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
                 actionState={actionState}
                 actionMessage={actionMessages[entry.kycId]}
                 isWaived={effectiveWaived}
+                disableActions={disableDecisionActions}
                 onDecision={(action) => submitDecision(entry, action)}
               />
             </section>
@@ -320,6 +417,82 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
           onClose={() => setViewerImage(null)}
         />
       )}
+
+      {enableImagePrint && (
+        <div className="kyc-print-root hidden print:block">
+          <header className="kyc-print-header">
+            <h1>{effectivePrintHeading}</h1>
+          </header>
+          <section className="kyc-print-grid">
+            {selectedPrintImages.map((item) => (
+              <figure key={item.key} className="kyc-print-item">
+                <Image
+                  src={item.url}
+                  alt={item.caption}
+                  width={1200}
+                  height={900}
+                  unoptimized
+                />
+              </figure>
+            ))}
+          </section>
+        </div>
+      )}
+
+      <style jsx global>{`
+        @media print {
+          body.kyc-image-print-mode * {
+            visibility: hidden !important;
+          }
+
+          body.kyc-image-print-mode .kyc-print-root,
+          body.kyc-image-print-mode .kyc-print-root * {
+            visibility: visible !important;
+          }
+
+          body.kyc-image-print-mode .kyc-print-root {
+            position: absolute !important;
+            inset: 0 !important;
+            background: #fff !important;
+            padding: 0.5in !important;
+          }
+
+          body.kyc-image-print-mode .kyc-print-header h1 {
+            margin: 0 0 0.2in 0 !important;
+            font-size: 20px !important;
+            letter-spacing: 0.08em !important;
+            text-transform: uppercase !important;
+            color: #0f172a !important;
+          }
+
+          body.kyc-image-print-mode .kyc-print-grid {
+            display: grid !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 0.18in !important;
+          }
+
+          body.kyc-image-print-mode .kyc-print-item {
+            margin: 0 !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 8px !important;
+            overflow: hidden !important;
+            break-inside: avoid-page !important;
+          }
+
+          body.kyc-image-print-mode .kyc-print-item img {
+            display: block !important;
+            width: 100% !important;
+            height: auto !important;
+            object-fit: contain !important;
+            max-height: 4.8in !important;
+          }
+
+          @page {
+            size: 8.5in 13in;
+            margin: 0.4in;
+          }
+        }
+      `}</style>
     </>
   );
 }

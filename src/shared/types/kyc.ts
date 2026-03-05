@@ -6,6 +6,7 @@ export interface BorrowerGovernmentIdKyc {
   frontStorageRef?: string;
   backStorageRef?: string;
   storageRefs?: string[];
+  imageUrls?: string[];
   isApproved?: boolean;
   createdAt?: string;
 }

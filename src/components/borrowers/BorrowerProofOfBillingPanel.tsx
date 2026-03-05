@@ -8,6 +8,8 @@ interface BorrowerProofOfBillingPanelProps {
   borrowerId: string;
   applicationId: string;
   kycs: BorrowerProofOfBillingKyc[];
+  enableImagePrint?: boolean;
+  disableDecisionActions?: boolean;
   onDecisionNoteAdded?: (note: BorrowerNote) => void;
   onDecisionComplete?: () => void;
 }
@@ -16,6 +18,8 @@ export default function BorrowerProofOfBillingPanel({
   borrowerId,
   applicationId,
   kycs,
+  enableImagePrint = false,
+  disableDecisionActions = false,
   onDecisionNoteAdded,
   onDecisionComplete
 }: BorrowerProofOfBillingPanelProps) {
@@ -30,6 +34,9 @@ export default function BorrowerProofOfBillingPanel({
       emptyMessage="Proof of billing submissions will appear once uploaded."
       contextLabel="Proof of billing image"
       kycs={kycs}
+      enableImagePrint={enableImagePrint}
+      printHeading="Proof of Billing"
+      disableDecisionActions={disableDecisionActions}
       onDecisionNoteAdded={onDecisionNoteAdded}
       onDecisionComplete={onDecisionComplete}
     />

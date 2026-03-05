@@ -8,6 +8,8 @@ interface BorrowerOtherDocumentPanelProps {
   borrowerId: string;
   applicationId: string;
   kycs: BorrowerOtherKyc[];
+  enableImagePrint?: boolean;
+  disableDecisionActions?: boolean;
   onDecisionNoteAdded?: (note: BorrowerNote) => void;
   onDecisionComplete?: () => void;
 }
@@ -16,6 +18,8 @@ export default function BorrowerOtherDocumentPanel({
   borrowerId,
   applicationId,
   kycs,
+  enableImagePrint = false,
+  disableDecisionActions = false,
   onDecisionNoteAdded,
   onDecisionComplete
 }: BorrowerOtherDocumentPanelProps) {
@@ -30,6 +34,9 @@ export default function BorrowerOtherDocumentPanel({
       emptyMessage="Other document uploads will appear once submitted."
       contextLabel="Other document image"
       kycs={kycs}
+      enableImagePrint={enableImagePrint}
+      printHeading="Others"
+      disableDecisionActions={disableDecisionActions}
       metadataFields={[
         { label: "Description", value: (entry) => entry.documentDescription }
       ]}

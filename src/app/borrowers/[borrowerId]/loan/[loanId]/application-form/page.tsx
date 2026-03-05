@@ -4,11 +4,11 @@ import { notFound } from "next/navigation";
 
 import BorrowerLoanApplicationForm from "@/components/borrowers/BorrowerLoanApplicationForm";
 import PrintControls from "@/components/shared/PrintControls";
-import PrintOnLoad from "@/components/shared/PrintOnLoad";
 import { getBorrowerSummaryById } from "@/shared/services/borrowerService";
 import { getBorrowerApplicationById } from "@/shared/services/applicationService";
 import { getLoanById } from "@/shared/services/loanService";
 import { requireStaffSession } from "@/shared/services/sessionService";
+import { getBorrowerSelfieKycs } from "@/shared/services/kycService";
 
 interface BorrowerLoanApplicationFormPageProps {
   params: Promise<{
@@ -44,6 +44,9 @@ export default async function BorrowerLoanApplicationFormPage({ params }: Borrow
   }
 
   const application = await getBorrowerApplicationById(borrowerId, loan.applicationId);
+  const selfieKycs = await getBorrowerSelfieKycs(borrowerId, 10);
+  const latestSelfie = selfieKycs.find((entry) => (entry.imageUrls?.length ?? 0) > 0);
+  const makerSelfieUrl = latestSelfie?.imageUrls?.[0];
 
   if (!application) {
     return (
@@ -59,9 +62,13 @@ export default async function BorrowerLoanApplicationFormPage({ params }: Borrow
       <div className="print-vertical-brand">GoIzzi! We make it easy! | loan application</div>
       <div className="print-footer" aria-hidden="true" />
       <div className="mx-auto w-full max-w-4xl">
-        <PrintOnLoad />
         <PrintControls />
-        <BorrowerLoanApplicationForm borrower={borrower} loan={loan} application={application} />
+        <BorrowerLoanApplicationForm
+          borrower={borrower}
+          loan={loan}
+          application={application}
+          makerSelfieUrl={makerSelfieUrl}
+        />
       </div>
     </div>
   );

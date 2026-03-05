@@ -1,8 +1,11 @@
+export type LocationType = "home" | "work";
+
 export interface LocationObservation {
   observationId: string;
   source: string;
   capturedAt: string;
   label: string;
+  locationType?: LocationType;
   geo: {
     lat: number;
     lng: number;

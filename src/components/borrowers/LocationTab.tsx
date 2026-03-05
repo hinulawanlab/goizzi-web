@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, MapPin, RefreshCw } from "lucide-react";
 
 import type { BorrowerSummary } from "@/shared/types/dashboard";
-import type { LocationObservation } from "@/shared/types/location";
+import type { LocationObservation, LocationType } from "@/shared/types/location";
 
 const STALE_THRESHOLD_DAYS = 30;
 const REFERENCE_TIMESTAMP = Date.now();
@@ -82,6 +82,7 @@ function LocationMap({ observation }: LocationMapProps) {
 }
 
 interface ObservationListProps {
+  borrowerId: string;
   observations: LocationObservation[];
   activeObservationId?: string;
   onSelectObservation: (observation: LocationObservation) => void;
@@ -93,6 +94,7 @@ interface ObservationListProps {
 }
 
 function ObservationList({
+  borrowerId,
   observations,
   activeObservationId,
   onSelectObservation,
@@ -109,6 +111,16 @@ function ObservationList({
   const pageStart = currentPage * pageSize;
   const pageEnd = pageStart + pageSize;
   const pagedObservations = observations.slice(pageStart, pageEnd);
+  const [pendingTypeObservationId, setPendingTypeObservationId] = useState<string | null>(null);
+  const [locationTypeByObservationId, setLocationTypeByObservationId] = useState<Record<string, LocationType | null>>(
+    () =>
+      observations.reduce<Record<string, LocationType | null>>((acc, observation) => {
+        acc[observation.observationId] = observation.locationType ?? null;
+        return acc;
+      }, {})
+  );
+  const [typeUpdateErrorByObservationId, setTypeUpdateErrorByObservationId] = useState<Record<string, string>>({});
+  const [savedTypeObservationId, setSavedTypeObservationId] = useState<string | null>(null);
 
   const handleCopy = (observation: LocationObservation) => {
     const coords = `${observation.geo.lat.toFixed(6)}, ${observation.geo.lng.toFixed(6)}`;
@@ -118,6 +130,52 @@ function ObservationList({
   const handlePageSizeChange = (nextSize: number) => {
     setPageSize(nextSize);
     setPageIndex(0);
+  };
+
+  const handleLocationTypeChange = async (
+    observation: LocationObservation,
+    nextTypeRaw: string
+  ) => {
+    const nextType = nextTypeRaw === "home" || nextTypeRaw === "work" ? (nextTypeRaw as LocationType) : null;
+
+    setPendingTypeObservationId(observation.observationId);
+    setTypeUpdateErrorByObservationId((current) => ({
+      ...current,
+      [observation.observationId]: ""
+    }));
+
+    try {
+      const response = await fetch(
+        `/api/borrowers/${borrowerId}/location-observations/${observation.observationId}/type`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ locationType: nextType })
+        }
+      );
+
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? "Unable to update location type.");
+      }
+
+      setLocationTypeByObservationId((current) => ({
+        ...current,
+        [observation.observationId]: nextType
+      }));
+      setSavedTypeObservationId(observation.observationId);
+      setTimeout(() => setSavedTypeObservationId((current) => (current === observation.observationId ? null : current)), 2000);
+    } catch (error) {
+      setTypeUpdateErrorByObservationId((current) => ({
+        ...current,
+        [observation.observationId]:
+          error instanceof Error ? error.message : "Unable to update location type."
+      }));
+    } finally {
+      setPendingTypeObservationId((current) => (current === observation.observationId ? null : current));
+    }
   };
 
   const isStale = (capturedAt: string) => {
@@ -159,6 +217,7 @@ function ObservationList({
               <th className="px-3 py-2">Label</th>
               <th className="px-3 py-2">Coords</th>
               <th className="px-3 py-2">Actions</th>
+              <th className="px-3 py-2">Type</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -209,6 +268,30 @@ function ObservationList({
                     {lastCopiedId === observation.observationId && (
                       <p className="mt-1 text-[11px] text-emerald-600">Copied to clipboard</p>
                     )}
+                  </td>
+                  <td className="px-3 py-3 align-top">
+                    <div className="space-y-1">
+                      <select
+                        value={locationTypeByObservationId[observation.observationId] ?? ""}
+                        onChange={(event) => handleLocationTypeChange(observation, event.target.value)}
+                        disabled={pendingTypeObservationId === observation.observationId}
+                        aria-label={`Set location type for ${observation.label}`}
+                        className="w-full min-w-28 cursor-pointer rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#1877f2] disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+                      >
+                        <option value="">Unlabeled</option>
+                        <option value="home">Home</option>
+                        <option value="work">Work</option>
+                      </select>
+                      {pendingTypeObservationId === observation.observationId && (
+                        <p className="text-[11px] text-slate-500">Saving...</p>
+                      )}
+                      {savedTypeObservationId === observation.observationId && (
+                        <p className="text-[11px] text-emerald-600">Saved</p>
+                      )}
+                      {typeUpdateErrorByObservationId[observation.observationId] && (
+                        <p className="text-[11px] text-rose-600">{typeUpdateErrorByObservationId[observation.observationId]}</p>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
@@ -410,6 +493,7 @@ export default function LocationTab({ borrower, observations, topSourcesCount, t
           </div>
         </div>
         <ObservationList
+          borrowerId={borrower.borrowerId}
           observations={observations}
           activeObservationId={activeObservation?.observationId}
           onSelectObservation={(observation) => setActiveObservation(observation)}

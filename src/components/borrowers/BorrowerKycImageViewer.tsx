@@ -1,6 +1,8 @@
 "use client";
 
+import { useMemo, useState, type WheelEvent } from "react";
 import Image from "next/image";
+import { Minus, Plus, RotateCcw } from "lucide-react";
 
 interface BorrowerKycImageViewerProps {
   imageUrl: string;
@@ -9,6 +11,24 @@ interface BorrowerKycImageViewerProps {
 }
 
 export default function BorrowerKycImageViewer({ imageUrl, alt, onClose }: BorrowerKycImageViewerProps) {
+  const MIN_ZOOM = 0.5;
+  const MAX_ZOOM = 4;
+  const ZOOM_STEP = 0.25;
+  const [zoomLevel, setZoomLevel] = useState(1);
+
+  const zoomPercent = useMemo(() => `${Math.round(zoomLevel * 100)}%`, [zoomLevel]);
+
+  const applyZoom = (next: number) => {
+    const clamped = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number(next.toFixed(2))));
+    setZoomLevel(clamped);
+  };
+
+  const handleWheelZoom = (event: WheelEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const delta = event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
+    applyZoom(zoomLevel + delta);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6">
       <button
@@ -20,22 +40,67 @@ export default function BorrowerKycImageViewer({ imageUrl, alt, onClose }: Borro
       <div className="relative z-10 w-full max-w-4xl overflow-hidden rounded-3xl bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
           <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Image preview</p>
-          <button
-            type="button"
-            onClick={onClose}
-            className="cursor-pointer rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-slate-500 hover:border-slate-300 hover:text-slate-800"
-          >
-            Close
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-1">
+              <button
+                type="button"
+                onClick={() => applyZoom(zoomLevel - ZOOM_STEP)}
+                disabled={zoomLevel <= MIN_ZOOM}
+                title="Zoom out"
+                aria-label="Zoom out image"
+                className="cursor-pointer rounded-full p-1 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-300"
+              >
+                <Minus className="h-4 w-4" aria-hidden />
+              </button>
+              <span className="min-w-14 text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
+                {zoomPercent}
+              </span>
+              <button
+                type="button"
+                onClick={() => applyZoom(zoomLevel + ZOOM_STEP)}
+                disabled={zoomLevel >= MAX_ZOOM}
+                title="Zoom in"
+                aria-label="Zoom in image"
+                className="cursor-pointer rounded-full p-1 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-300"
+              >
+                <Plus className="h-4 w-4" aria-hidden />
+              </button>
+              <button
+                type="button"
+                onClick={() => setZoomLevel(1)}
+                title="Reset zoom"
+                aria-label="Reset image zoom"
+                className="cursor-pointer rounded-full p-1 text-slate-600 hover:bg-slate-100"
+              >
+                <RotateCcw className="h-4 w-4" aria-hidden />
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="cursor-pointer rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-slate-500 hover:border-slate-300 hover:text-slate-800"
+            >
+              Close
+            </button>
+          </div>
         </div>
-        <div className="bg-slate-950">
+        <div
+          className="overflow-auto bg-slate-950"
+          onWheel={handleWheelZoom}
+          title="Use mouse wheel to zoom"
+        >
           <Image
             src={imageUrl}
             alt={alt}
             width={1600}
             height={1200}
             unoptimized
-            className="max-h-[80vh] w-full object-contain"
+            className="mx-auto max-h-[80vh] w-full object-contain"
+            style={{
+              transform: `scale(${zoomLevel})`,
+              transformOrigin: "center center",
+              transition: "transform 120ms ease-out"
+            }}
           />
         </div>
       </div>

@@ -10,15 +10,18 @@ interface BorrowerKycDecisionSectionProps {
   actionMessage?: string;
   onDecision: (action: DecisionAction) => void;
   isWaived: boolean;
+  disableActions?: boolean;
 }
 
 export default function BorrowerKycDecisionSection({
   actionState,
   actionMessage,
   onDecision,
-  isWaived
+  isWaived,
+  disableActions = false
 }: BorrowerKycDecisionSectionProps) {
   const isWorking = actionState === "working";
+  const isDisabled = isWorking || disableActions;
   const waiveAction: DecisionAction = isWaived ? "unwaive" : "waive";
   const waiveLabel = isWaived ? "Unwaive requirement" : "Waive requirement";
 
@@ -29,9 +32,9 @@ export default function BorrowerKycDecisionSection({
         <button
           type="button"
           onClick={() => onDecision("approve")}
-          disabled={isWorking}
+          disabled={isDisabled}
           className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-            isWorking
+            isDisabled
               ? "cursor-not-allowed border-emerald-200 text-emerald-300"
               : "cursor-pointer border-emerald-400 text-emerald-600 hover:border-emerald-500 hover:text-emerald-700"
           }`}
@@ -41,9 +44,9 @@ export default function BorrowerKycDecisionSection({
         <button
           type="button"
           onClick={() => onDecision("reject")}
-          disabled={isWorking}
+          disabled={isDisabled}
           className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-            isWorking
+            isDisabled
               ? "cursor-not-allowed border-rose-200 text-rose-300"
               : "cursor-pointer border-rose-400 text-rose-600 hover:border-rose-500 hover:text-rose-700"
           }`}
@@ -53,9 +56,9 @@ export default function BorrowerKycDecisionSection({
         <button
           type="button"
           onClick={() => onDecision(waiveAction)}
-          disabled={isWorking}
+          disabled={isDisabled}
           className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-            isWorking
+            isDisabled
               ? "cursor-not-allowed border-slate-200 text-slate-300"
               : "cursor-pointer border-slate-300 text-slate-600 hover:border-slate-400 hover:text-slate-800"
           }`}

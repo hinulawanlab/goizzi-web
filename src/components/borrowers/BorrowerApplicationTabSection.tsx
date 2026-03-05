@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Check, MessageSquare, MessageSquareOff, Phone, PhoneOff, X } from "lucide-react";
+import Image from "next/image";
 
 import BorrowerBankStatementPanel from "@/components/borrowers/BorrowerBankStatementPanel";
 import BorrowerOtherDocumentPanel from "@/components/borrowers/BorrowerOtherDocumentPanel";
@@ -14,6 +15,7 @@ import type { BorrowerSummary } from "@/shared/types/dashboard";
 import type { BorrowerReference, ReferenceContactStatus } from "@/shared/types/borrowerReference";
 import type {
   BorrowerBankStatementKyc,
+  BorrowerGovernmentIdKyc,
   BorrowerOtherKyc,
   BorrowerPayslipKyc,
   BorrowerProofOfBillingKyc,
@@ -35,6 +37,7 @@ interface BorrowerApplicationTabSectionProps {
   payslipKycs: BorrowerPayslipKyc[];
   propertyTitleKycs: BorrowerPropertyTitleKyc[];
   otherKycs: BorrowerOtherKyc[];
+  selfieKycs: BorrowerGovernmentIdKyc[];
   refreshTokensByTab: Record<TabKey, number>;
   auditStatus: string;
   auditUpdatedAt?: string;
@@ -134,6 +137,7 @@ export default function BorrowerApplicationTabSection({
   payslipKycs,
   propertyTitleKycs,
   otherKycs,
+  selfieKycs,
   refreshTokensByTab,
   auditStatus,
   auditUpdatedAt,
@@ -152,6 +156,8 @@ export default function BorrowerApplicationTabSection({
   const [auditActionStates, setAuditActionStates] = useState<Record<string, { state: AuditActionState; message: string }>>(
     {}
   );
+  const [makerSelfieUrl, setMakerSelfieUrl] = useState<string | null>(null);
+  const [isPreparingMakerPrint, setIsPreparingMakerPrint] = useState(false);
 
   const referencesById = useMemo(() => {
     const mapping: Record<string, BorrowerReference> = {};
@@ -160,6 +166,7 @@ export default function BorrowerApplicationTabSection({
     });
     return mapping;
   }, [references]);
+  const isApprovedApplication = auditStatus.trim().toLowerCase() === "approved";
 
   const getReferenceStatus = (referenceId: string): ReferenceContactStatus => {
     return statusOverrides[referenceId] ?? referencesById[referenceId]?.contactStatus ?? "pending";
@@ -216,6 +223,43 @@ export default function BorrowerApplicationTabSection({
     }));
   };
 
+  const latestSelfieKyc = useMemo(() => {
+    const sorted = [...selfieKycs].sort((left, right) => {
+      const leftTime = left.createdAt ? Date.parse(left.createdAt) : 0;
+      const rightTime = right.createdAt ? Date.parse(right.createdAt) : 0;
+      return rightTime - leftTime;
+    });
+    return sorted.find((entry) => (entry.storageRefs?.length ?? 0) > 0) ?? null;
+  }, [selfieKycs]);
+
+  const loadMakerSelfieForPrint = async (): Promise<string | null> => {
+    if (!latestSelfieKyc?.kycId) {
+      return null;
+    }
+    const response = await fetch(`/api/borrowers/${borrower.borrowerId}/kyc/${latestSelfieKyc.kycId}/images`);
+    if (!response.ok) {
+      return null;
+    }
+    const payload = (await response.json()) as { urls?: string[] };
+    const url = Array.isArray(payload.urls) ? payload.urls[0] : undefined;
+    return typeof url === "string" && url.trim() ? url : null;
+  };
+
+  const handleMakerPrint = async () => {
+    setIsPreparingMakerPrint(true);
+    try {
+      const selfieUrl = makerSelfieUrl ?? (await loadMakerSelfieForPrint());
+      if (selfieUrl && selfieUrl !== makerSelfieUrl) {
+        setMakerSelfieUrl(selfieUrl);
+        setTimeout(() => window.print(), 180);
+      } else {
+        window.print();
+      }
+    } finally {
+      setIsPreparingMakerPrint(false);
+    }
+  };
+
   const updateNoteFlags = async (
     noteId: string,
     updates: { isActive?: boolean; callActive?: boolean; messageActive?: boolean },
@@ -246,12 +290,41 @@ export default function BorrowerApplicationTabSection({
   return (
     <>
       {activeTab === "maker" && (
-        <div className="space-y-6">
-          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+        <div className="maker-print-root space-y-6">
+          <div className="print:hidden flex justify-end">
+            <button
+              type="button"
+              onClick={() => void handleMakerPrint()}
+              title="Preview and print maker details"
+              aria-label="Preview and print maker details"
+              disabled={isPreparingMakerPrint}
+              className="cursor-pointer rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300"
+            >
+              {isPreparingMakerPrint ? "Preparing..." : "Print"}
+            </button>
+          </div>
+
+          <div className="maker-print-card rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+            <div className="maker-print-selfie-block hidden print:block" aria-hidden={!makerSelfieUrl}>
+              {makerSelfieUrl ? (
+                <Image
+                  src={makerSelfieUrl}
+                  alt="Borrower selfie"
+                  width={140}
+                  height={140}
+                  unoptimized
+                  className="maker-print-selfie-image h-[140px] w-[140px] rounded-lg border border-slate-200 object-cover"
+                />
+              ) : (
+                <div className="maker-print-selfie-fallback h-[140px] w-[140px] rounded-lg border border-slate-200 bg-slate-50 text-center text-[10px] uppercase tracking-[0.2em] text-slate-400">
+                  No selfie
+                </div>
+              )}
+            </div>
             <p className="mt-2 text-lg font-semibold text-slate-900">
               {(application.borrower.fullName ?? borrower.fullName)?.toUpperCase()}
             </p>
-            <div className="mt-4 grid gap-3">
+            <div className="maker-print-grid mt-4 grid gap-3">
               <DetailRow label="Nickname" value={application.borrower.nickname} />
               <DetailRow label="Age" value={application.borrower.age} />
               <DetailRow label="Gender" value={application.borrower.gender} />
@@ -276,9 +349,9 @@ export default function BorrowerApplicationTabSection({
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+          <div className="maker-print-card rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
             <p className="text-md font-medium uppercase tracking-[0.3em] text-slate-600">Loan details</p>
-            <div className="mt-4 grid gap-3">
+            <div className="maker-print-grid mt-4 grid gap-3">
               <DetailRow label="Loan type" value={application.loanDetails?.productName} />
               <DetailRow label="Loan category" value={application.loanDetails?.productId} />
               <DetailRow
@@ -292,9 +365,9 @@ export default function BorrowerApplicationTabSection({
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+          <div className="maker-print-card rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
             <p className="text-md font-medium uppercase tracking-[0.3em] text-slate-600">Source of income details</p>
-            <div className="mt-4 grid gap-3">
+            <div className="maker-print-grid mt-4 grid gap-3">
               <DetailRow label="Employer / Business Name" value={application.borrowerIncome?.employerName} />
               <DetailRow label="Employer address" value={application.borrowerIncome?.employerAddress} />
               <DetailRow label="Employer contact" value={application.borrowerIncome?.employerContact} />
@@ -304,9 +377,9 @@ export default function BorrowerApplicationTabSection({
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+          <div className="maker-print-card rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
             <p className="text-md font-medium uppercase tracking-[0.3em] text-slate-600">Spouse details</p>
-            <div className="mt-4 grid gap-3">
+            <div className="maker-print-grid mt-4 grid gap-3">
               <DetailRow label="Full name" value={application.spouse?.fullName} />
               <DetailRow label="Nickname" value={application.spouse?.nickname} />
               <DetailRow label="Address" value={application.spouse?.address} />
@@ -319,9 +392,9 @@ export default function BorrowerApplicationTabSection({
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+          <div className="maker-print-card rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
             <p className="text-md font-medium uppercase tracking-[0.3em] text-slate-600">Assets & estimated value</p>
-            <div className="mt-4 grid gap-3">
+            <div className="maker-print-grid mt-4 grid gap-3">
               <DetailRow label="Assets" value={application.borrowerAssets?.selections?.join(", ")} />
               <DetailRow label="Asset details" value={application.borrowerAssets?.details} />
               <DetailRow
@@ -330,6 +403,78 @@ export default function BorrowerApplicationTabSection({
               />
             </div>
           </div>
+
+          <style jsx global>{`
+            @media print {
+              @page {
+                size: A4 portrait;
+                margin: 8mm;
+              }
+
+              body * {
+                visibility: hidden !important;
+              }
+
+              .maker-print-root,
+              .maker-print-root * {
+                visibility: visible !important;
+              }
+
+              .maker-print-root {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                z-index: 9999 !important;
+              }
+
+              body {
+                background: #fff !important;
+              }
+
+              .maker-print-root {
+                zoom: 0.78;
+                break-inside: avoid-page;
+              }
+
+              .maker-print-card {
+                position: relative !important;
+                border: 1px solid #e2e8f0 !important;
+                box-shadow: none !important;
+                border-radius: 8px !important;
+                padding: 10px !important;
+                margin: 0 !important;
+                break-inside: avoid-page;
+              }
+
+              .maker-print-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 6px !important;
+              }
+
+              .maker-print-selfie-block {
+                position: absolute !important;
+                top: 10px !important;
+                right: 10px !important;
+              }
+
+              .maker-print-selfie-image {
+                display: block !important;
+              }
+
+              .maker-print-selfie-fallback {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+              }
+
+              .maker-print-grid p {
+                margin-top: 2px !important;
+                margin-bottom: 0 !important;
+                line-height: 1.2 !important;
+              }
+            }
+          `}</style>
         </div>
       )}
 
@@ -376,6 +521,8 @@ export default function BorrowerApplicationTabSection({
           borrowerId={borrower.borrowerId}
           applicationId={application.applicationId}
           kycs={bankStatementKycs}
+          enableImagePrint={isApprovedApplication}
+          disableDecisionActions={isApprovedApplication}
           onDecisionNoteAdded={onDecisionNoteAdded}
           onDecisionComplete={onKycDecisionRefresh}
         />
@@ -387,6 +534,8 @@ export default function BorrowerApplicationTabSection({
           borrowerId={borrower.borrowerId}
           applicationId={application.applicationId}
           kycs={payslipKycs}
+          enableImagePrint={isApprovedApplication}
+          disableDecisionActions={isApprovedApplication}
           onDecisionNoteAdded={onDecisionNoteAdded}
           onDecisionComplete={onKycDecisionRefresh}
         />
@@ -398,6 +547,7 @@ export default function BorrowerApplicationTabSection({
           borrowerId={borrower.borrowerId}
           applicationId={application.applicationId}
           kycs={propertyTitleKycs}
+          disableDecisionActions={isApprovedApplication}
           onDecisionNoteAdded={onDecisionNoteAdded}
           onDecisionComplete={onKycDecisionRefresh}
         />
@@ -409,6 +559,8 @@ export default function BorrowerApplicationTabSection({
           borrowerId={borrower.borrowerId}
           applicationId={application.applicationId}
           kycs={otherKycs}
+          enableImagePrint={isApprovedApplication}
+          disableDecisionActions={isApprovedApplication}
           onDecisionNoteAdded={onDecisionNoteAdded}
           onDecisionComplete={onKycDecisionRefresh}
         />
@@ -483,6 +635,8 @@ export default function BorrowerApplicationTabSection({
           borrowerId={borrower.borrowerId}
           applicationId={application.applicationId}
           kycs={proofOfBillingKycs}
+          enableImagePrint={isApprovedApplication}
+          disableDecisionActions={isApprovedApplication}
           onDecisionNoteAdded={onDecisionNoteAdded}
           onDecisionComplete={onKycDecisionRefresh}
         />
