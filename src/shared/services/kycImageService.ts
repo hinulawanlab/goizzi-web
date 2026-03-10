@@ -5,6 +5,7 @@ import { auth } from "@/shared/singletons/firebase";
 export interface KycSignedImageItem {
   path: string;
   url: string;
+  rotationDeg?: number;
 }
 
 export interface KycSignedImageResponse {
@@ -49,7 +50,13 @@ export async function fetchSignedKycImageUrls(
   const urls = Array.isArray(payload.urls) ? payload.urls.filter((url) => typeof url === "string") : [];
   const items = Array.isArray(payload.items)
     ? payload.items.filter(
-        (item): item is KycSignedImageItem => Boolean(item && typeof item.path === "string" && typeof item.url === "string")
+        (item): item is KycSignedImageItem =>
+          Boolean(
+            item &&
+              typeof item.path === "string" &&
+              typeof item.url === "string" &&
+              (item.rotationDeg === undefined || typeof item.rotationDeg === "number")
+          )
       )
     : [];
 

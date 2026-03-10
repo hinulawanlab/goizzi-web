@@ -20,6 +20,7 @@ export interface KycDocumentEntry {
   documentType?: string;
   storageRefs: string[];
   imageUrls?: string[];
+  imageRotations?: Record<string, number>;
   isApproved?: boolean;
   isWaived?: boolean;
   createdAt?: string;
@@ -108,8 +109,12 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
   const [actionMessages, setActionMessages] = useState<Record<string, string>>({});
   const [approvalOverrides, setApprovalOverrides] = useState<Record<string, boolean>>({});
   const [waiveOverrides, setWaiveOverrides] = useState<Record<string, boolean>>({});
-  const [viewerImage, setViewerImage] = useState<{ url: string; alt: string } | null>(null);
+  const [viewerImage, setViewerImage] = useState<{
+    images: Array<{ url: string; alt: string; path?: string }>;
+    initialIndex: number;
+  } | null>(null);
   const [selectedImages, setSelectedImages] = useState<Record<string, boolean>>({});
+  const [imageRotationByUrl, setImageRotationByUrl] = useState<Record<string, number>>({});
   const [isPreparingPrint, setIsPreparingPrint] = useState(false);
 
   const sortedKycs = useMemo(() => {
@@ -126,7 +131,7 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
   const effectivePrintHeading = printHeading ?? title;
 
   const selectedPrintImages = useMemo(() => {
-    const selected: Array<{ key: string; url: string; caption: string }> = [];
+    const selected: Array<{ key: string; url: string; caption: string; rotationDeg: number }> = [];
     visibleKycs.forEach((entry) => {
       const rowTitle = resolveDecisionLabel(entry, title);
       const urls = imageStates[entry.kycId]?.urls ?? [];
@@ -138,12 +143,13 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
         selected.push({
           key,
           url,
-          caption: `${rowTitle} ${index + 1}`
+          caption: `${rowTitle} ${index + 1}`,
+          rotationDeg: imageRotationByUrl[url] ?? 0
         });
       });
     });
     return selected;
-  }, [imageStates, selectedImages, title, visibleKycs]);
+  }, [imageRotationByUrl, imageStates, selectedImages, title, visibleKycs]);
 
   useEffect(() => {
     const handleAfterPrint = () => {
@@ -170,6 +176,29 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
       });
     }
   }, [visibleKycs, borrowerId, contextLabel]);
+
+  useEffect(() => {
+    setImageRotationByUrl((current) => {
+      const next = { ...current };
+      let hasChanges = false;
+
+      visibleKycs.forEach((entry) => {
+        const items = imageStates[entry.kycId]?.items ?? [];
+        items.forEach((item) => {
+          if (!item.url) {
+            return;
+          }
+          const nextRotation = item.rotationDeg ?? 0;
+          if (next[item.url] !== nextRotation) {
+            next[item.url] = nextRotation;
+            hasChanges = true;
+          }
+        });
+      });
+
+      return hasChanges ? next : current;
+    });
+  }, [imageStates, visibleKycs]);
 
   const decisionWorkingMessages: Record<DecisionAction, string> = {
     approve: "Updating approval...",
@@ -251,6 +280,39 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
     setTimeout(() => {
       window.print();
     }, 120);
+  };
+
+  const handleViewerRotate = async (imageUrl: string, rotationDeg: number, storagePath?: string) => {
+    setImageRotationByUrl((current) => ({
+      ...current,
+      [imageUrl]: rotationDeg
+    }));
+
+    if (!borrowerId || !storagePath) {
+      return;
+    }
+
+    const entry = visibleKycs.find((kyc) => (imageStates[kyc.kycId]?.items ?? []).some((item) => item.url === imageUrl));
+    if (!entry?.kycId) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/borrowers/${borrowerId}/kyc/${entry.kycId}/image-rotation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storagePath,
+          rotationDeg
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save image rotation.");
+      }
+    } catch (error) {
+      console.warn("Unable to save image rotation:", error);
+    }
   };
 
   if (!visibleKycs.length) {
@@ -349,7 +411,16 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
                             >
                               <button
                                 type="button"
-                                onClick={() => setViewerImage({ url, alt })}
+                                onClick={() =>
+                                  setViewerImage({
+                                    images: imageState.urls.map((imageUrl, imageIndex) => ({
+                                      url: imageUrl,
+                                      alt: `${rowTitle} ${imageIndex + 1}`,
+                                      path: imageState.items?.[imageIndex]?.path
+                                    })),
+                                    initialIndex: index
+                                  })
+                                }
                                 className="w-full cursor-pointer text-left"
                               >
                                 <Image
@@ -401,6 +472,7 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
               <BorrowerKycDecisionSection
                 actionState={actionState}
                 actionMessage={actionMessages[entry.kycId]}
+                isApproved={effectiveApproval}
                 isWaived={effectiveWaived}
                 disableActions={disableDecisionActions}
                 onDecision={(action) => submitDecision(entry, action)}
@@ -412,8 +484,10 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
 
       {viewerImage && (
         <BorrowerKycImageViewer
-          imageUrl={viewerImage.url}
-          alt={viewerImage.alt}
+          images={viewerImage.images}
+          initialIndex={viewerImage.initialIndex}
+          rotationByUrl={imageRotationByUrl}
+          onRotate={handleViewerRotate}
           onClose={() => setViewerImage(null)}
         />
       )}
@@ -423,7 +497,15 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
           <header className="kyc-print-header">
             <h1>{effectivePrintHeading}</h1>
           </header>
-          <section className="kyc-print-grid">
+          <section
+            className={`kyc-print-grid ${
+              selectedPrintImages.length <= 2
+                ? "kyc-print-grid--single"
+                : selectedPrintImages.length <= 4
+                  ? "kyc-print-grid--compact"
+                  : "kyc-print-grid--multi"
+            }`}
+          >
             {selectedPrintImages.map((item) => (
               <figure key={item.key} className="kyc-print-item">
                 <Image
@@ -432,6 +514,9 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
                   width={1200}
                   height={900}
                   unoptimized
+                  style={{
+                    transform: `rotate(${item.rotationDeg}deg)`
+                  }}
                 />
               </figure>
             ))}
@@ -467,8 +552,8 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
 
           body.kyc-image-print-mode .kyc-print-grid {
             display: grid !important;
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
             gap: 0.18in !important;
+            align-items: stretch !important;
           }
 
           body.kyc-image-print-mode .kyc-print-item {
@@ -477,14 +562,42 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
             border-radius: 8px !important;
             overflow: hidden !important;
             break-inside: avoid-page !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            background: #fff !important;
           }
 
           body.kyc-image-print-mode .kyc-print-item img {
             display: block !important;
             width: 100% !important;
-            height: auto !important;
+            height: 100% !important;
             object-fit: contain !important;
-            max-height: 4.8in !important;
+            max-height: none !important;
+          }
+
+          body.kyc-image-print-mode .kyc-print-grid--single {
+            grid-template-columns: 1fr !important;
+          }
+
+          body.kyc-image-print-mode .kyc-print-grid--single .kyc-print-item {
+            min-height: 5.7in !important;
+          }
+
+          body.kyc-image-print-mode .kyc-print-grid--compact {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          }
+
+          body.kyc-image-print-mode .kyc-print-grid--compact .kyc-print-item {
+            min-height: 5.4in !important;
+          }
+
+          body.kyc-image-print-mode .kyc-print-grid--multi {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          }
+
+          body.kyc-image-print-mode .kyc-print-grid--multi .kyc-print-item {
+            min-height: 4.8in !important;
           }
 
           @page {

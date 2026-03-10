@@ -31,7 +31,7 @@ export default async function BorrowerApplicationPage({ params }: BorrowerApplic
     notFound();
   }
 
-  await requireStaffSession();
+  const session = await requireStaffSession();
 
   const borrowerPromise = getBorrowerSummaryById(borrowerId);
   const applicationPromise = getBorrowerApplicationById(borrowerId, applicationId);
@@ -68,6 +68,7 @@ export default async function BorrowerApplicationPage({ params }: BorrowerApplic
       <div className="mx-auto w-full max-w-none">
         <main className="space-y-6">
           <BorrowerApplicationTabs
+            staffRole={session.role}
             borrower={borrower}
             application={application}
             references={references}

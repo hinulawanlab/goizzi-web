@@ -13,6 +13,7 @@ import BorrowerApplicationChecklistModal from "@/components/borrowers/BorrowerAp
 import { useBorrowerApplicationActions } from "@/components/borrowers/useBorrowerApplicationActions";
 import type { LoanAction, TabKey } from "@/components/borrowers/borrowerApplicationTypes";
 import { auth } from "@/shared/singletons/firebase";
+import type { UserRole } from "@/shared/types/user";
 import type { BorrowerSummary } from "@/shared/types/dashboard";
 import type { BorrowerReference } from "@/shared/types/borrowerReference";
 import type {
@@ -28,6 +29,7 @@ import type { LoanApplication } from "@/shared/types/loanApplication";
 import type { BorrowerNote } from "@/shared/types/borrowerNote";
 
 interface BorrowerApplicationTabsProps {
+  staffRole: UserRole;
   borrower: BorrowerSummary;
   application: LoanApplication;
   references: BorrowerReference[];
@@ -43,6 +45,7 @@ interface BorrowerApplicationTabsProps {
 }
 
 export default function BorrowerApplicationTabs({
+  staffRole,
   borrower,
   application,
   references,
@@ -141,6 +144,7 @@ export default function BorrowerApplicationTabs({
   const latestProofOfBilling = getLatestByCreatedAt(proofOfBillingKycs);
   const latestHomePhoto = getLatestByCreatedAt(homePhotoKycs);
   const latestOtherDoc = getLatestByCreatedAt(otherKycs);
+  const isAdmin = staffRole === "admin";
 
   const hasSelfie = resolveApprovedOrWaived(latestSelfie?.isApproved);
   const hasGovernmentId = resolveApprovedOrWaived(latestGovernmentId?.isApproved);
@@ -175,16 +179,29 @@ export default function BorrowerApplicationTabs({
   );
 
   const autoChecklistItems = useMemo(
-    () => [
-      { key: "selfie", label: "Selfie", checked: hasSelfie },
-      { key: "governmentId", label: "Government ID", checked: hasGovernmentId },
-      { key: "proofOfIncome", label: "Proof of income", checked: hasProofOfIncome },
-      { key: "bankStatements", label: "Bank statements", checked: hasBankStatements },
-      { key: "proofOfBilling", label: "Proof of billing", checked: hasProofOfBilling },
-      { key: "references", label: "References", checked: hasReferences },
-      { key: "residence", label: "Home photo", checked: hasHomePhoto }
-    ],
-    [hasSelfie, hasGovernmentId, hasProofOfIncome, hasBankStatements, hasProofOfBilling, hasReferences, hasHomePhoto]
+    () => {
+      const buildAutoItem = (key: string, label: string, satisfied: boolean) => {
+        const overridden = manualVerified.includes(`override:${key}`);
+        return {
+          key,
+          label,
+          checked: satisfied || overridden,
+          overridden,
+          readOnly: satisfied && !overridden
+        };
+      };
+
+      return [
+        buildAutoItem("selfie", "Selfie", hasSelfie),
+        buildAutoItem("governmentId", "Government ID", hasGovernmentId),
+        buildAutoItem("proofOfIncome", "Proof of income", hasProofOfIncome),
+        buildAutoItem("bankStatements", "Bank statements", hasBankStatements),
+        buildAutoItem("proofOfBilling", "Proof of billing", hasProofOfBilling),
+        buildAutoItem("references", "References", hasReferences),
+        buildAutoItem("residence", "Home photo", hasHomePhoto)
+      ];
+    },
+    [hasSelfie, hasGovernmentId, hasProofOfIncome, hasBankStatements, hasProofOfBilling, hasReferences, hasHomePhoto, manualVerified]
   );
 
   const manualChecklistItems = useMemo(
@@ -324,6 +341,16 @@ export default function BorrowerApplicationTabs({
     }
   };
 
+  const handleAutoOverrideToggle = async (key: string, checked: boolean) => {
+    if (!isAdmin) {
+      setManualChecklistState("error");
+      setManualChecklistMessage("Only administrators can override auto checks.");
+      return;
+    }
+
+    await handleManualToggle(`override:${key}`, checked);
+  };
+
   const handleApprovalSubmit = async (payload: {
     loanAmount: number;
     loanInterest: number;
@@ -357,8 +384,10 @@ export default function BorrowerApplicationTabs({
         isOpen={isApprovalOpen}
         autoItems={autoChecklistItems}
         manualItems={manualChecklistItems}
+        canOverrideAutoItems={isAdmin}
         checklistState={manualChecklistState}
         checklistMessage={manualChecklistMessage}
+        onToggleAutoItem={handleAutoOverrideToggle}
         onToggleManualItem={handleManualToggle}
       />
       <div className="lg:fixed lg:left-4 lg:top-8 lg:bottom-8 lg:z-20 lg:w-72">

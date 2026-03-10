@@ -65,6 +65,25 @@ function normalizeStorageRefs(refs: unknown): string[] {
   return refs.map(normalizeStorageRef).filter(Boolean) as string[];
 }
 
+function normalizeRotationMap(value: unknown): Record<string, number> | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const entries = Object.entries(value as Record<string, unknown>)
+    .map(([key, rotation]) => {
+      const normalizedKey = normalizeStorageRef(key);
+      if (!normalizedKey || typeof rotation !== "number" || !Number.isFinite(rotation)) {
+        return null;
+      }
+      const normalizedRotation = ((Math.round(rotation / 90) * 90) % 360 + 360) % 360;
+      return [normalizedKey, normalizedRotation] as const;
+    })
+    .filter(Boolean) as Array<readonly [string, number]>;
+
+  return entries.length ? Object.fromEntries(entries) : undefined;
+}
+
 function stripLeadingSlash(value: string): string {
   return value.replace(/^\/+/, "");
 }
@@ -121,6 +140,7 @@ function mapGovernmentIdDoc(doc: DocumentSnapshot, borrowerId: string): Borrower
     frontStorageRef,
     backStorageRef,
     storageRefs: normalizedRefs,
+    imageRotations: normalizeRotationMap(data.imageRotations),
     isApproved:
       typeof data.isApproved === "boolean"
         ? data.isApproved
@@ -145,6 +165,7 @@ function mapSelfieDoc(doc: DocumentSnapshot, borrowerId: string): BorrowerGovern
     borrowerId,
     kycId: doc.id,
     storageRefs,
+    imageRotations: normalizeRotationMap(data.imageRotations),
     isApproved:
       typeof data.isApproved === "boolean"
         ? data.isApproved
@@ -166,6 +187,7 @@ function mapProofOfBillingDoc(doc: DocumentSnapshot, borrowerId: string): Borrow
     kycId: doc.id,
     documentType: typeof data.documentType === "string" ? data.documentType : undefined,
     storageRefs,
+    imageRotations: normalizeRotationMap(data.imageRotations),
     isApproved:
       typeof data.isApproved === "boolean"
         ? data.isApproved
@@ -191,6 +213,7 @@ function mapBankStatementDoc(doc: DocumentSnapshot, borrowerId: string): Borrowe
     accountNumber: typeof data.accountNumber === "string" ? data.accountNumber : undefined,
     bankName: typeof data.bankName === "string" ? data.bankName : undefined,
     storageRefs,
+    imageRotations: normalizeRotationMap(data.imageRotations),
     isApproved:
       typeof data.isApproved === "boolean"
         ? data.isApproved
@@ -214,6 +237,7 @@ function mapPayslipDoc(doc: DocumentSnapshot, borrowerId: string): BorrowerPaysl
     documentType: typeof data.documentType === "string" ? data.documentType : undefined,
     employer: typeof data.employer === "string" ? data.employer : undefined,
     storageRefs,
+    imageRotations: normalizeRotationMap(data.imageRotations),
     isApproved:
       typeof data.isApproved === "boolean"
         ? data.isApproved
@@ -236,6 +260,7 @@ function mapPropertyTitleDoc(doc: DocumentSnapshot, borrowerId: string): Borrowe
     kycId: doc.id,
     documentType: typeof data.documentType === "string" ? data.documentType : undefined,
     storageRefs,
+    imageRotations: normalizeRotationMap(data.imageRotations),
     isApproved:
       typeof data.isApproved === "boolean"
         ? data.isApproved
@@ -259,6 +284,7 @@ function mapOtherDoc(doc: DocumentSnapshot, borrowerId: string): BorrowerOtherKy
     documentType: typeof data.documentType === "string" ? data.documentType : undefined,
     documentDescription: typeof data.documentDescription === "string" ? data.documentDescription : undefined,
     storageRefs,
+    imageRotations: normalizeRotationMap(data.imageRotations),
     isApproved:
       typeof data.isApproved === "boolean"
         ? data.isApproved
@@ -280,6 +306,7 @@ function mapHomePhotoDoc(doc: DocumentSnapshot, borrowerId: string): BorrowerHom
     borrowerId,
     kycId: doc.id,
     storageRefs,
+    imageRotations: normalizeRotationMap(data.imageRotations),
     isApproved:
       typeof data.isApproved === "boolean"
         ? data.isApproved
@@ -803,4 +830,41 @@ export async function setBorrowerGovernmentIdApproval(
     );
 
   await updateBorrowerKycVerifiedStatus(borrowerId);
+}
+
+export async function setBorrowerKycImageRotation(
+  borrowerId: string,
+  kycId: string,
+  storagePath: string,
+  rotationDeg: number
+): Promise<number> {
+  if (!db) {
+    throw new Error("Firestore Admin client is not initialized.");
+  }
+  if (!borrowerId || !kycId) {
+    throw new Error("Borrower or KYC id is missing.");
+  }
+
+  const normalizedPath = normalizeStorageRef(storagePath);
+  if (!normalizedPath) {
+    throw new Error("Storage path is missing.");
+  }
+
+  const normalizedRotation = ((Math.round(rotationDeg / 90) * 90) % 360 + 360) % 360;
+
+  await db
+    .collection("borrowers")
+    .doc(borrowerId)
+    .collection("kyc")
+    .doc(kycId)
+    .set(
+      {
+        imageRotations: {
+          [normalizedPath]: normalizedRotation
+        }
+      },
+      { merge: true }
+    );
+
+  return normalizedRotation;
 }

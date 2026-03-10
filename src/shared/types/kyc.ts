@@ -7,6 +7,7 @@ export interface BorrowerGovernmentIdKyc {
   backStorageRef?: string;
   storageRefs?: string[];
   imageUrls?: string[];
+  imageRotations?: Record<string, number>;
   isApproved?: boolean;
   createdAt?: string;
 }
@@ -17,6 +18,7 @@ export interface BorrowerProofOfBillingKyc {
   documentType?: string;
   storageRefs: string[];
   imageUrls?: string[];
+  imageRotations?: Record<string, number>;
   isApproved?: boolean;
   isWaived?: boolean;
   createdAt?: string;
@@ -31,6 +33,7 @@ export interface BorrowerBankStatementKyc {
   bankName?: string;
   storageRefs: string[];
   imageUrls?: string[];
+  imageRotations?: Record<string, number>;
   isApproved?: boolean;
   isWaived?: boolean;
   createdAt?: string;
@@ -43,6 +46,7 @@ export interface BorrowerPayslipKyc {
   employer?: string;
   storageRefs: string[];
   imageUrls?: string[];
+  imageRotations?: Record<string, number>;
   isApproved?: boolean;
   isWaived?: boolean;
   createdAt?: string;
@@ -54,6 +58,7 @@ export interface BorrowerPropertyTitleKyc {
   documentType?: string;
   storageRefs: string[];
   imageUrls?: string[];
+  imageRotations?: Record<string, number>;
   isApproved?: boolean;
   isWaived?: boolean;
   createdAt?: string;
@@ -66,6 +71,7 @@ export interface BorrowerOtherKyc {
   documentDescription?: string;
   storageRefs: string[];
   imageUrls?: string[];
+  imageRotations?: Record<string, number>;
   isApproved?: boolean;
   isWaived?: boolean;
   createdAt?: string;
@@ -76,6 +82,7 @@ export interface BorrowerHomePhotoKyc {
   kycId: string;
   storageRefs: string[];
   imageUrls?: string[];
+  imageRotations?: Record<string, number>;
   isApproved?: boolean;
   isWaived?: boolean;
   createdAt?: string;

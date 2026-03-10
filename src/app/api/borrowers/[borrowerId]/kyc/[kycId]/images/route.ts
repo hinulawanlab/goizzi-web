@@ -8,6 +8,7 @@ interface KycDocData {
   storageRef?: string;
   frontStorageRef?: string;
   backStorageRef?: string;
+  imageRotations?: Record<string, number>;
 }
 
 function normalizeStoragePath(path?: string): string | null {
@@ -115,7 +116,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ bor
           action: "read",
           expires: Date.now() + 15 * 60 * 1000
         });
-        return { path, url };
+        return { path, url, rotationDeg: data.imageRotations?.[`/${path}`] ?? data.imageRotations?.[path] ?? 0 };
       })
     );
 

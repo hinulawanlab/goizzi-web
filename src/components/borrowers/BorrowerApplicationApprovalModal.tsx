@@ -111,7 +111,7 @@ export default function BorrowerApplicationApprovalModal({
   const isProceedDisabled = isWorking || !isChecklistComplete;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8 lg:justify-end lg:pr-8 2xl:pr-[max(2rem,calc(50%-36rem))]">
       <button
         type="button"
         onClick={onClose}
@@ -119,7 +119,7 @@ export default function BorrowerApplicationApprovalModal({
         aria-label="Close approval modal"
         disabled={isWorking}
       />
-      <div className="relative w-full max-w-2xl rounded-3xl border border-slate-100 bg-white p-6 shadow-2xl">
+      <div className="relative w-full max-w-2xl rounded-3xl border border-slate-100 bg-white p-6 shadow-2xl lg:max-w-[52rem]">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
           <div>
             <p className="text-xs uppercase tracking-[0.4em] text-slate-400">Approve loan</p>

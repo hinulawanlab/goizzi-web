@@ -9,6 +9,7 @@ interface BorrowerKycDecisionSectionProps {
   actionState: ActionState;
   actionMessage?: string;
   onDecision: (action: DecisionAction) => void;
+  isApproved?: boolean;
   isWaived: boolean;
   disableActions?: boolean;
 }
@@ -17,11 +18,15 @@ export default function BorrowerKycDecisionSection({
   actionState,
   actionMessage,
   onDecision,
+  isApproved,
   isWaived,
   disableActions = false
 }: BorrowerKycDecisionSectionProps) {
   const isWorking = actionState === "working";
   const isDisabled = isWorking || disableActions;
+  const disableApprove = isDisabled || isApproved === true;
+  const disableReject = isDisabled || isApproved === false;
+  const disableWaive = isDisabled || isWaived;
   const waiveAction: DecisionAction = isWaived ? "unwaive" : "waive";
   const waiveLabel = isWaived ? "Unwaive requirement" : "Waive requirement";
 
@@ -32,9 +37,9 @@ export default function BorrowerKycDecisionSection({
         <button
           type="button"
           onClick={() => onDecision("approve")}
-          disabled={isDisabled}
+          disabled={disableApprove}
           className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-            isDisabled
+            disableApprove
               ? "cursor-not-allowed border-emerald-200 text-emerald-300"
               : "cursor-pointer border-emerald-400 text-emerald-600 hover:border-emerald-500 hover:text-emerald-700"
           }`}
@@ -44,9 +49,9 @@ export default function BorrowerKycDecisionSection({
         <button
           type="button"
           onClick={() => onDecision("reject")}
-          disabled={isDisabled}
+          disabled={disableReject}
           className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-            isDisabled
+            disableReject
               ? "cursor-not-allowed border-rose-200 text-rose-300"
               : "cursor-pointer border-rose-400 text-rose-600 hover:border-rose-500 hover:text-rose-700"
           }`}
@@ -56,9 +61,9 @@ export default function BorrowerKycDecisionSection({
         <button
           type="button"
           onClick={() => onDecision(waiveAction)}
-          disabled={isDisabled}
+          disabled={disableWaive}
           className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-            isDisabled
+            disableWaive
               ? "cursor-not-allowed border-slate-200 text-slate-300"
               : "cursor-pointer border-slate-300 text-slate-600 hover:border-slate-400 hover:text-slate-800"
           }`}

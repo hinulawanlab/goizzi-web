@@ -9,6 +9,10 @@ interface ManualChecksPayload {
   actorUserId?: string;
 }
 
+function hasAdminOverrideKeys(values: string[]) {
+  return values.some((value) => typeof value === "string" && value.trim().startsWith("override:"));
+}
+
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ borrowerId: string; applicationId: string }> }
@@ -36,6 +40,10 @@ export async function POST(
 
   if (!Array.isArray(payload.manualVerified)) {
     return NextResponse.json({ error: "manualVerified must be an array of strings." }, { status: 400 });
+  }
+
+  if (hasAdminOverrideKeys(payload.manualVerified) && session.role !== "admin") {
+    return NextResponse.json({ error: "Only administrators can override auto checks." }, { status: 403 });
   }
 
   try {

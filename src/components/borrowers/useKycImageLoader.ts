@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { fetchSignedKycImageUrls } from "@/shared/services/kycImageService";
+import { fetchSignedKycImageUrls, type KycSignedImageItem } from "@/shared/services/kycImageService";
 
 type LoadState = "idle" | "loading" | "success" | "error";
 
@@ -11,6 +11,7 @@ const DEFAULT_FETCH_TIMEOUT_MS = 10000;
 interface KycImageState {
   status: LoadState;
   urls: string[];
+  items?: KycSignedImageItem[];
   errorMessage?: string;
   startedAt?: number;
   attempts?: number;
@@ -20,6 +21,7 @@ interface KycImageSource {
   kycId: string;
   storageRefs?: string[];
   imageUrls?: string[];
+  imageRotations?: Record<string, number>;
 }
 
 interface UseKycImageLoaderOptions {
@@ -57,7 +59,7 @@ async function fetchKycImageUrls(
   kycId: string,
   fetchTimeoutMs: number,
   attempts = 2
-): Promise<string[]> {
+): Promise<{ urls: string[]; items: KycSignedImageItem[] }> {
   let lastError: unknown;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
@@ -66,10 +68,10 @@ async function fetchKycImageUrls(
         controller.abort();
       }, fetchTimeoutMs);
 
-      const { urls } = await fetchSignedKycImageUrls(borrowerId, kycId, { signal: controller.signal });
+      const result = await fetchSignedKycImageUrls(borrowerId, kycId, { signal: controller.signal });
       clearTimeout(timeoutId);
 
-      return urls;
+      return result;
     } catch (error) {
       lastError = error;
       if (isTimeoutError(error) && attempt < attempts) {
@@ -111,6 +113,7 @@ export function useKycImageLoader(
   useEffect(() => {
     kycs.forEach((kyc) => {
       const refs = kyc.storageRefs ?? [];
+      const normalizedRefs = refs.map(normalizeStoragePath).filter(Boolean) as string[];
       const currentState = imageStatesRef.current[kyc.kycId];
       if (currentState?.status === "success" || currentState?.status === "error") {
         return;
@@ -131,15 +134,23 @@ export function useKycImageLoader(
       if (!refs.length) {
         setImageStates((prev) => ({
           ...prev,
-          [kyc.kycId]: { status: "success", urls: [] }
+          [kyc.kycId]: { status: "success", urls: [], items: [] }
         }));
         return;
       }
 
       if (Array.isArray(kyc.imageUrls) && kyc.imageUrls.length > 0) {
+        const items = kyc.imageUrls.map((url, index) => {
+          const storagePath = normalizedRefs[index];
+          return {
+            path: storagePath ?? "",
+            url,
+            rotationDeg: storagePath ? kyc.imageRotations?.[storagePath] ?? 0 : 0
+          };
+        });
         setImageStates((prev) => ({
           ...prev,
-          [kyc.kycId]: { status: "success", urls: kyc.imageUrls ?? [] }
+          [kyc.kycId]: { status: "success", urls: kyc.imageUrls ?? [], items }
         }));
         return;
       }
@@ -154,11 +165,10 @@ export function useKycImageLoader(
         }
       }));
 
-      const normalizedRefs = refs.map(normalizeStoragePath).filter(Boolean) as string[];
       if (!normalizedRefs.length) {
         setImageStates((prev) => ({
           ...prev,
-          [kyc.kycId]: { status: "error", urls: [], errorMessage: "No valid storage paths." }
+          [kyc.kycId]: { status: "error", urls: [], items: [], errorMessage: "No valid storage paths." }
         }));
         return;
       }
@@ -178,7 +188,7 @@ export function useKycImageLoader(
       }, fetchTimeoutMs);
 
       fetchKycImageUrls(borrowerId, kyc.kycId, fetchTimeoutMs)
-        .then((urls) => {
+        .then(({ urls, items }) => {
           if (!isMountedRef.current) {
             return;
           }
@@ -186,14 +196,14 @@ export function useKycImageLoader(
           if (!urls.length) {
             setImageStates((prev) => ({
               ...prev,
-              [kyc.kycId]: { status: "error", urls: [], errorMessage: "Images could not be loaded." }
+              [kyc.kycId]: { status: "error", urls: [], items: [], errorMessage: "Images could not be loaded." }
             }));
             return;
           }
 
           setImageStates((prev) => ({
             ...prev,
-            [kyc.kycId]: { status: "success", urls }
+            [kyc.kycId]: { status: "success", urls, items }
           }));
         })
         .catch((error) => {
@@ -204,7 +214,7 @@ export function useKycImageLoader(
           console.warn(`${contextLabel} load error.`, { borrowerId, kycId: kyc.kycId, error });
           setImageStates((prev) => ({
             ...prev,
-            [kyc.kycId]: { status: "error", urls: [], errorMessage: "Images could not be loaded." }
+            [kyc.kycId]: { status: "error", urls: [], items: [], errorMessage: "Images could not be loaded." }
           }));
         });
     });
