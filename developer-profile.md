@@ -23,3 +23,4 @@
 - 2026-03-05: approved-loan `Print Loan Form` should open in preview-first mode (no auto-print), include maker+co-maker consent, display maker selfie at top-right, and target two pages.
 - 2026-03-05: in approved application image tabs, enable per-image tick selection and print only selected items from the current tab with a tab-specific heading in Folio print layout.
 - 2026-03-05: when application status is approved, KYC decision controls (approve/reject/waive) should stay visible but disabled/grey to prevent further status actions.
+- 2026-03-11: when Next.js detects multiple lockfiles, pin `turbopack.root` to the app directory to avoid parent-folder module resolution errors during local dev.

@@ -4,7 +4,8 @@
   "private": true,
   "description": "",
   "scripts": {
-    "dev": "next dev",
+    "dev": "npm run build && next start",
+    "dev:hot": "next dev --webpack --disable-source-maps",
     "build": "next build",
     "start": "next start",
     "lint": "eslint --ext .ts,.tsx src",

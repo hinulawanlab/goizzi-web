@@ -189,7 +189,7 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
             return;
           }
           const nextRotation = item.rotationDeg ?? 0;
-          if (next[item.url] !== nextRotation) {
+          if (next[item.url] === undefined) {
             next[item.url] = nextRotation;
             hasChanges = true;
           }
