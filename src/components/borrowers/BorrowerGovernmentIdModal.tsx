@@ -268,6 +268,8 @@ export default function BorrowerGovernmentIdModal({ kycs, borrowerName }: Borrow
   const totalKycs = kycs.length;
   const canNavigateLeft = currentIndex > 0;
   const canNavigateRight = currentIndex < totalKycs - 1;
+  const disableApprove = !currentKyc || actionState === "working" || approvalStatus === true;
+  const disableReject = !currentKyc || actionState === "working" || approvalStatus === false;
   const hasSelectedForPrint =
     (printSelections.front && Boolean(frontUrl)) || (printSelections.back && Boolean(backUrl));
 
@@ -469,9 +471,9 @@ export default function BorrowerGovernmentIdModal({ kycs, borrowerName }: Borrow
                     <button
                       type="button"
                       onClick={() => submitApproval(true)}
-                      disabled={!currentKyc || actionState === "working"}
+                      disabled={disableApprove}
                       className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-                        !currentKyc || actionState === "working"
+                        disableApprove
                           ? "cursor-not-allowed border-emerald-200 text-emerald-300"
                           : "cursor-pointer border-emerald-400 text-emerald-600 hover:border-emerald-500 hover:text-emerald-700"
                       }`}
@@ -481,9 +483,9 @@ export default function BorrowerGovernmentIdModal({ kycs, borrowerName }: Borrow
                     <button
                       type="button"
                       onClick={() => submitApproval(false)}
-                      disabled={!currentKyc || actionState === "working"}
+                      disabled={disableReject}
                       className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-                        !currentKyc || actionState === "working"
+                        disableReject
                           ? "cursor-not-allowed border-rose-200 text-rose-300"
                           : "cursor-pointer border-rose-400 text-rose-600 hover:border-rose-500 hover:text-rose-700"
                       }`}
