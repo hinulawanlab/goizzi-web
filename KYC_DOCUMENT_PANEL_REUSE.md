@@ -88,5 +88,6 @@ Each tab passes its result list into `BorrowerApplicationTabSection`.
 
 ## 9) Viewer behavior
 - Clicking an image opens `BorrowerKycImageViewer`.
-- Viewer currently supports open/close only.
-- Future viewer actions will be added later.
+- Viewer supports zoom and rotation preview.
+- Rotation changes are temporary while the viewer is open.
+- Rotation is persisted only when the user clicks the save icon in the viewer toolbar.

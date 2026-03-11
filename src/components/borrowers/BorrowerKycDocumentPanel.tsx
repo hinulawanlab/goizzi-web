@@ -6,7 +6,9 @@ import Image from "next/image";
 import BorrowerKycDecisionSection, {
   type DecisionAction
 } from "@/components/borrowers/BorrowerKycDecisionSection";
-import BorrowerKycImageViewer from "@/components/borrowers/BorrowerKycImageViewer";
+import BorrowerKycImageViewer, {
+  type BorrowerKycImageRotationChange
+} from "@/components/borrowers/BorrowerKycImageViewer";
 import { useKycImageLoader } from "@/components/borrowers/useKycImageLoader";
 import type { ActionState } from "@/components/borrowers/borrowerApplicationTypes";
 import { auth } from "@/shared/singletons/firebase";
@@ -282,25 +284,40 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
     }, 120);
   };
 
-  const handleViewerRotate = async (imageUrl: string, rotationDeg: number, storagePath?: string) => {
-    setImageRotationByUrl((current) => ({
-      ...current,
-      [imageUrl]: rotationDeg
-    }));
-
-    if (!borrowerId || !storagePath) {
+  const handleViewerSaveRotations = async (changes: BorrowerKycImageRotationChange[]) => {
+    if (!changes.length) {
       return;
     }
 
-    const entry = visibleKycs.find((kyc) => (imageStates[kyc.kycId]?.items ?? []).some((item) => item.url === imageUrl));
-    if (!entry?.kycId) {
-      return;
+    if (!borrowerId) {
+      throw new Error("Missing borrower id. Refresh and retry.");
     }
 
+    let authToken: string | null = null;
     try {
+      authToken = auth.currentUser ? await auth.currentUser.getIdToken() : null;
+    } catch (error) {
+      console.warn("Unable to get Firebase ID token for image rotation save:", error);
+    }
+
+    const requests = changes.map(async ({ imageUrl, rotationDeg, storagePath }) => {
+      if (!storagePath) {
+        throw new Error("Missing storage path for rotated image.");
+      }
+
+      const entry = visibleKycs.find((kyc) =>
+        (imageStates[kyc.kycId]?.items ?? []).some((item) => item.url === imageUrl && item.path === storagePath)
+      );
+      if (!entry?.kycId) {
+        throw new Error("Unable to find the KYC entry for this image.");
+      }
+
       const response = await fetch(`/api/borrowers/${borrowerId}/kyc/${entry.kycId}/image-rotation`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
+        },
         body: JSON.stringify({
           storagePath,
           rotationDeg
@@ -308,11 +325,17 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save image rotation.");
+        const payload = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(payload.error ?? "Failed to save image rotation.");
       }
-    } catch (error) {
-      console.warn("Unable to save image rotation:", error);
-    }
+    });
+
+    await Promise.all(requests);
+
+    setImageRotationByUrl((current) => ({
+      ...current,
+      ...Object.fromEntries(changes.map(({ imageUrl, rotationDeg }) => [imageUrl, rotationDeg]))
+    }));
   };
 
   if (!visibleKycs.length) {
@@ -487,7 +510,7 @@ export default function BorrowerKycDocumentPanel<T extends KycDocumentEntry>({
           images={viewerImage.images}
           initialIndex={viewerImage.initialIndex}
           rotationByUrl={imageRotationByUrl}
-          onRotate={handleViewerRotate}
+          onSaveRotations={handleViewerSaveRotations}
           onClose={() => setViewerImage(null)}
         />
       )}

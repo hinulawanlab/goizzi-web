@@ -40,6 +40,17 @@ function normalizeStoragePath(path?: string): string | null {
   return trimmed.replace(/^\/+/, "");
 }
 
+function resolveRotationForStoragePath(
+  imageRotations: Record<string, number> | undefined,
+  storagePath?: string | null
+): number {
+  const normalizedPath = normalizeStoragePath(storagePath ?? undefined);
+  if (!normalizedPath || !imageRotations) {
+    return 0;
+  }
+  return imageRotations[`/${normalizedPath}`] ?? imageRotations[normalizedPath] ?? 0;
+}
+
 function isTimeoutError(error: unknown) {
   if (!error) {
     return false;
@@ -145,7 +156,7 @@ export function useKycImageLoader(
           return {
             path: storagePath ?? "",
             url,
-            rotationDeg: storagePath ? kyc.imageRotations?.[storagePath] ?? 0 : 0
+            rotationDeg: resolveRotationForStoragePath(kyc.imageRotations, storagePath)
           };
         });
         setImageStates((prev) => ({

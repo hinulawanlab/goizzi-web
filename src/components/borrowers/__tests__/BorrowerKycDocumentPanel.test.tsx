@@ -51,6 +51,7 @@ const { useKycImageLoader } = await import("@/components/borrowers/useKycImageLo
 describe("BorrowerKycDocumentPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal("confirm", vi.fn(() => true));
     vi.stubGlobal(
       "fetch",
       vi.fn(() => Promise.resolve({ ok: true, json: async () => ({}) } as unknown as Response))
@@ -100,10 +101,15 @@ describe("BorrowerKycDocumentPanel", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Payslip 1" }));
     fireEvent.click(screen.getByRole("button", { name: "Rotate image" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save image rotation" }));
 
     await waitFor(() => {
-      const previewImage = screen.getAllByAltText("Payslip 1")[1];
-      expect(previewImage).toHaveStyle({ transform: "scale(1) rotate(270deg)" });
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/borrowers/borrower-1/kyc/kyc-1/image-rotation",
+        expect.objectContaining({
+          method: "POST"
+        })
+      );
     });
 
     rerender(
@@ -119,6 +125,8 @@ describe("BorrowerKycDocumentPanel", () => {
         kycs={[entry]}
       />
     );
+
+    fireEvent.click(screen.getByRole("button", { name: "Payslip 1" }));
 
     await waitFor(() => {
       const previewImage = screen.getAllByAltText("Payslip 1")[1];
